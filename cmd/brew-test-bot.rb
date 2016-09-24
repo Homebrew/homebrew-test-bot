@@ -1162,3 +1162,5 @@ module Homebrew
     output
   end
 end
+
+Homebrew.test_bot
