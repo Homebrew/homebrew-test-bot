@@ -1,0 +1,12 @@
+# Force OS X.
+language: objective-c
+os: osx
+osx_image: xcode8
+
+# Empty (to avoid Bundler).
+install:
+  - brew update
+
+# Test installing packages works.
+script:
+  - PATH="cmd:$PATH" brew test-bot wget
