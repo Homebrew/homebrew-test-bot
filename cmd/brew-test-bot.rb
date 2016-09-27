@@ -710,6 +710,11 @@ module Homebrew
       return if @skip_homebrew
 
       if !@tap && (@formulae.empty? || @test_default_formula)
+        # this should always succeed
+        test "brew", "man"
+        # this succeeds if the committed manpages are up-to-date
+        test "brew", "man", "--fail-if-changed"
+
         # TODO: try to fix this on Linux at some stage.
         if OS.mac?
           # test update from origin/master to current commit.
