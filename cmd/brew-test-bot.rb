@@ -1,4 +1,3 @@
-#: @hide_from_man_page
 #:  * `test-bot` [options]  <url|formula>:
 #:    Tests the full lifecycle of a formula or Homebrew/brew change.
 #:
