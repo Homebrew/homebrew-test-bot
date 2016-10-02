@@ -179,7 +179,7 @@ module Homebrew
         puts "travis_fold:start:#{@travis_fold_id}"
         puts "travis_time:start:#{@travis_timer_id}"
       end
-      puts "#{Tty.blue}==>#{Tty.white} #{@command.join(" ")}#{Tty.reset}"
+      puts Formatter.headline(@command.join(" "), color: :blue)
     end
 
     def puts_result
@@ -187,11 +187,11 @@ module Homebrew
         travis_start_time = @start_time.to_i * 1_000_000_000
         travis_end_time = @end_time.to_i * 1_000_000_000
         travis_duration = travis_end_time - travis_start_time
-        puts "#{Tty.white}==>#{Tty.green} PASSED#{Tty.reset}" if passed?
+        puts Formatter.headline(Formatter.success("PASSED")) if passed?
         puts "travis_time:end:#{@travis_timer_id},start=#{travis_start_time},finish=#{travis_end_time},duration=#{travis_duration}"
         puts "travis_fold:end:#{@travis_fold_id}"
       end
-      puts "#{Tty.white}==>#{Tty.red} FAILED#{Tty.reset}" if failed?
+      puts Formatter.headline(Formatter.error("FAILED")) if failed?
     end
 
     def output?
@@ -439,7 +439,7 @@ module Homebrew
     end
 
     def skip(formula_name)
-      puts "#{Tty.blue}==>#{Tty.white} SKIPPING: #{formula_name}#{Tty.reset}"
+      puts Formatter.headline("SKIPPING: #{Formatter.identifier(formula_name)}")
     end
 
     def satisfied_requirements?(formula, spec, dependency = nil)
