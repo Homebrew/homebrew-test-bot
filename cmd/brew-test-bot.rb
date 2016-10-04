@@ -406,7 +406,7 @@ module Homebrew
         # the right commit to BrewTestBot.
         if !travis_pr && !ARGV.include?("--no-pull")
           diff_start_sha1 = current_sha1
-          test "brew", "pull", "--clean", @url
+          test "brew", "pull", "--clean", *[@tap ? "--tap=#{@tap}" : nil, @url].compact
           diff_end_sha1 = current_sha1
         end
         @short_url = @url.gsub("https://github.com/", "")
@@ -957,7 +957,7 @@ module Homebrew
 
     if (pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CIRCLE_PR_NUMBER"])
       pull_pr = "https://github.com/#{tap.user}/homebrew-#{tap.repo}/pull/#{pr}"
-      safe_system "brew", "pull", "--clean", pull_pr
+      safe_system "brew", "pull", "--clean", *[tap ? "--tap=#{tap}" : nil, pull_pr].compact
     end
 
     if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old")
