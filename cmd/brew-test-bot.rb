@@ -988,8 +988,9 @@ module Homebrew
     bottles_hash.each do |formula_name, bottle_hash|
       version = bottle_hash["formula"]["pkg_version"]
       bintray_package = bottle_hash["bintray"]["package"]
+      bintray_org = OS.mac? ? "homebrew" : "linuxbrew"
       bintray_repo = bottle_hash["bintray"]["repository"]
-      bintray_repo_url = "https://api.bintray.com/packages/homebrew/#{bintray_repo}"
+      bintray_repo_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
       bottle_hash["bottle"]["tags"].each do |_tag, tag_hash|
         filename = tag_hash["filename"]
@@ -997,7 +998,7 @@ module Homebrew
                   "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
           raise <<-EOS.undent
             #{filename} is already published. Please remove it manually from
-            https://bintray.com/homebrew/#{bintray_repo}/#{bintray_package}/view#files
+            https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
           EOS
         end
 
@@ -1017,7 +1018,7 @@ module Homebrew
           formula_packaged[formula_name] = true
         end
 
-        content_url = "https://api.bintray.com/content/homebrew"
+        content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
         content_url += "?override=1"
         curl "--silent", "--fail", "-u#{bintray_user}:#{bintray_key}",
