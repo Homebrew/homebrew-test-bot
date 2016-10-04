@@ -360,6 +360,10 @@ module Homebrew
       elsif travis_pr
         @url = "https://github.com/#{ENV["TRAVIS_REPO_SLUG"]}/pull/#{ENV["TRAVIS_PULL_REQUEST"]}"
         @hash = nil
+      elsif ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
+        # Circle CI build of a pull request.
+        @url = ENV["CI_PULL_REQUEST"]
+        @hash = nil
       end
 
       # Use Jenkins Git plugin variables for master branch jobs.
@@ -923,6 +927,7 @@ module Homebrew
       jenkins = ENV["JENKINS_HOME"]
       job = ENV["UPSTREAM_JOB_NAME"]
       id = ENV["UPSTREAM_BUILD_ID"]
+      return unless jenkins
       raise "Missing Jenkins variables!" if !jenkins || !job || !id
 
       bottles = Dir["#{jenkins}/jobs/#{job}/configurations/axis-version/*/builds/#{id}/archive/*.bottle*.*"]
@@ -950,7 +955,7 @@ module Homebrew
     safe_system "git", "reset", "--hard", "origin/master"
     safe_system "brew", "update"
 
-    if (pr = ENV["UPSTREAM_PULL_REQUEST"])
+    if (pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CIRCLE_PR_NUMBER"])
       pull_pr = "https://github.com/#{tap.user}/homebrew-#{tap.repo}/pull/#{pr}"
       safe_system "brew", "pull", "--clean", pull_pr
     end
@@ -964,7 +969,7 @@ module Homebrew
     remote = "git@github.com:BrewTestBot/homebrew-#{tap.repo}.git"
     git_tag = if pr
       "pr-#{pr}"
-    elsif (upstream_number = ENV["UPSTREAM_BUILD_NUMBER"])
+    elsif (upstream_number = ENV["UPSTREAM_BUILD_NUMBER"] || ENV["CIRCLE_BUILD_NUM"])
       "testing-#{upstream_number}"
     elsif (number = ENV["BUILD_NUMBER"])
       "other-#{number}"
