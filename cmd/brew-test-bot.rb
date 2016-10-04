@@ -632,8 +632,14 @@ module Homebrew
           install_passed = steps.last.passed?
         end
       end
-      test "brew", "style", formula_name if @tap && @tap.name == "homebrew/core"
       test "brew", "audit", *audit_args
+
+      # Only check for style violations if not already shown by
+      # `brew audit --new-formula`
+      if !@added_formulae.include?(formula_name) && @tap && @tap.name == "homebrew/core"
+        test "brew", "style", formula_name
+      end
+
       if install_passed
         if formula.stable? && !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
           bottle_args = ["--verbose", "--json", formula_name]
@@ -743,7 +749,6 @@ module Homebrew
           test "brew", "cask-tests", *coverage_args
         end
       elsif @tap
-        test "brew", "style", @tap.name if @tap.name == "homebrew/core"
         test "brew", "readall", "--aliases", @tap.name
       end
     end
