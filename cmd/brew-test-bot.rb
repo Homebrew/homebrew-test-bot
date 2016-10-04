@@ -92,6 +92,8 @@ require "development_tools"
 require "utils/bottles"
 
 module Homebrew
+  module_function
+
   BYTES_IN_1_MEGABYTE = 1024*1024
   MAX_STEP_OUTPUT_SIZE = BYTES_IN_1_MEGABYTE - (200*1024) # margin of safety
 
