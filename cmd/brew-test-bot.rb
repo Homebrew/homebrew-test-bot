@@ -1046,6 +1046,7 @@ module Homebrew
 
     travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
     jenkins_pr = !ENV["ghprbPullLink"].nil?
+    jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
 
     if ARGV.include?("--ci-auto")
