@@ -1051,10 +1051,13 @@ module Homebrew
     if ARGV.include?("--ci-auto")
       if travis_pr || jenkins_pr
         ARGV << "--ci-pr"
+        puts "Building in --ci-pr mode"
       elsif travis || jenkins_branch
         ARGV << "--ci-master"
+        puts "Building in --ci-master mode"
       else
         ARGV << "--ci-testing"
+        puts "Building in --ci-testing mode"
       end
     end
 
