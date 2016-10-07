@@ -792,6 +792,7 @@ module Homebrew
     def cleanup_before
       @category = __method__
       return unless ARGV.include? "--cleanup"
+      git "stash", "clear"
       git "stash"
       git "am", "--abort"
       git "rebase", "--abort"
@@ -819,6 +820,7 @@ module Homebrew
       if ARGV.include? "--cleanup"
         git "reset", "--hard", "origin/master"
         git "stash", "pop"
+        git "stash", "clear"
         test "brew", "cleanup", "--prune=7"
 
         cleanup_shared
