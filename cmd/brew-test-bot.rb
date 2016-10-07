@@ -64,14 +64,16 @@
 #:    when not building a tap and no other formulae are specified.
 #:
 #:    If `--ci-master` is passed, use the Homebrew master branch CI
-#:    options.
+#:    options. Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-pr` is passed, use the Homebrew pull request CI options.
+#:    Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-testing` is passed, use the Homebrew testing CI options.
+#:    Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-auto` is passed, automatically pick one of the Homebrew CI
-#:    options based on the environment.
+#:    options based on the environment. Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
@@ -1056,8 +1058,7 @@ module Homebrew
 
     if ARGV.include?("--ci-master") || ARGV.include?("--ci-pr") \
        || ARGV.include?("--ci-testing")
-      ARGV << "--cleanup" if ENV["JENKINS_HOME"]
-      ARGV << "--junit" << "--local" << "--test-default-formula"
+      ARGV << "--cleanup" << "--junit" << "--local" << "--test-default-formula"
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
