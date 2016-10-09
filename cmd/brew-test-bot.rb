@@ -763,6 +763,7 @@ module Homebrew
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
+        next if tap == "homebrew/test-bot"
         next if tap == @tap.to_s
         safe_system "brew", "untap", tap
       end
