@@ -64,14 +64,16 @@
 #:    when not building a tap and no other formulae are specified.
 #:
 #:    If `--ci-master` is passed, use the Homebrew master branch CI
-#:    options.
+#:    options. Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-pr` is passed, use the Homebrew pull request CI options.
+#:    Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-testing` is passed, use the Homebrew testing CI options.
+#:    Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-auto` is passed, automatically pick one of the Homebrew CI
-#:    options based on the environment.
+#:    options based on the environment. Implies `--cleanup`: use with care!
 #:
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
@@ -771,6 +773,7 @@ module Homebrew
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
+        next if tap == "homebrew/test-bot"
         next if tap == @tap.to_s
         safe_system "brew", "untap", tap
       end
@@ -800,6 +803,7 @@ module Homebrew
     def cleanup_before
       @category = __method__
       return unless ARGV.include? "--cleanup"
+      git "stash", "clear"
       git "stash"
       git "am", "--abort"
       git "rebase", "--abort"
@@ -827,6 +831,7 @@ module Homebrew
       if ARGV.include? "--cleanup"
         git "reset", "--hard", "origin/master"
         git "stash", "pop"
+        git "stash", "clear"
         test "brew", "cleanup", "--prune=7"
 
         cleanup_shared
@@ -1059,22 +1064,25 @@ module Homebrew
 
     travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
     jenkins_pr = !ENV["ghprbPullLink"].nil?
+    jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
 
     if ARGV.include?("--ci-auto")
       if travis_pr || jenkins_pr
         ARGV << "--ci-pr"
+        puts "Building in --ci-pr mode"
       elsif travis || jenkins_branch
         ARGV << "--ci-master"
+        puts "Building in --ci-master mode"
       else
         ARGV << "--ci-testing"
+        puts "Building in --ci-testing mode"
       end
     end
 
     if ARGV.include?("--ci-master") || ARGV.include?("--ci-pr") \
        || ARGV.include?("--ci-testing")
-      ARGV << "--cleanup" if ENV["JENKINS_HOME"]
-      ARGV << "--junit" << "--local" << "--test-default-formula"
+      ARGV << "--cleanup" << "--junit" << "--local" << "--test-default-formula"
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
