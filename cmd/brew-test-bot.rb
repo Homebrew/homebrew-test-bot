@@ -101,6 +101,11 @@ module Homebrew
 
   HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
+  WELL_STYLED_TAPS = [
+    "homebrew/core",
+    "homebrew/versions",
+  ].freeze
+
   def fix_encoding!(str)
     # Assume we are starting from a "mostly" UTF-8 string
     str.force_encoding(Encoding::UTF_8)
@@ -640,7 +645,7 @@ module Homebrew
 
       # Only check for style violations if not already shown by
       # `brew audit --new-formula`
-      if !@added_formulae.include?(formula_name) && @tap && @tap.name == "homebrew/core"
+      if !@added_formulae.include?(formula_name) && @tap && WELL_STYLED_TAPS.include?(@tap.name)
         test "brew", "style", formula_name
       end
 
