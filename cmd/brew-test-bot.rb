@@ -757,8 +757,15 @@ module Homebrew
       end
     end
 
+    def cleanup_git_meta(repository)
+      pr_locks = "#{repository}/.git/refs/remotes/*/pr/*/*.lock"
+      Dir.glob(pr_locks) { |lock| FileUtils.rm_f lock }
+      FileUtils.rm_f "#{repository}/.git/gc.log"
+    end
+
     def cleanup_shared
-      git "gc", "--auto"
+      cleanup_git_meta(HOMEBREW_REPOSITORY)
+      git "gc", "--auto", "--force"
       test "git", "clean", "-ffdx", "--exclude=Library/Taps"
 
       Tap.names.each do |tap|
@@ -782,6 +789,7 @@ module Homebrew
       end
 
       Pathname.glob("#{HOMEBREW_LIBRARY}/Taps/*/*").each do |git_repo|
+        cleanup_git_meta(git_repo)
         next if @repository == git_repo
         git_repo.cd do
           safe_system "git", "checkout", "-f", "master"
@@ -803,9 +811,6 @@ module Homebrew
       end
 
       cleanup_shared
-
-      pr_locks = "#{@repository}/.git/refs/remotes/*/pr/*/*.lock"
-      Dir.glob(pr_locks) { |lock| FileUtils.rm_rf lock }
     end
 
     def cleanup_after
