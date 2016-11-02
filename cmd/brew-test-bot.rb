@@ -502,8 +502,9 @@ module Homebrew
       fetch_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
+      new_formula = @added_formulae.include?(formula_name) ? true : false
       audit_args = [formula_name]
-      audit_args << "--new-formula" if @added_formulae.include? formula_name
+      audit_args << "--new-formula" if new_formula
 
       if formula.stable
         unless satisfied_requirements?(formula, :stable)
@@ -645,14 +646,14 @@ module Homebrew
 
       # Only check for style violations if not already shown by
       # `brew audit --new-formula`
-      if !@added_formulae.include?(formula_name) && @tap && WELL_STYLED_TAPS.include?(@tap.name)
+      if !new_formula && @tap && WELL_STYLED_TAPS.include?(@tap.name)
         test "brew", "style", formula_name
       end
 
       if install_passed
         if formula.stable? && !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
           bottle_args = ["--verbose", "--json", formula_name]
-          bottle_args << "--keep-old" if ARGV.include? "--keep-old"
+          bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
           bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
           bottle_args << "--force-core-tap" if @test_default_formula
           test "brew", "bottle", *bottle_args
@@ -662,7 +663,7 @@ module Homebrew
               bottle_step.output.gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
             bottle_json_filename = bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
             bottle_merge_args = ["--merge", "--write", "--no-commit", bottle_json_filename]
-            bottle_merge_args << "--keep-old" if ARGV.include? "--keep-old"
+            bottle_merge_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
             test "brew", "bottle", *bottle_merge_args
             test "brew", "uninstall", "--force", formula_name
             FileUtils.ln bottle_filename, HOMEBREW_CACHE/bottle_filename, force: true
