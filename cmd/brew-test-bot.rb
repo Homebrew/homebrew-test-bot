@@ -434,9 +434,9 @@ module Homebrew
         formula_path = @tap.formula_dir.to_s
         @added_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
         @modified_formula += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
-        or_later_arg = "-G    sha256 ['\"][a-f0-9]*['\"] => :\w+_or_later$"
+        or_later_arg = "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$"
         unless @modified_formula.empty?
-          unless git("diff", or_later_arg, "--unified=0").strip.empty?
+          unless git("diff", or_later_arg, "--unified=0", diff_start_sha1, diff_end_sha1).strip.empty?
             # Test rather than build bottles if we're testing a `*_or_later`
             # bottle change.
             ARGV << "--no-bottle"
