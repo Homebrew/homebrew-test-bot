@@ -502,7 +502,7 @@ module Homebrew
       fetch_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
-      new_formula = @added_formulae.include?(formula_name) ? true : false
+      new_formula = @added_formulae.include?(formula_name)
       audit_args = [formula_name]
       audit_args << "--new-formula" if new_formula
 
