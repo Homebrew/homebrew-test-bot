@@ -101,6 +101,11 @@ module Homebrew
 
   HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
+  WELL_STYLED_TAPS = [
+    "homebrew/core",
+    "homebrew/versions",
+  ].freeze
+
   def fix_encoding!(str)
     # Assume we are starting from a "mostly" UTF-8 string
     str.force_encoding(Encoding::UTF_8)
@@ -432,7 +437,15 @@ module Homebrew
       if @tap
         formula_path = @tap.formula_dir.to_s
         @added_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
-        @modified_formula += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")\
+        @modified_formula += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
+        or_later_arg = "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$"
+        unless @modified_formula.empty?
+          unless git("diff", or_later_arg, "--unified=0", diff_start_sha1, diff_end_sha1).strip.empty?
+            # Test rather than build bottles if we're testing a `*_or_later`
+            # bottle change.
+            ARGV << "--no-bottle"
+          end
+        end
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
         # Build the default test formula.
         HOMEBREW_CACHE_FORMULA.mkpath
@@ -488,7 +501,7 @@ module Homebrew
     def formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
 
-      test "brew", "uses", formula_name
+      test "brew", "uses", "--recursive", formula_name
 
       formula = Formulary.factory(formula_name)
 
@@ -501,8 +514,9 @@ module Homebrew
       fetch_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
+      new_formula = @added_formulae.include?(formula_name)
       audit_args = [formula_name]
-      audit_args << "--new-formula" if @added_formulae.include? formula_name
+      audit_args << "--new-formula" if new_formula
 
       if formula.stable
         unless satisfied_requirements?(formula, :stable)
@@ -583,7 +597,7 @@ module Homebrew
       build_dependencies = dependencies - runtime_dependencies
       unchanged_build_dependencies = build_dependencies - @formulae
 
-      dependents = Utils.popen_read("brew", "uses", formula_name).split("\n")
+      dependents = Utils.popen_read("brew", "uses", "--recursive", formula_name).split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
 
@@ -644,14 +658,14 @@ module Homebrew
 
       # Only check for style violations if not already shown by
       # `brew audit --new-formula`
-      if !@added_formulae.include?(formula_name) && @tap && @tap.name == "homebrew/core"
+      if !new_formula && @tap && WELL_STYLED_TAPS.include?(@tap.name)
         test "brew", "style", formula_name
       end
 
       if install_passed
         if formula.stable? && !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
           bottle_args = ["--verbose", "--json", formula_name]
-          bottle_args << "--keep-old" if ARGV.include? "--keep-old"
+          bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
           bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
           bottle_args << "--force-core-tap" if @test_default_formula
           test "brew", "bottle", *bottle_args
@@ -661,7 +675,7 @@ module Homebrew
               bottle_step.output.gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
             bottle_json_filename = bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
             bottle_merge_args = ["--merge", "--write", "--no-commit", bottle_json_filename]
-            bottle_merge_args << "--keep-old" if ARGV.include? "--keep-old"
+            bottle_merge_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
             test "brew", "bottle", *bottle_merge_args
             test "brew", "uninstall", "--force", formula_name
             FileUtils.ln bottle_filename, HOMEBREW_CACHE/bottle_filename, force: true
@@ -767,8 +781,15 @@ module Homebrew
       end
     end
 
+    def cleanup_git_meta(repository)
+      pr_locks = "#{repository}/.git/refs/remotes/*/pr/*/*.lock"
+      Dir.glob(pr_locks) { |lock| FileUtils.rm_f lock }
+      FileUtils.rm_f "#{repository}/.git/gc.log"
+    end
+
     def cleanup_shared
-      git "gc", "--auto"
+      cleanup_git_meta(HOMEBREW_REPOSITORY)
+      git "gc", "--auto", "--force"
       test "git", "clean", "-ffdx", "--exclude=Library/Taps"
 
       Tap.names.each do |tap|
@@ -792,6 +813,7 @@ module Homebrew
       end
 
       Pathname.glob("#{HOMEBREW_LIBRARY}/Taps/*/*").each do |git_repo|
+        cleanup_git_meta(git_repo)
         next if @repository == git_repo
         git_repo.cd do
           safe_system "git", "checkout", "-f", "master"
@@ -813,9 +835,6 @@ module Homebrew
       end
 
       cleanup_shared
-
-      pr_locks = "#{@repository}/.git/refs/remotes/*/pr/*/*.lock"
-      Dir.glob(pr_locks) { |lock| FileUtils.rm_rf lock }
     end
 
     def cleanup_after
