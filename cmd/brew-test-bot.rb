@@ -445,7 +445,7 @@ module Homebrew
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
         # Build the default test formula.
         HOMEBREW_CACHE_FORMULA.mkpath
-        testbottest = "#{HOMEBREW_LIBRARY}/Homebrew/test/testbottest.rb"
+        testbottest = "#{HOMEBREW_LIBRARY}/Homebrew/test/support/fixtures/testbottest.rb"
         FileUtils.cp testbottest, HOMEBREW_CACHE_FORMULA
         @test_default_formula = true
         @added_formulae = [testbottest]
