@@ -92,6 +92,7 @@ require "rexml/cdata"
 require "tap"
 require "development_tools"
 require "utils/bottles"
+require "json"
 
 module Homebrew
   module_function
@@ -952,7 +953,7 @@ module Homebrew
 
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
-      deep_merge_hashes hash, Utils::JSON.load(IO.read(json_file))
+      deep_merge_hashes hash, JSON.load(IO.read(json_file))
     end
 
     first_formula_name = bottles_hash.keys.first
