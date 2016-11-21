@@ -748,7 +748,6 @@ module Homebrew
         end
 
         test "brew", "style"
-        test "brew", "readall", "--syntax"
 
         coverage_args = []
         if ARGV.include?("--coverage")
