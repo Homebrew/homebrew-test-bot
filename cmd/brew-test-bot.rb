@@ -488,7 +488,8 @@ module Homebrew
     def setup
       @category = __method__
       return if ARGV.include? "--skip-setup"
-      test "brew", "doctor"
+      # TODO: try to fix this on Linux at some stage.
+      test "brew", "doctor" if OS.mac?
       test "brew", "--env"
       test "brew", "config"
     end
