@@ -488,9 +488,7 @@ module Homebrew
     def setup
       @category = __method__
       return if ARGV.include? "--skip-setup"
-      if !ENV["TRAVIS"] && HOMEBREW_PREFIX.to_s == "/usr/local"
-        test "brew", "doctor"
-      end
+      test "brew", "doctor"
       test "brew", "--env"
       test "brew", "config"
     end
@@ -1084,7 +1082,8 @@ module Homebrew
 
     if ARGV.include?("--ci-master") || ARGV.include?("--ci-pr") \
        || ARGV.include?("--ci-testing")
-      ARGV << "--cleanup" << "--junit" << "--local" << "--test-default-formula"
+      ARGV << "--cleanup" << "--test-default-formula"
+      ARGV << "--local" << "--junit" if ENV["JENKINS_HOME"]
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
