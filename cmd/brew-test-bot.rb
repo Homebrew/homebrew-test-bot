@@ -169,7 +169,7 @@ module Homebrew
     end
 
     def command_short
-      (@command - %w[brew --force --retry --verbose --build-bottle --json]).join(" ")
+      (@command - %w[brew --force --retry --verbose --build-bottle --build-from-source --json]).join(" ")
     end
 
     def passed?
@@ -507,6 +507,7 @@ module Homebrew
 
       fetch_args = [formula_name]
       fetch_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
+      fetch_args << "--build-from-source" if ARGV.include?("--no-bottle")
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
       new_formula = @added_formulae.include?(formula_name)
@@ -606,10 +607,10 @@ module Homebrew
       test "brew", "fetch", "--retry", *unchanged_dependencies unless unchanged_dependencies.empty?
 
       unless changed_dependences.empty?
-        test "brew", "fetch", "--retry", "--build-bottle", *changed_dependences
+        test "brew", "fetch", "--retry", "--build-from-source", *changed_dependences
         unless ARGV.include?("--fast")
           # Install changed dependencies as new bottles so we don't have checksum problems.
-          test "brew", "install", "--build-bottle", *changed_dependences
+          test "brew", "install", "--build-from-source", *changed_dependences
           # Run postinstall on them because the tested formula might depend on
           # this step
           test "brew", "postinstall", *changed_dependences
@@ -624,6 +625,7 @@ module Homebrew
       # install_args is just for the main (stable, or devel if in a devel-only tap) spec
       install_args = []
       install_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
+      install_args << "--build-from-source" if ARGV.include?("--no-bottle")
       install_args << "--HEAD" if ARGV.include? "--HEAD"
 
       # Pass --devel or --HEAD to install in the event formulae lack stable. Supports devel-only/head-only.
