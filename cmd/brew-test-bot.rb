@@ -116,6 +116,11 @@ module Homebrew
   end
 
   def resolve_test_tap
+    # Force Homebrew/brew-style testing for the test-bot itself.
+    if ENV["TRAVIS_REPO_SLUG"].to_s.end_with?("/homebrew-test-bot")
+      return
+    end
+
     if tap = ARGV.value("tap")
       return Tap.fetch(tap)
     end
@@ -1085,7 +1090,8 @@ module Homebrew
 
     if ARGV.include?("--ci-master") || ARGV.include?("--ci-pr") \
        || ARGV.include?("--ci-testing")
-      ARGV << "--cleanup" << "--test-default-formula"
+      ARGV << "--cleanup"
+      ARGV << "--test-default-formula" if OS.mac?
       ARGV << "--local" << "--junit" if ENV["JENKINS_HOME"]
     end
 
