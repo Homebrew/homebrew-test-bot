@@ -92,6 +92,7 @@ require "rexml/cdata"
 require "tap"
 require "development_tools"
 require "utils/bottles"
+require "json"
 
 module Homebrew
   module_function
@@ -115,6 +116,11 @@ module Homebrew
   end
 
   def resolve_test_tap
+    # Force Homebrew/brew-style testing for the test-bot itself.
+    if ENV["TRAVIS_REPO_SLUG"].to_s.end_with?("/homebrew-test-bot")
+      return
+    end
+
     if tap = ARGV.value("tap")
       return Tap.fetch(tap)
     end
@@ -168,7 +174,7 @@ module Homebrew
     end
 
     def command_short
-      (@command - %w[brew --force --retry --verbose --build-bottle --json]).join(" ")
+      (@command - %w[brew --force --retry --verbose --build-bottle --build-from-source --json]).join(" ")
     end
 
     def passed?
@@ -449,7 +455,7 @@ module Homebrew
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
         # Build the default test formula.
         HOMEBREW_CACHE_FORMULA.mkpath
-        testbottest = "#{HOMEBREW_LIBRARY}/Homebrew/test/testbottest.rb"
+        testbottest = "#{HOMEBREW_LIBRARY}/Homebrew/test/support/fixtures/testbottest.rb"
         FileUtils.cp testbottest, HOMEBREW_CACHE_FORMULA
         @test_default_formula = true
         @added_formulae = [testbottest]
@@ -491,9 +497,8 @@ module Homebrew
     def setup
       @category = __method__
       return if ARGV.include? "--skip-setup"
-      if !ENV["TRAVIS"] && HOMEBREW_PREFIX.to_s == "/usr/local"
-        test "brew", "doctor"
-      end
+      # TODO: try to fix this on Linux at some stage.
+      test "brew", "doctor" if OS.mac?
       test "brew", "--env"
       test "brew", "config"
     end
@@ -512,6 +517,7 @@ module Homebrew
 
       fetch_args = [formula_name]
       fetch_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
+      fetch_args << "--build-from-source" if ARGV.include?("--no-bottle")
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
       new_formula = @added_formulae.include?(formula_name)
@@ -611,10 +617,10 @@ module Homebrew
       test "brew", "fetch", "--retry", *unchanged_dependencies unless unchanged_dependencies.empty?
 
       unless changed_dependences.empty?
-        test "brew", "fetch", "--retry", "--build-bottle", *changed_dependences
+        test "brew", "fetch", "--retry", "--build-from-source", *changed_dependences
         unless ARGV.include?("--fast")
           # Install changed dependencies as new bottles so we don't have checksum problems.
-          test "brew", "install", "--build-bottle", *changed_dependences
+          test "brew", "install", "--build-from-source", *changed_dependences
           # Run postinstall on them because the tested formula might depend on
           # this step
           test "brew", "postinstall", *changed_dependences
@@ -629,6 +635,7 @@ module Homebrew
       # install_args is just for the main (stable, or devel if in a devel-only tap) spec
       install_args = []
       install_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
+      install_args << "--build-from-source" if ARGV.include?("--no-bottle")
       install_args << "--HEAD" if ARGV.include? "--HEAD"
 
       # Pass --devel or --HEAD to install in the event formulae lack stable. Supports devel-only/head-only.
@@ -756,7 +763,6 @@ module Homebrew
         end
 
         test "brew", "style"
-        test "brew", "readall", "--syntax"
 
         coverage_args = []
         if ARGV.include?("--coverage")
@@ -769,7 +775,7 @@ module Homebrew
 
         test "brew", "tests", "--no-compat"
         # brew tests --generic currently fails on Linux.
-        test "brew", "tests", "--generic", *tests_args unless OS.linux?
+        test "brew", "tests", "--generic" unless OS.linux?
         test "brew", "tests", "--official-cmd-taps", *coverage_args
 
         if OS.mac?
@@ -963,7 +969,7 @@ module Homebrew
 
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
-      deep_merge_hashes hash, Utils::JSON.load(IO.read(json_file))
+      deep_merge_hashes hash, JSON.load(IO.read(json_file))
     end
 
     first_formula_name = bottles_hash.keys.first
@@ -1071,7 +1077,7 @@ module Homebrew
 
     travis = !ENV["TRAVIS"].nil?
     if travis
-      ARGV << "--verbose"
+      ARGV << "--verbose" << "--ci-auto"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
@@ -1101,7 +1107,9 @@ module Homebrew
 
     if ARGV.include?("--ci-master") || ARGV.include?("--ci-pr") \
        || ARGV.include?("--ci-testing")
-      ARGV << "--cleanup" << "--junit" << "--local" << "--test-default-formula"
+      ARGV << "--cleanup"
+      ARGV << "--test-default-formula" if OS.mac?
+      ARGV << "--local" << "--junit" if ENV["JENKINS_HOME"]
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
