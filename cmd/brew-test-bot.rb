@@ -964,8 +964,13 @@ module Homebrew
     first_formula_name = bottles_hash.keys.first
     tap = Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || "homebrew/core")
 
-    ENV["GIT_AUTHOR_NAME"] = ENV["GIT_COMMITTER_NAME"] = "BrewTestBot"
-    ENV["GIT_AUTHOR_EMAIL"] = ENV["GIT_COMMITTER_EMAIL"] = "brew-test-bot@googlegroups.com"
+    if OS.mac?
+      ENV["GIT_AUTHOR_NAME"] = ENV["GIT_COMMITTER_NAME"] = "BrewTestBot"
+      ENV["GIT_AUTHOR_EMAIL"] = ENV["GIT_COMMITTER_EMAIL"] = "brew-test-bot@googlegroups.com"
+    elsif OS.linux?
+      ENV["GIT_AUTHOR_NAME"] = ENV["GIT_COMMITTER_NAME"] = "LinuxbrewTestBot"
+      ENV["GIT_AUTHOR_EMAIL"] = ENV["GIT_COMMITTER_EMAIL"] = "testbot@linuxbrew.sh"
+    end
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
 
@@ -986,7 +991,7 @@ module Homebrew
       system "brew", "bottle", "--merge", "--write", *json_files
     end
 
-    remote = "git@github.com:BrewTestBot/homebrew-#{tap.repo}.git"
+    remote = "git@github.com:#{ENV["GIT_AUTHOR_NAME"]}/homebrew-#{tap.repo}.git"
     git_tag = if pr
       "pr-#{pr}"
     elsif (upstream_number = ENV["UPSTREAM_BUILD_NUMBER"])
