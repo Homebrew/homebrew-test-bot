@@ -976,7 +976,7 @@ module Homebrew
     safe_system "brew", "update"
 
     if (pr = ENV["UPSTREAM_PULL_REQUEST"])
-      pull_pr = "https://github.com/#{tap.user}/homebrew-#{tap.repo}/pull/#{pr}"
+      pull_pr = "#{tap.remote}/pull/#{pr}"
       safe_system "brew", "pull", "--clean", pull_pr
     end
 
