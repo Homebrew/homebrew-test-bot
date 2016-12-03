@@ -1084,7 +1084,7 @@ module Homebrew
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? && (ENV["CODECOV_TOKEN"] || ENV["TRAVIS"])
+    if OS.mac? && (ENV["CODECOV_TOKEN"] || travis)
       ARGV << "--coverage"
     end
 

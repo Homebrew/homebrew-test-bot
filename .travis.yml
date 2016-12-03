@@ -3,7 +3,7 @@ language: ruby
 matrix:
   include:
     - os: osx
-      osx_image: xcode8.0
+      osx_image: xcode8.1
       rvm: system
     - os: linux
       rvm: 2.0.0
