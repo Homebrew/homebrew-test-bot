@@ -410,8 +410,6 @@ module Homebrew
       # environment variables e.g.
       # `brew test-bot https://github.com/Homebrew/homebrew-core/pull/678`.
       elsif @url
-        # TODO: in future Travis CI may need to also use `brew pull` to e.g. push
-        # the right commit to BrewTestBot.
         if !travis_pr && !ARGV.include?("--no-pull")
           diff_start_sha1 = current_sha1
           test "brew", "pull", "--clean", @url
@@ -801,7 +799,7 @@ module Homebrew
       end
       safe_system "brew", "prune"
 
-      unless @repository == HOMEBREW_REPOSITORY
+      if @tap
         HOMEBREW_REPOSITORY.cd do
           safe_system "git", "checkout", "-f", "master"
           safe_system "git", "reset", "--hard", "origin/master"
@@ -836,6 +834,7 @@ module Homebrew
 
     def cleanup_after
       @category = __method__
+      return if ENV["TRAVIS"]
 
       if @start_branch && !@start_branch.empty? && \
          (ARGV.include?("--cleanup") || @url || @hash)
