@@ -116,11 +116,6 @@ module Homebrew
   end
 
   def resolve_test_tap
-    # Force Homebrew/brew-style testing for the test-bot itself.
-    if ENV["TRAVIS_REPO_SLUG"].to_s.end_with?("/homebrew-test-bot")
-      return
-    end
-
     if tap = ARGV.value("tap")
       return Tap.fetch(tap)
     end
@@ -743,7 +738,9 @@ module Homebrew
       @category = __method__
       return if @skip_homebrew
 
-      if !@tap && (@formulae.empty? || @test_default_formula)
+      test_brew = !@tap || @tap.to_s == "homebrew/test-bot"
+      test_no_formulae = @formulae.empty? || @test_default_formula
+      if test_brew && test_no_formulae
         # verify that manpages are up-to-date
         test "brew", "man", "--fail-if-changed"
 
