@@ -801,6 +801,7 @@ module Homebrew
 
       if @tap
         HOMEBREW_REPOSITORY.cd do
+          puts "CLEANING: #{HOMEBREW_REPOSITORY}" if ENV["TRAVIS"]
           safe_system "git", "checkout", "-f", "master"
           safe_system "git", "reset", "--hard", "origin/master"
           safe_system "git", "clean", "-ffdx", "--exclude=Library/Taps"
@@ -810,6 +811,7 @@ module Homebrew
       Pathname.glob("#{HOMEBREW_LIBRARY}/Taps/*/*").each do |git_repo|
         cleanup_git_meta(git_repo)
         next if @repository == git_repo
+        puts "CLEANING: #{git_repo}" if ENV["TRAVIS"]
         git_repo.cd do
           safe_system "git", "checkout", "-f", "master"
           safe_system "git", "reset", "--hard", "origin/master"
@@ -825,6 +827,7 @@ module Homebrew
       git "am", "--abort"
       git "rebase", "--abort"
       unless ARGV.include? "--no-pull"
+        puts "CLEANING: BEFORE" if ENV["TRAVIS"]
         git "checkout", "-f", "master"
         git "reset", "--hard", "origin/master"
       end
