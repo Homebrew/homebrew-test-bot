@@ -761,7 +761,7 @@ module Homebrew
 
         coverage_args = []
         if ARGV.include?("--coverage")
-          if ENV["JENKINS_HOME"]
+          if ENV["JENKINS_HOME"] || ENV["TRAVIS"]
             coverage_args << "--coverage" if OS.mac? && MacOS.version == :sierra
           else
             coverage_args << "--coverage"
@@ -1087,7 +1087,7 @@ module Homebrew
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? && (ENV["COVERALLS_REPO_TOKEN"] || ENV["CODECOV_TOKEN"])
+    if OS.mac? && (ENV["CODECOV_TOKEN"] || ENV["TRAVIS"])
       ARGV << "--coverage"
     end
 
