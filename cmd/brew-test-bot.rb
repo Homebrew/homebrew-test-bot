@@ -141,6 +141,10 @@ module Homebrew
     end
   end
 
+  def tap_option(tap)
+    tap.nil? ? [] : ["--tap=#{tap}"]
+  end
+
   # Wraps command invocations. Instantiated by Test#test.
   # Handles logging and pretty-printing.
   class Step
@@ -412,7 +416,7 @@ module Homebrew
       elsif @url
         unless ARGV.include?("--no-pull")
           diff_start_sha1 = current_sha1
-          test "brew", "pull", "--clean", @url
+          test "brew", "pull", "--clean", *tap_option(@tap), @url
           diff_end_sha1 = current_sha1
         end
         @short_url = @url.gsub("https://github.com/", "")
@@ -985,7 +989,7 @@ module Homebrew
     pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CIRCLE_PR_NUMBER"]
     if pr
       pull_pr = "#{tap.remote}/pull/#{pr}"
-      safe_system "brew", "pull", "--clean", pull_pr
+      safe_system "brew", "pull", "--clean", *tap_option(tap), pull_pr
     end
 
     if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
