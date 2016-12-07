@@ -984,7 +984,7 @@ module Homebrew
     # These variables are for Jenkins and Circle CI respectively.
     pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CIRCLE_PR_NUMBER"]
     if pr
-      pull_pr = "#{tap.remote}/pull/#{pr}"
+      pull_pr = "https://github.com/#{tap.user}/homebrew-#{tap.repo}/pull/#{pr}"
       safe_system "brew", "pull", "--clean", pull_pr
     end
 
