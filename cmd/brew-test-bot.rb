@@ -137,7 +137,7 @@ module Homebrew
       end
     end
 
-    return unless git_url = ENV["UPSTREAM_GIT_URL"] || ENV["GIT_URL"]
+    return unless git_url = ENV["UPSTREAM_GIT_URL"] || ENV["GIT_URL"] || ENV["CIRCLE_REPOSITORY_URL"]
     # Also can get tap from Jenkins GIT_URL.
     url_path = git_url.sub(%r{^https?://github\.com/}, "").chomp("/").sub(/\.git$/, "")
     begin
