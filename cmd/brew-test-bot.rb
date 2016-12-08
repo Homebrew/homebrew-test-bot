@@ -116,11 +116,6 @@ module Homebrew
   end
 
   def resolve_test_tap
-    # Force Homebrew/brew-style testing for the test-bot itself.
-    if ENV["TRAVIS_REPO_SLUG"].to_s.end_with?("/homebrew-test-bot")
-      return
-    end
-
     if tap = ARGV.value("tap")
       return Tap.fetch(tap)
     end
@@ -137,8 +132,13 @@ module Homebrew
       end
     end
 
-    return unless git_url = ENV["UPSTREAM_GIT_URL"] || ENV["GIT_URL"] || ENV["CIRCLE_REPOSITORY_URL"]
-    # Also can get tap from Jenkins GIT_URL.
+    # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
+    # Circle CI's CIRCLE_REPOSITORY_URL.
+    git_url =
+      ENV["UPSTREAM_GIT_URL"] ||
+      ENV["GIT_URL"] ||
+      ENV["CIRCLE_REPOSITORY_URL"]
+    return unless git_url
     url_path = git_url.sub(%r{^https?://github\.com/}, "").chomp("/").sub(/\.git$/, "")
     begin
       return Tap.fetch(url_path) if url_path =~ HOMEBREW_TAP_REGEX
@@ -415,9 +415,7 @@ module Homebrew
       # environment variables e.g.
       # `brew test-bot https://github.com/Homebrew/homebrew-core/pull/678`.
       elsif @url
-        # TODO: in future Travis CI may need to also use `brew pull` to e.g. push
-        # the right commit to BrewTestBot.
-        if !travis_pr && !ARGV.include?("--no-pull")
+        unless ARGV.include?("--no-pull")
           diff_start_sha1 = current_sha1
           test "brew", "pull", "--clean", *[@tap ? "--tap=#{@tap}" : nil, @url].compact
           diff_end_sha1 = current_sha1
@@ -748,7 +746,9 @@ module Homebrew
       @category = __method__
       return if @skip_homebrew
 
-      if !@tap && (@formulae.empty? || @test_default_formula)
+      test_brew = !@tap || @tap.to_s == "homebrew/test-bot"
+      test_no_formulae = @formulae.empty? || @test_default_formula
+      if test_brew && test_no_formulae
         # verify that manpages are up-to-date
         test "brew", "man", "--fail-if-changed"
 
@@ -766,7 +766,7 @@ module Homebrew
 
         coverage_args = []
         if ARGV.include?("--coverage")
-          if ENV["JENKINS_HOME"]
+          if ENV["JENKINS_HOME"] || ENV["TRAVIS"]
             coverage_args << "--coverage" if OS.mac? && MacOS.version == :sierra
           else
             coverage_args << "--coverage"
@@ -810,7 +810,7 @@ module Homebrew
       end
       safe_system "brew", "prune"
 
-      unless @repository == HOMEBREW_REPOSITORY
+      if @tap
         HOMEBREW_REPOSITORY.cd do
           safe_system "git", "checkout", "-f", "master"
           safe_system "git", "reset", "--hard", "origin/master"
@@ -845,6 +845,7 @@ module Homebrew
 
     def cleanup_after
       @category = __method__
+      return if ENV["TRAVIS"]
 
       if @start_branch && !@start_branch.empty? && \
          (ARGV.include?("--cleanup") || @url || @hash)
@@ -1087,13 +1088,13 @@ module Homebrew
 
     travis = !ENV["TRAVIS"].nil?
     if travis
-      ARGV << "--verbose" << "--ci-auto"
+      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? && (ENV["COVERALLS_REPO_TOKEN"] || ENV["CODECOV_TOKEN"])
+    if OS.mac? && (ENV["CODECOV_TOKEN"] || travis)
       ARGV << "--coverage"
     end
 

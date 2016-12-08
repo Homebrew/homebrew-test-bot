@@ -1,9 +1,9 @@
 language: ruby
+
 matrix:
   include:
-    - env: OSX=10.11
-      os: osx
-      osx_image: xcode8.0
+    - os: osx
+      osx_image: xcode8.1
       rvm: system
     - os: linux
       rvm: 2.0.0
@@ -11,20 +11,20 @@ matrix:
 before_install:
   - export HOMEBREW_DEVELOPER="1"
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-      sudo chown -R $USER "$(brew --repo)";
-      git -C "$(brew --repo)" reset --hard origin/master;
+      HOMEBREW_REPOSITORY="$(brew --repo)";
+      sudo chown -R "$USER" "$HOMEBREW_REPOSITORY";
+      git -C "$HOMEBREW_REPOSITORY" reset --hard origin/master;
       brew update || brew update;
-      rm -rf "$(brew --repo $TRAVIS_REPO_SLUG)";
     else
-      HOMEBREW="$HOME/Homebrew";
-      git clone --depth=1 https://github.com/Homebrew/brew "$HOMEBREW";
-      export PATH="$HOMEBREW/bin:$PATH";
+      HOMEBREW_REPOSITORY="$HOME/Homebrew";
+      git clone --depth=1 https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY";
+      export PATH="$HOMEBREW_REPOSITORY/bin:$PATH";
       umask 022;
     fi
-  - mkdir -p "$(brew --repo $TRAVIS_REPO_SLUG)"
-  - rsync -az "$TRAVIS_BUILD_DIR/" "$(brew --repo $TRAVIS_REPO_SLUG)"
-  - export TRAVIS_BUILD_DIR="$(brew --repo $TRAVIS_REPO_SLUG)"
-  - cd "$(brew --repo)"
+  - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
+  - mkdir -p "$(dirname "$HOMEBREW_TAP_DIR")"
+  - rm -rf "$HOMEBREW_TAP_DIR"
+  - ln -s "$PWD" "$HOMEBREW_TAP_DIR"
   - ulimit -n 1024
 
 script:
