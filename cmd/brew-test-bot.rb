@@ -519,7 +519,7 @@ module Homebrew
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
       new_formula = @added_formulae.include?(formula_name)
-      audit_args = [formula_name]
+      audit_args = [formula_name, "--online"]
       audit_args << "--new-formula" if new_formula
 
       if formula.stable
