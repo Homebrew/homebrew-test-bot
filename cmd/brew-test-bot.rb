@@ -799,10 +799,14 @@ module Homebrew
         safe_system "brew", "untap", tap
       end
 
-      Dir.glob("#{HOMEBREW_PREFIX}/{Cellar,etc,var}/**/*").each do |file|
-        FileUtils.rm_rf file
+      prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
+      prefix_paths_to_keep << "bin/brew"
+      prefix_paths_to_keep.map! {|path| "#{HOMEBREW_PREFIX}/#{path}"}
+      Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
+        next if path.start_with?("#{HOMEBREW_REPOSITORY}")
+        next if prefix_paths_to_keep.include?(path)
+        FileUtils.rm_rf path
       end
-      safe_system "brew", "prune"
 
       if @tap
         HOMEBREW_REPOSITORY.cd do
