@@ -519,7 +519,7 @@ module Homebrew
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
       new_formula = @added_formulae.include?(formula_name)
-      audit_args = [formula_name]
+      audit_args = [formula_name, "--online"]
       audit_args << "--new-formula" if new_formula
 
       if formula.stable
@@ -806,10 +806,14 @@ module Homebrew
         safe_system "brew", "untap", tap
       end
 
-      Dir.glob("#{HOMEBREW_PREFIX}/{Cellar,etc,var}/**/*").each do |file|
-        FileUtils.rm_rf file
+      prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
+      prefix_paths_to_keep << "bin/brew"
+      prefix_paths_to_keep.map! {|path| "#{HOMEBREW_PREFIX}/#{path}"}
+      Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
+        next if path.start_with?("#{HOMEBREW_REPOSITORY}")
+        next if prefix_paths_to_keep.include?(path)
+        FileUtils.rm_rf path
       end
-      safe_system "brew", "prune"
 
       if @tap
         HOMEBREW_REPOSITORY.cd do
@@ -1084,7 +1088,7 @@ module Homebrew
     ENV["HOMEBREW_SANDBOX"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
-    ENV["HOMEBREW_EXPERIMENTAL_FILTER_FLAGS_ON_DEPS"] = "1"
+    ENV["HOMEBREW_CHECK_RECURSIVE_VERSION_DEPENDENCIES"] = "1"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
     travis = !ENV["TRAVIS"].nil?
