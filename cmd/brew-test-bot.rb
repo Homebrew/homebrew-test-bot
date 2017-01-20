@@ -774,8 +774,7 @@ module Homebrew
         end
 
         test "brew", "tests", "--no-compat"
-        # brew tests --generic currently fails on Linux.
-        test "brew", "tests", "--generic" unless OS.linux?
+        test "brew", "tests", "--generic"
         test "brew", "tests", "--official-cmd-taps", *coverage_args
 
         if OS.mac?
