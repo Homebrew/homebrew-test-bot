@@ -838,6 +838,8 @@ module Homebrew
         git "reset", "--hard", "origin/master"
       end
 
+      Pathname.glob("*.bottle*.*").each(&:unlink)
+
       cleanup_shared
     end
 
