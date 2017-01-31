@@ -998,18 +998,6 @@ module Homebrew
 
     # These variables are for Jenkins and Circle CI respectively.
     pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CIRCLE_PR_NUMBER"]
-    if pr
-      pull_pr = "#{tap.remote}/pull/#{pr}"
-      safe_system "brew", "pull", "--clean", *[tap ? "--tap=#{tap}" : nil, pull_pr].compact
-    end
-
-    if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
-      system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
-    else
-      system "brew", "bottle", "--merge", "--write", *json_files
-    end
-
-    # These variables are for Jenkins and Circle CI respectively.
     upstream_number = ENV["UPSTREAM_BUILD_NUMBER"] || ENV["CIRCLE_BUILD_NUM"]
     remote = "git@github.com:#{ENV["GIT_AUTHOR_NAME"]}/homebrew-#{tap.repo}.git"
     git_tag = if pr
@@ -1021,6 +1009,17 @@ module Homebrew
     end
     if git_tag
       safe_system "git", "push", "--force", remote, "master:master", ":refs/tags/#{git_tag}"
+    end
+
+    if pr
+      pull_pr = "#{tap.remote}/pull/#{pr}"
+      safe_system "brew", "pull", "--clean", *[tap ? "--tap=#{tap}" : nil, pull_pr].compact
+    end
+
+    if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
+      system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
+    else
+      system "brew", "bottle", "--merge", "--write", *json_files
     end
 
     formula_packaged = {}
@@ -1075,7 +1074,7 @@ module Homebrew
 
     return unless git_tag
     safe_system "git", "tag", "--force", git_tag
-    safe_system "git", "push", "--force", remote, "master:master", "refs/tags/#{git_tag}"
+    safe_system "git", "push", "--force", remote, "refs/tags/#{git_tag}"
   end
 
   def sanitize_argv_and_env
