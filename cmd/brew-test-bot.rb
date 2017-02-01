@@ -799,6 +799,7 @@ module Homebrew
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
+        next if tap == "homebrew/dupes" && !OS.mac?
         next if tap == "homebrew/test-bot"
         next if tap == "linuxbrew/xorg"
         next if tap == @tap.to_s
