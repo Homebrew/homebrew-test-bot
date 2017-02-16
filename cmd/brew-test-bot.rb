@@ -363,6 +363,7 @@ module Homebrew
       @start_branch = current_branch
 
       travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
+      circle_pr = ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
 
       # Use Jenkins GitHub Pull Request Builder plugin variables for
       # pull request jobs.
@@ -381,7 +382,7 @@ module Homebrew
         @url = "https://github.com/#{ENV["TRAVIS_REPO_SLUG"]}/pull/#{ENV["TRAVIS_PULL_REQUEST"]}"
         @hash = nil
       # Use Circle CI pull-request variables for pull request jobs.
-      elsif ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
+      elsif circle_pr
         @url = ENV["CI_PULL_REQUEST"]
         @hash = nil
       end
@@ -393,6 +394,10 @@ module Homebrew
       # Use Travis CI Git variables for master or branch jobs.
       elsif ENV["TRAVIS_COMMIT_RANGE"]
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
+      # Use CircleCI Git variables.
+      elsif ENV["CIRCLE_SHA1"]
+        diff_start_sha1 = "origin/master"
+        diff_end_sha1 = ENV["CIRCLE_SHA1"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         diff_end_sha1 = diff_start_sha1 = current_sha1
@@ -1103,7 +1108,8 @@ module Homebrew
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
     travis = !ENV["TRAVIS"].nil?
-    if travis
+    circle = !ENV["CIRCLECI"].nil?
+    if travis || circle
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
@@ -1115,15 +1121,16 @@ module Homebrew
     end
 
     travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
+    circle_pr = ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
     jenkins_pr = !ENV["ghprbPullLink"].nil?
     jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
 
     if ARGV.include?("--ci-auto")
-      if travis_pr || jenkins_pr
+      if travis_pr || circle_pr || jenkins_pr
         ARGV << "--ci-pr"
         puts "Building in --ci-pr mode"
-      elsif travis || jenkins_branch
+      elsif travis || circle || jenkins_branch
         ARGV << "--ci-master"
         puts "Building in --ci-master mode"
       else
