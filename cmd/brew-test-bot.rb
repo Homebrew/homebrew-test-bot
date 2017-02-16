@@ -559,6 +559,11 @@ module Homebrew
         retry
       end
 
+      if OS.linux? && ENV["TRAVIS"]
+        installed_gcc = true
+        run_as_not_developer { test "brew", "install", "gcc" }
+      end
+
       begin
         deps.each do |dep|
           CompilerSelector.select_for(dep.to_formula)
