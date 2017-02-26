@@ -369,10 +369,6 @@ module Homebrew
         pr = $1
         @url = "#{git_url}/pull/#{pr}"
         @hash = nil
-      # Use Travis CI pull-request variables for pull request jobs.
-      elsif travis_pr
-        @url = "https://github.com/#{ENV["TRAVIS_REPO_SLUG"]}/pull/#{ENV["TRAVIS_PULL_REQUEST"]}"
-        @hash = nil
       # Use Circle CI pull-request variables for pull request jobs.
       elsif ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
         @url = ENV["CI_PULL_REQUEST"]
