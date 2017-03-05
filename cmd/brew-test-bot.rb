@@ -764,7 +764,7 @@ module Homebrew
         test "brew", "tests", "--generic"
         test "brew", "tests", "--official-cmd-taps", *coverage_args
 
-        if OS.mac?
+        if OS.mac? && (HOMEBREW_LIBRARY_PATH/"cask/cmd/brew-cask-tests.rb").exist?
           test "brew", "cask-tests", *coverage_args
         end
       elsif @tap
