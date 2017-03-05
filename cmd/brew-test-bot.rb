@@ -743,6 +743,7 @@ module Homebrew
       end
 
       if formula.devel && formula.stable? \
+         && OS.mac? \
          && !ARGV.include?("--HEAD") && !ARGV.include?("--fast") \
          && satisfied_requirements?(formula, :devel)
         test "brew", "fetch", "--retry", "--devel", *fetch_args
