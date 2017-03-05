@@ -765,7 +765,6 @@ module Homebrew
         test "brew", "tests", "--official-cmd-taps", *coverage_args
 
         if OS.mac?
-          run_as_not_developer { test "brew", "tap", "caskroom/cask" }
           test "brew", "cask-tests", *coverage_args
         end
       elsif @tap
