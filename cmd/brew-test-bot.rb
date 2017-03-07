@@ -1035,11 +1035,10 @@ module Homebrew
       safe_system "brew", "pull", "--clean", *[tap ? "--tap=#{tap}" : nil, pull_pr].compact
     end
 
-    if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
-      system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
-    else
-      system "brew", "bottle", "--merge", "--write", *json_files
-    end
+    args = []
+    args << "--keep-old" if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
+    args << "--keep-going" if ARGV.include?("--keep-going")
+    safe_system "brew", "bottle", "--merge", "--write", *args, *json_files
 
     formula_packaged = {}
 
@@ -1060,10 +1059,15 @@ module Homebrew
         filename = tag_hash["filename"]
         if system "curl", "-I", "--silent", "--fail", "--output", "/dev/null",
                   "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
-          raise <<-EOS.undent
+          message = <<-EOS.undent
             #{filename} is already published. Please remove it manually from
             https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
           EOS
+          if ARGV.include? "--keep-going"
+            opoo message
+          else
+            raise message
+          end
         end
 
         unless formula_packaged[formula_name]
