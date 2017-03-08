@@ -355,8 +355,6 @@ module Homebrew
       @category = __method__
       @start_branch = current_branch
 
-      travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
-
       # Use Jenkins GitHub Pull Request Builder plugin variables for
       # pull request jobs.
       if ENV["ghprbPullLink"]
