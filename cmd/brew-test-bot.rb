@@ -405,7 +405,7 @@ module Homebrew
         diff_start_sha1 = "#{@hash}^"
         diff_end_sha1 = @hash
         @name = @hash
-      # Handle a URL being passed on the command-line or through Jenkins/Travis
+      # Handle a URL being passed on the command-line or through Jenkins
       # environment variables e.g.
       # `brew test-bot https://github.com/Homebrew/homebrew-core/pull/678`.
       elsif @url
