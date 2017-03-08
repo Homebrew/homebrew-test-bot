@@ -355,8 +355,6 @@ module Homebrew
       @category = __method__
       @start_branch = current_branch
 
-      travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
-
       # Use Jenkins GitHub Pull Request Builder plugin variables for
       # pull request jobs.
       if ENV["ghprbPullLink"]
@@ -368,10 +366,6 @@ module Homebrew
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
         pr = $1
         @url = "#{git_url}/pull/#{pr}"
-        @hash = nil
-      # Use Travis CI pull-request variables for pull request jobs.
-      elsif travis_pr
-        @url = "https://github.com/#{ENV["TRAVIS_REPO_SLUG"]}/pull/#{ENV["TRAVIS_PULL_REQUEST"]}"
         @hash = nil
       # Use Circle CI pull-request variables for pull request jobs.
       elsif ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
@@ -411,7 +405,7 @@ module Homebrew
         diff_start_sha1 = "#{@hash}^"
         diff_end_sha1 = @hash
         @name = @hash
-      # Handle a URL being passed on the command-line or through Jenkins/Travis
+      # Handle a URL being passed on the command-line or through Jenkins
       # environment variables e.g.
       # `brew test-bot https://github.com/Homebrew/homebrew-core/pull/678`.
       elsif @url
