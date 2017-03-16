@@ -287,7 +287,7 @@ module Homebrew
       @repository = @tap ? @tap.path : HOMEBREW_REPOSITORY
       @skip_homebrew = options.fetch(:skip_homebrew, false)
 
-      if quiet_system "git", "-C", @repository.to_s, "rev-parse", "--verify", "-q", argument
+      if valid_git_ref?(argument)
         @hash = argument
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
         @url = url_match[0]
@@ -300,6 +300,13 @@ module Homebrew
       @category = __method__
       @brewbot_root = Pathname.pwd + "brewbot"
       FileUtils.mkdir_p @brewbot_root
+    end
+
+    def valid_git_ref?(ref)
+      quiet_system "git",
+        "--git-dir", (@repository/".git").to_s,
+        "--work-tree", @repository.to_s,
+        "rev-parse", "--verify", "-q", ref
     end
 
     def no_args?
