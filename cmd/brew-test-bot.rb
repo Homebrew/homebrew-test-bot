@@ -359,6 +359,10 @@ module Homebrew
         end.compact
       end
 
+      def merge_commit?(commit)
+        git("rev-list", "--parents", "-n1", commit).count(" ") > 1
+      end
+
       @category = __method__
       @start_branch = current_branch
 
@@ -453,7 +457,13 @@ module Homebrew
       if @tap
         formula_path = @tap.formula_dir.to_s
         @added_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
-        @modified_formula += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
+        if merge_commit? diff_end_sha1
+          # Test formulae whose bottles were updated.
+          summaries = git("log", "--pretty=%s", "#{diff_start_sha1}..#{diff_end_sha1}").lines
+          @modified_formula = summaries.map { |s| s[/^([^:]+): update .* bottle\.$/, 1] }.compact
+        else
+          @modified_formula += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
+        end
         or_later_arg = "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$"
         unless @modified_formula.empty?
           unless git("diff", or_later_arg, "--unified=0", diff_start_sha1, diff_end_sha1).strip.empty?
