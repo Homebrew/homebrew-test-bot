@@ -407,7 +407,11 @@ module Homebrew
         diff_end_sha1 = diff_start_sha1 = current_sha1
       end
 
-      diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
+      if merge_commit? diff_end_sha1
+        diff_start_sha1 = git("rev-parse", "#{diff_end_sha1}^1").strip
+      else
+        diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
+      end
 
       # Handle no arguments being passed on the command-line e.g. `brew test-bot`.
       if no_args?
