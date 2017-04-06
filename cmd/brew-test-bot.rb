@@ -723,6 +723,10 @@ module Homebrew
             test "brew", "install", bottle_filename
           end
         end
+        if OS.linux?
+          test "brew", "linkage", formula_name
+          test "brew", "linkage", "--test", formula_name
+        end
         shared_test_args = ["--verbose"]
         shared_test_args << "--keep-tmp" if ARGV.keep_tmp?
         test "brew", "test", formula_name, *shared_test_args if formula.test_defined?
