@@ -132,9 +132,10 @@ module Homebrew
       end
     end
 
-    # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
+    # Get tap from Jenkins CHANGE_URL, UPSTREAM_GIT_URL, GIT_URL or
     # Circle CI's CIRCLE_REPOSITORY_URL.
     git_url =
+      ENV["CHANGE_URL"] ||
       ENV["UPSTREAM_GIT_URL"] ||
       ENV["GIT_URL"] ||
       ENV["CIRCLE_REPOSITORY_URL"]
@@ -361,6 +362,11 @@ module Homebrew
         @url = ENV["ghprbPullLink"]
         @hash = nil
         test "git", "checkout", "origin/master"
+      # Use Jenkins Pipeline plugin variables for pull request jobs
+      elsif ENV["CHANGE_URL"]
+        @url = ENV["CHANGE_URL"]
+        @hash = nil
+      # Use Jenkins Git plugin variables
       elsif ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
@@ -380,6 +386,10 @@ module Homebrew
       # Use Travis CI Git variables for master or branch jobs.
       elsif ENV["TRAVIS_COMMIT_RANGE"]
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
+      # Use Jenkins Pipeline plugin variables for pull request jobs
+      elsif ENV["CHANGE_TARGET"]
+        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"])
+        diff_end_sha1 = current_sha1
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         diff_end_sha1 = diff_start_sha1 = current_sha1
