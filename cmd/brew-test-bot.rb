@@ -394,19 +394,7 @@ module Homebrew
         diff_end_sha1 = diff_start_sha1 = current_sha1
       end
 
-      if ENV["JENKINS_HOME"]
-        puts "Jenkins url: #{@url}"
-        puts "Jenkins hash: #{@hash}"
-        puts "Jenkins current_sha1: #{current_sha1}"
-        puts "Jenkins diff_start_sha1: #{diff_start_sha1}"
-        puts "Jenkins diff_end_sha1: #{diff_end_sha1}"
-      end
-
       diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
-
-      if ENV["JENKINS_HOME"]
-        puts "Jenkins merge-base diff_start_sha1: #{diff_start_sha1}"
-      end
 
       # Handle no arguments being passed on the command-line e.g. `brew test-bot`.
       if no_args?
@@ -447,9 +435,6 @@ module Homebrew
         raise "Cannot set @name: invalid command-line arguments!"
       end
 
-      if ENV["JENKINS_HOME"]
-        puts "Jenkins name: #{@name}"
-      end
 
       @log_root = @brewbot_root + @name
       FileUtils.mkdir_p @log_root
@@ -479,9 +464,6 @@ module Homebrew
       end
 
       @formulae += @added_formulae + @modified_formula
-      if ENV["JENKINS_HOME"]
-        puts "Jenkins formulae: #{@formulae.to_a.join " "}"
-      end
     end
 
     def skip(formula_name)
