@@ -132,7 +132,7 @@ module Homebrew
       end
     end
 
-    # Get tap from Jenkins CHANGE_URL, UPSTREAM_GIT_URL, GIT_URL or
+    # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
     # Circle CI's CIRCLE_REPOSITORY_URL.
     git_url =
       ENV["UPSTREAM_GIT_URL"] ||
@@ -362,11 +362,11 @@ module Homebrew
         @hash = nil
         test "git", "checkout", "origin/master"
       # Use Jenkins Pipeline plugin variables for pull request jobs
-      elsif ENV["CHANGE_URL"]
+      elsif ENV["JENKINS_HOME"] && ENV["CHANGE_URL"]
         @url = ENV["CHANGE_URL"]
         @hash = nil
       # Use Jenkins Git plugin variables
-      elsif ENV["GIT_URL"] && ENV["GIT_BRANCH"]
+      elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
         pr = $1
@@ -386,15 +386,27 @@ module Homebrew
       elsif ENV["TRAVIS_COMMIT_RANGE"]
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
       # Use Jenkins Pipeline plugin variables for pull request jobs
-      elsif ENV["CHANGE_TARGET"]
-        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"])
+      elsif ENV["JENKINS_HOME"] && ENV["CHANGE_TARGET"]
+        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"]).strip
         diff_end_sha1 = current_sha1
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         diff_end_sha1 = diff_start_sha1 = current_sha1
       end
 
+      if ENV["JENKINS_HOME"]
+        puts "Jenkins url: #{@url}"
+        puts "Jenkins hash: #{@hash}"
+        puts "Jenkins current_sha1: #{current_sha1}"
+        puts "Jenkins diff_start_sha1: #{diff_start_sha1}"
+        puts "Jenkins diff_end_sha1: #{diff_end_sha1}"
+      end
+
       diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
+
+      if ENV["JENKINS_HOME"]
+        puts "Jenkins merge-base diff_start_sha1: #{diff_start_sha1}"
+      end
 
       # Handle no arguments being passed on the command-line e.g. `brew test-bot`.
       if no_args?
@@ -435,6 +447,10 @@ module Homebrew
         raise "Cannot set @name: invalid command-line arguments!"
       end
 
+      if ENV["JENKINS_HOME"]
+        puts "Jenkins name: #{@name}"
+      end
+
       @log_root = @brewbot_root + @name
       FileUtils.mkdir_p @log_root
 
@@ -463,6 +479,9 @@ module Homebrew
       end
 
       @formulae += @added_formulae + @modified_formula
+      if ENV["JENKINS_HOME"]
+        puts "Jenkins formulae: #{@formulae.to_a.join " "}"
+      end
     end
 
     def skip(formula_name)
@@ -1085,8 +1104,9 @@ module Homebrew
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
-    jenkins_pipeline_branch = !ENV["BRANCH_NAME"].nil?
-    jenkins_pipeline_pr = !ENV["CHANGE_URL"].nil?
+    jenkins = !ENV["JENKINS_HOME"].nil?
+    jenkins_pipeline_branch = jenkins && !ENV["BRANCH_NAME"].nil?
+    jenkins_pipeline_pr = jenkins && !ENV["CHANGE_URL"].nil?
     if jenkins_pipeline_branch || jenkins_pipeline_pr
       ARGV << "--ci-auto" << "--no-pull"
     end
