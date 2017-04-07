@@ -1086,6 +1086,11 @@ module Homebrew
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
+    jenkins_pipeline_pr = !ENV["CHANGE_URL"].nil?
+    if jenkins_pipeline_pr
+      ARGV << "--ci-auto" << "--no-pull"
+    end
+
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
     if OS.mac? && (ENV["CODECOV_TOKEN"] || travis)
@@ -1095,7 +1100,7 @@ module Homebrew
     travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
     jenkins_pr = !ENV["ghprbPullLink"].nil?
     jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
-    jenkins_pr ||= !ENV["CHANGE_URL"].nil?
+    jenkins_pr ||= jenkins_pipeline_pr
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
     jenkins_branch ||= !ENV["BRANCH_NAME"].nil?
 
