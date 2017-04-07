@@ -135,7 +135,6 @@ module Homebrew
     # Get tap from Jenkins CHANGE_URL, UPSTREAM_GIT_URL, GIT_URL or
     # Circle CI's CIRCLE_REPOSITORY_URL.
     git_url =
-      ENV["CHANGE_URL"] ||
       ENV["UPSTREAM_GIT_URL"] ||
       ENV["GIT_URL"] ||
       ENV["CIRCLE_REPOSITORY_URL"]
@@ -1086,8 +1085,9 @@ module Homebrew
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
+    jenkins_pipeline_branch = !ENV["BRANCH_NAME"].nil?
     jenkins_pipeline_pr = !ENV["CHANGE_URL"].nil?
-    if jenkins_pipeline_pr
+    if jenkins_pipeline_branch || jenkins_pipeline_pr
       ARGV << "--ci-auto" << "--no-pull"
     end
 
@@ -1102,7 +1102,7 @@ module Homebrew
     jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
     jenkins_pr ||= jenkins_pipeline_pr
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
-    jenkins_branch ||= !ENV["BRANCH_NAME"].nil?
+    jenkins_branch ||= jenkins_pipeline_branch
 
     if ARGV.include?("--ci-auto")
       if travis_pr || jenkins_pr
