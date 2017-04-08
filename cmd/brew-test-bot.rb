@@ -1088,8 +1088,8 @@ module Homebrew
     end
 
     jenkins = !ENV["JENKINS_HOME"].nil?
-    jenkins_pipeline_branch = jenkins && !ENV["BRANCH_NAME"].nil?
     jenkins_pipeline_pr = jenkins && !ENV["CHANGE_URL"].nil?
+    jenkins_pipeline_branch = jenkins && !jenkins_pipeline_pr && !ENV["BRANCH_NAME"].nil?
     if jenkins_pipeline_branch || jenkins_pipeline_pr
       ARGV << "--ci-auto"
     end
