@@ -306,10 +306,6 @@ module Homebrew
       FileUtils.mkdir_p @brewbot_root
     end
 
-    def no_args?
-      @hash == "HEAD"
-    end
-
     def safe_formula_canonical_name(formula_name)
       Formulary.factory(formula_name).full_name
     rescue TapFormulaUnavailableError => e
@@ -369,6 +365,7 @@ module Homebrew
       elsif ENV["JENKINS_HOME"] && ENV["CHANGE_URL"]
         @url = ENV["CHANGE_URL"]
         @hash = nil
+        test "git", "checkout", "origin/master"
       # Use Jenkins Git plugin variables
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
@@ -389,8 +386,8 @@ module Homebrew
       # Use Travis CI Git variables for master or branch jobs.
       elsif ENV["TRAVIS_COMMIT_RANGE"]
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
-      # Use Jenkins Pipeline plugin variables for pull request jobs
-      elsif ENV["JENKINS_HOME"] && ENV["CHANGE_TARGET"]
+      # Use Jenkins Pipeline plugin variables for branch jobs
+      elsif ENV["JENKINS_HOME"] && !ENV["CHANGE_URL"] && ENV["CHANGE_TARGET"]
         diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"]).strip
         diff_end_sha1 = current_sha1
       # Otherwise just use the current SHA-1 (which may be overriden later)
@@ -401,7 +398,7 @@ module Homebrew
       diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
 
       # Handle no arguments being passed on the command-line e.g. `brew test-bot`.
-      if no_args?
+      if @hash == "HEAD"
         if diff_start_sha1 == diff_end_sha1 || \
            single_commit?(diff_start_sha1, diff_end_sha1)
           @name = diff_end_sha1
@@ -438,7 +435,6 @@ module Homebrew
       else
         raise "Cannot set @name: invalid command-line arguments!"
       end
-
 
       @log_root = @brewbot_root + @name
       FileUtils.mkdir_p @log_root
@@ -1095,7 +1091,10 @@ module Homebrew
     jenkins_pipeline_branch = jenkins && !ENV["BRANCH_NAME"].nil?
     jenkins_pipeline_pr = jenkins && !ENV["CHANGE_URL"].nil?
     if jenkins_pipeline_branch || jenkins_pipeline_pr
-      ARGV << "--ci-auto" << "--no-pull"
+      ARGV << "--ci-auto"
+    end
+    if jenkins_pipeline_branch
+      ARGV << "--no-pull"
     end
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
