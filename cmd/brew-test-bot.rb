@@ -1024,12 +1024,19 @@ module Homebrew
       bintray_package = bottle_hash["bintray"]["package"]
       bintray_org = ARGV.value("bintray-org") || "homebrew"
       bintray_repo = bottle_hash["bintray"]["repository"]
-      bintray_repo_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
+      bintray_packages_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
       bottle_hash["bottle"]["tags"].each do |_tag, tag_hash|
         filename = tag_hash["filename"]
-        if system "curl", "-I", "--silent", "--fail", "--output", "/dev/null",
-                  "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
+        bintray_filename_url = "https://api.bintray.com/file_version/#{bintray_org}/#{bintray_repo}/#{filename}"
+        filename_already_published = begin
+          json = JSON.parse curl_output bintray_filename_url
+          json["published"]
+        rescue JSON::ParserError
+          false
+        end
+
+        if filename_already_published
           raise <<-EOS.undent
             #{filename} is already published. Please remove it manually from
             https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
@@ -1037,16 +1044,16 @@ module Homebrew
         end
 
         unless formula_packaged[formula_name]
-          package_url = "#{bintray_repo_url}/#{bintray_package}"
-          unless system "curl", "--silent", "--fail", "--output", "/dev/null", package_url
+          package_url = "#{bintray_packages_url}/#{bintray_package}"
+          unless curl "--output", "/dev/null", package_url
             package_blob = <<-EOS.undent
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
                "public_stats": true}
             EOS
-            curl "--silent", "--fail", "-u#{bintray_user}:#{bintray_key}",
-                 "-H", "Content-Type: application/json",
-                 "-d", package_blob, bintray_repo_url
+            curl "--user#{bintray_user}:#{bintray_key}",
+                 "--header", "Content-Type: application/json",
+                 "--data", package_blob, bintray_packages_url
             puts
           end
           formula_packaged[formula_name] = true
@@ -1054,8 +1061,8 @@ module Homebrew
 
         content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
-        curl "--silent", "--fail", "-u#{bintray_user}:#{bintray_key}",
-             "-T", filename, content_url
+        curl "--user#{bintray_user}:#{bintray_key}",
+             "--upload-file", filename, content_url
         puts
       end
     end
