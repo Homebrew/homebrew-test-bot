@@ -1030,7 +1030,8 @@ module Homebrew
         filename = tag_hash["filename"]
         bintray_filename_url = "https://api.bintray.com/file_version/#{bintray_org}/#{bintray_repo}/#{filename}"
         filename_already_published = begin
-          json = JSON.parse curl_output bintray_filename_url
+          output, _ = curl_output bintray_filename_url
+          json = JSON.parse output
           json["published"]
         rescue JSON::ParserError
           false
