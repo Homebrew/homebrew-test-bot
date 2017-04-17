@@ -1052,7 +1052,7 @@ module Homebrew
                "public_download_numbers": true,
                "public_stats": true}
             EOS
-            curl "--user#{bintray_user}:#{bintray_key}",
+            curl "--user", "#{bintray_user}:#{bintray_key}",
                  "--header", "Content-Type: application/json",
                  "--data", package_blob, bintray_packages_url
             puts
@@ -1062,7 +1062,7 @@ module Homebrew
 
         content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
-        curl "--user#{bintray_user}:#{bintray_key}",
+        curl "--user", "#{bintray_user}:#{bintray_key}",
              "--upload-file", filename, content_url
         puts
       end
