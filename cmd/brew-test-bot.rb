@@ -951,18 +951,14 @@ module Homebrew
     # Don't trust formulae we're uploading
     ENV["HOMEBREW_DISABLE_LOAD_FORMULA"] = "1"
 
-    bintray_user = ENV["BINTRAY_USER"]
-    bintray_key = ENV["BINTRAY_KEY"]
+    bintray_user = ENV["HOMEBREW_BINTRAY_USER"]
+    bintray_key = ENV["HOMEBREW_BINTRAY_KEY"]
     if !bintray_user || !bintray_key
-      raise "Missing BINTRAY_USER or BINTRAY_KEY variables!"
+      raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!"
     end
 
     # Don't pass keys/cookies to subprocesses
-    ENV["BINTRAY_KEY"] = nil
-    ENV["HUDSON_SERVER_COOKIE"] = nil
-    ENV["JENKINS_SERVER_COOKIE"] = nil
-    ENV["HUDSON_COOKIE"] = nil
-    ENV["COVERALLS_REPO_TOKEN"] = nil
+    ENV.clear_sensitive_environment!
 
     ARGV << "--verbose"
 
