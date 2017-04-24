@@ -592,17 +592,28 @@ module Homebrew
       formula.recursive_dependencies.each do |dependency|
         conflicts += dependency.to_formula.conflicts
       end
-
-      conflicts.each do |conflict|
-        confict_formula = Formulary.factory(conflict.name)
-
-        if confict_formula.installed? && confict_formula.linked_keg.exist?
-          test "brew", "unlink", "--force", conflict.name
-        end
-      end
+      unlink_formulae = conflicts.map(&:name)
 
       installed = Utils.popen_read("brew", "list").split("\n")
       dependencies = Utils.popen_read("brew", "deps", "--include-build", formula_name).split("\n")
+      installed_non_dependencies = installed - dependencies
+      installed_dependencies = installed & dependencies
+
+      unlink_formulae += installed_non_dependencies if ARGV.include?("--cleanup")
+
+      unlink_formulae.uniq.each do |name|
+        unlink_formula = Formulary.factory(name)
+        next unless unlink_formula.installed?
+        next unless unlink_formula.linked_keg.exist?
+        test "brew", "unlink", "--force", name
+      end
+
+      installed_dependencies.each do |name|
+        link_formula = Formulary.factory(name)
+        next if link_formula.keg_only?
+        next if link_formula.linked_keg.exist?
+        test "brew", "link", name
+      end
 
       dependencies -= installed
       unchanged_dependencies = dependencies - @formulae
