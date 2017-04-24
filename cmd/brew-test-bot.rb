@@ -1057,7 +1057,7 @@ module Homebrew
 
         unless formula_packaged[formula_name]
           package_url = "#{bintray_packages_url}/#{bintray_package}"
-          unless system(*curl_args("--output", "/dev/null", package_url))
+          unless system(*curl_args(["--output", "/dev/null", package_url]))
             package_blob = <<-EOS.undent
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
