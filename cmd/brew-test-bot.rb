@@ -1041,7 +1041,7 @@ module Homebrew
         filename = tag_hash["filename"]
         bintray_filename_url = "https://api.bintray.com/file_version/#{bintray_org}/#{bintray_repo}/#{filename}"
         filename_already_published = begin
-          output, _ = curl_output bintray_filename_url
+          output, = curl_output bintray_filename_url
           json = JSON.parse output
           json["published"]
         rescue JSON::ParserError
@@ -1057,7 +1057,7 @@ module Homebrew
 
         unless formula_packaged[formula_name]
           package_url = "#{bintray_packages_url}/#{bintray_package}"
-          unless curl "--output", "/dev/null", package_url
+          unless system(*curl_args("--output", "/dev/null", package_url))
             package_blob = <<-EOS.undent
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
