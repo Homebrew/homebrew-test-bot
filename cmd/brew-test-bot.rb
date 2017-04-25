@@ -975,6 +975,12 @@ module Homebrew
       end
     end
 
+    # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
+    bintray_org = ARGV.value("bintray-org") || "homebrew"
+    if bintray_org == "homebrew" && !OS.mac?
+      ENV["HOMEBREW_FORCE_HOMEBREW_ORG"] = "1"
+    end
+
     # Don't pass keys/cookies to subprocesses
     ENV.clear_sensitive_environment!
 
@@ -1094,7 +1100,7 @@ module Homebrew
     bottles_hash.each do |formula_name, bottle_hash|
       version = bottle_hash["formula"]["pkg_version"]
       bintray_package = bottle_hash["bintray"]["package"]
-      bintray_org = ARGV.value("bintray-org") || "homebrew"
+      bintray_org = bintray_org
       bintray_repo = bottle_hash["bintray"]["repository"]
       bintray_packages_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
