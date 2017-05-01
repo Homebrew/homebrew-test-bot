@@ -1100,23 +1100,20 @@ module Homebrew
     bottles_hash.each do |formula_name, bottle_hash|
       version = bottle_hash["formula"]["pkg_version"]
       bintray_package = bottle_hash["bintray"]["package"]
-      bintray_org = bintray_org
       bintray_repo = bottle_hash["bintray"]["repository"]
       bintray_packages_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
       bottle_hash["bottle"]["tags"].each do |_tag, tag_hash|
         filename = tag_hash["filename"]
-        bintray_filename_url = "https://api.bintray.com/file_version/#{bintray_org}/#{bintray_repo}/#{filename}"
+        bintray_filename_url =
+          "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
         filename_already_published = if ARGV.include?("--dry-run")
-          puts "curl #{bintray_filename_url}"
+          puts "curl -I --output /dev/null #{bintray_filename_url}"
           false
         else
           begin
-            output, = curl_output bintray_filename_url
-            json = JSON.parse output
-            json["published"]
-          rescue JSON::ParserError
-            false
+            system(*curl_args(extra_args: ["-I", "--output", "/dev/null",
+                                           bintray_filename_url]))
           end
         end
 
