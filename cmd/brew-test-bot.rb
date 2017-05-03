@@ -384,9 +384,10 @@ module Homebrew
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
-        pr = $1
-        @url = "#{git_url}/pull/#{pr}"
-        @hash = nil
+        if pr = $1
+          @url = "#{git_url}/pull/#{pr}"
+          @hash = nil
+        end
       # Use Circle CI pull-request variables for pull request jobs.
       elsif ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
         @url = ENV["CI_PULL_REQUEST"]
