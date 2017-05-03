@@ -678,9 +678,10 @@ module Homebrew
       run_as_not_developer do
         if !ARGV.include?("--fast") || formula_bottled || formula.bottle_unneeded?
           test "brew", "install", "--only-dependencies", *install_args unless dependencies.empty?
-          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/etc"
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/var"
+          if ARGV.include? "--cleanup"
+            # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+            FileUtils.rm_rf ["#{HOMEBREW_PREFIX}/etc", "#{HOMEBREW_PREFIX}/var"]
+          end
           test "brew", "install", *install_args
           install_passed = steps.last.passed?
         end
@@ -751,9 +752,10 @@ module Homebrew
          && satisfied_requirements?(formula, :devel)
         test "brew", "fetch", "--retry", "--devel", *fetch_args
         run_as_not_developer do
-          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/etc"
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/var"
+          if ARGV.include? "--cleanup"
+            # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+            FileUtils.rm_rf ["#{HOMEBREW_PREFIX}/etc", "#{HOMEBREW_PREFIX}/var"]
+          end
           test "brew", "install", "--devel", formula_name, *shared_install_args
         end
         devel_install_passed = steps.last.passed?
