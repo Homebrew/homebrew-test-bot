@@ -742,8 +742,9 @@ module Homebrew
         end
         if ARGV.include? "--cleanup"
           # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-          Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |path|
-            FileUtils.rm_rf path.sub(formula.bottle_prefix, HOMEBREW_PREFIX/"etc")
+          Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
+            prefix_path = bottle_path.sub(formula.bottle_prefix, HOMEBREW_PREFIX)
+            FileUtils.rm_rf prefix_path
           end
         end
         test "brew", "uninstall", "--force", formula_name
@@ -762,8 +763,9 @@ module Homebrew
           test "brew", "test", "--devel", formula_name, *shared_test_args if formula.test_defined?
           if ARGV.include? "--cleanup"
             # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-            Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |path|
-              FileUtils.rm_rf path.sub(formula.bottle_prefix, HOMEBREW_PREFIX/"etc")
+            Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
+              prefix_path = bottle_path.sub(formula.bottle_prefix, HOMEBREW_PREFIX)
+              FileUtils.rm_rf prefix_path
             end
           end
           test "brew", "uninstall", "--devel", "--force", formula_name
