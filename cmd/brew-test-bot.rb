@@ -304,6 +304,8 @@ module Homebrew
         @repository = HOMEBREW_REPOSITORY
       end
       @skip_homebrew = options.fetch(:skip_homebrew, false)
+      @skip_cleanup_before = options.fetch(:skip_cleanup_before, false)
+      @skip_cleanup_after = options.fetch(:skip_cleanup_after, false)
 
       if quiet_system "git", "-C", @repository.to_s, "rev-parse", "--verify", "-q", argument
         @hash = argument
@@ -868,6 +870,7 @@ module Homebrew
 
     def cleanup_before
       @category = __method__
+      return if @skip_cleanup_before
       return unless ARGV.include? "--cleanup"
       git "stash", "clear"
       git "stash"
@@ -885,7 +888,8 @@ module Homebrew
 
     def cleanup_after
       @category = __method__
-      return if ENV["TRAVIS"]
+      return if @skip_cleanup_after
+      return if ENV["TRAVIS"] || ENV["CIRCLE_CI"]
 
       if @start_branch && !@start_branch.empty? && \
          (ARGV.include?("--cleanup") || @url || @hash)
@@ -1286,17 +1290,25 @@ module Homebrew
     tests = []
     any_errors = false
     skip_homebrew = ARGV.include?("--skip-homebrew")
+    skip_cleanup_before = false
     if ARGV.named.empty?
       # With no arguments just build the most recent commit.
-      current_test = Test.new("HEAD", tap: tap, skip_homebrew: skip_homebrew)
+      current_test = Test.new("HEAD", tap: tap,
+                                      skip_homebrew: skip_homebrew,
+                                      skip_cleanup_before: skip_cleanup_before)
       any_errors = !current_test.run
       tests << current_test
     else
       ARGV.named.each do |argument|
+        skip_cleanup_after = argument != ARGV.named.last
         test_error = false
         begin
-          current_test = Test.new(argument, tap: tap, skip_homebrew: skip_homebrew)
+          current_test = Test.new(argument, tap: tap,
+                                            skip_homebrew: skip_homebrew,
+                                            skip_cleanup_before: skip_cleanup_before,
+                                            skip_cleanup_after: skip_cleanup_after)
           skip_homebrew = true
+          skip_cleanup_before = true
         rescue ArgumentError => e
           test_error = true
           ofail e.message
