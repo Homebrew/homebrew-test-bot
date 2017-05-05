@@ -1038,14 +1038,14 @@ module Homebrew
               Utils::Bottles.tag => {
                 "filename" => "testbottest-1.0.0.#{Utils::Bottles.tag}.bottle.tar.gz",
                 "sha256" => "20cdde424f5fe6d4fdb6a24cff41d2f7aefcd1ef2f98d46f6c074c36a1eef81e",
-              }
-            }
+              },
+            },
           },
           "bintray" => {
             "package" => "testbottest",
             "repository" => "bottles",
           },
-        }
+        },
       }
     end
 
