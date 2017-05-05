@@ -678,10 +678,6 @@ module Homebrew
       run_as_not_developer do
         if !ARGV.include?("--fast") || formula_bottled || formula.bottle_unneeded?
           test "brew", "install", "--only-dependencies", *install_args unless dependencies.empty?
-          if ARGV.include? "--cleanup"
-            # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-            FileUtils.rm_rf ["#{HOMEBREW_PREFIX}/etc", "#{HOMEBREW_PREFIX}/var"]
-          end
           test "brew", "install", *install_args
           install_passed = steps.last.passed?
         end
@@ -744,6 +740,12 @@ module Homebrew
             test "brew", "test", "--verbose", dependent.name
           end
         end
+        if ARGV.include? "--cleanup"
+          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+          Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |path|
+            FileUtils.rm_rf path.sub(formula.bottle_prefix, HOMEBREW_PREFIX/"etc")
+          end
+        end
         test "brew", "uninstall", "--force", formula_name
       end
 
@@ -752,16 +754,18 @@ module Homebrew
          && satisfied_requirements?(formula, :devel)
         test "brew", "fetch", "--retry", "--devel", *fetch_args
         run_as_not_developer do
-          if ARGV.include? "--cleanup"
-            # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-            FileUtils.rm_rf ["#{HOMEBREW_PREFIX}/etc", "#{HOMEBREW_PREFIX}/var"]
-          end
           test "brew", "install", "--devel", formula_name, *shared_install_args
         end
         devel_install_passed = steps.last.passed?
         test "brew", "audit", "--devel", *audit_args
         if devel_install_passed
           test "brew", "test", "--devel", formula_name, *shared_test_args if formula.test_defined?
+          if ARGV.include? "--cleanup"
+            # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+            Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |path|
+              FileUtils.rm_rf path.sub(formula.bottle_prefix, HOMEBREW_PREFIX/"etc")
+            end
+          end
           test "brew", "uninstall", "--devel", "--force", formula_name
         end
       end
