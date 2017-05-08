@@ -893,7 +893,13 @@ module Homebrew
     def cleanup_after
       @category = __method__
       return if @skip_cleanup_after
-      return if ENV["TRAVIS"] || ENV["CIRCLE_CI"]
+      return if ENV["CIRCLE_CI"]
+
+      if ENV["TRAVIS"]
+        # For Travis CI build caching.
+        test "brew", "install", "md5deep" if OS.mac?
+        return
+      end
 
       if @start_branch && !@start_branch.empty? && \
          (ARGV.include?("--cleanup") || @url || @hash)
