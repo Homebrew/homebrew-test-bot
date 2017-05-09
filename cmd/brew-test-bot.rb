@@ -523,6 +523,35 @@ module Homebrew
       test "brew", "config"
     end
 
+    def link_deps_unlink_conflicts(formula, installed = nil, dependencies = nil)
+      conflicts = formula.conflicts
+      formula.recursive_dependencies.each do |dependency|
+        conflicts += dependency.to_formula.conflicts
+      end
+      unlink_formulae = conflicts.map(&:name)
+
+      installed ||= Utils.popen_read("brew", "list").split("\n")
+      dependencies ||= Utils.popen_read("brew", "deps", formula.name).split("\n")
+      installed_non_dependencies = installed - dependencies
+      installed_dependencies = installed & dependencies
+
+      unlink_formulae += installed_non_dependencies if ARGV.include?("--cleanup")
+
+      unlink_formulae.uniq.each do |name|
+        unlink_formula = Formulary.factory(name)
+        next unless unlink_formula.installed?
+        next unless unlink_formula.linked_keg.exist?
+        test "brew", "unlink", "--force", name
+      end
+
+      installed_dependencies.each do |name|
+        link_formula = Formulary.factory(name)
+        next if link_formula.keg_only?
+        next if link_formula.linked_keg.exist?
+        test "brew", "link", name
+      end
+    end
+
     def formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
 
@@ -617,6 +646,8 @@ module Homebrew
         next if link_formula.linked_keg.exist?
         test "brew", "link", name
       end
+      dependencies = Utils.popen_read("brew", "deps", "--include-build", formula.name).split("\n")
+      link_deps_unlink_conflicts(formula, installed, dependencies)
 
       dependencies -= installed
       unchanged_dependencies = dependencies - @formulae
@@ -721,16 +752,10 @@ module Homebrew
         shared_test_args << "--keep-tmp" if ARGV.keep_tmp?
         test "brew", "test", formula_name, *shared_test_args if formula.test_defined?
         bottled_dependents.each do |dependent|
+          link_deps_unlink_conflicts(dependent)
           unless dependent.installed?
             test "brew", "fetch", "--retry", dependent.name
             next if steps.last.failed?
-            conflicts = dependent.conflicts.map { |c| Formulary.factory(c.name) }.select(&:installed?)
-            dependent.recursive_dependencies.each do |dependency|
-              conflicts += dependency.to_formula.conflicts.map { |c| Formulary.factory(c.name) }.select(&:installed?)
-            end
-            conflicts.each do |conflict|
-              test "brew", "unlink", conflict.name
-            end
             unless ARGV.include?("--fast")
               run_as_not_developer { test "brew", "install", dependent.name }
               next if steps.last.failed?
