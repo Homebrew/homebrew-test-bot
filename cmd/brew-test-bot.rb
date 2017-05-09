@@ -339,15 +339,37 @@ module Homebrew
       @repository.cd { Utils.popen_read("git", *args) }
     end
 
+    def shorten_revision(revision)
+      git("rev-parse", "--short", revision).strip
+    end
+
+    def current_sha1
+      shorten_revision "HEAD"
+    end
+
+    def commit_start_end
+      # Use Jenkins Git plugin variables for master branch jobs.
+      if ENV["GIT_PREVIOUS_COMMIT"] && ENV["GIT_COMMIT"]
+        diff_start_sha1 = ENV["GIT_PREVIOUS_COMMIT"]
+        diff_end_sha1 = ENV["GIT_COMMIT"]
+      # Use Travis CI Git variables for master or branch jobs.
+      elsif ENV["TRAVIS_COMMIT_RANGE"]
+        diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
+      # Use Jenkins Pipeline plugin variables for branch jobs
+      elsif ENV["JENKINS_HOME"] && !ENV["CHANGE_URL"] && ENV["CHANGE_TARGET"]
+        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"]).strip
+        diff_end_sha1 = current_sha1
+      # Otherwise just use the current SHA-1 (which may be overriden later)
+      else
+        diff_end_sha1 = diff_start_sha1 = current_sha1
+      end
+
+      diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
+
+      [diff_start_sha1, diff_end_sha1]
+    end
+
     def download
-      def shorten_revision(revision)
-        git("rev-parse", "--short", revision).strip
-      end
-
-      def current_sha1
-        shorten_revision "HEAD"
-      end
-
       def current_branch
         git("symbolic-ref", "HEAD").gsub("refs/heads/", "").strip
       end
@@ -396,23 +418,7 @@ module Homebrew
         @hash = nil
       end
 
-      # Use Jenkins Git plugin variables for master branch jobs.
-      if ENV["GIT_PREVIOUS_COMMIT"] && ENV["GIT_COMMIT"]
-        diff_start_sha1 = ENV["GIT_PREVIOUS_COMMIT"]
-        diff_end_sha1 = ENV["GIT_COMMIT"]
-      # Use Travis CI Git variables for master or branch jobs.
-      elsif ENV["TRAVIS_COMMIT_RANGE"]
-        diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
-      # Use Jenkins Pipeline plugin variables for branch jobs
-      elsif ENV["JENKINS_HOME"] && !ENV["CHANGE_URL"] && ENV["CHANGE_TARGET"]
-        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"]).strip
-        diff_end_sha1 = current_sha1
-      # Otherwise just use the current SHA-1 (which may be overriden later)
-      else
-        diff_end_sha1 = diff_start_sha1 = current_sha1
-      end
-
-      diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
+      diff_start_sha1, diff_end_sha1 = commit_start_end
 
       # Handle no arguments being passed on the command-line e.g. `brew test-bot`.
       if @hash == "HEAD"
@@ -572,6 +578,10 @@ module Homebrew
       new_formula = @added_formulae.include?(formula_name)
       audit_args = [formula_name, "--online"]
       audit_args << "--new-formula" if new_formula
+
+      if ARGV.include?("--ci-pr")
+        audit_args << "--commit-range=#{commit_start_end.join("...")}"
+      end
 
       if formula.stable
         unless satisfied_requirements?(formula, :stable)
