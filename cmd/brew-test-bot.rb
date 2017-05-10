@@ -762,6 +762,9 @@ module Homebrew
             end
           end
           next unless dependent.installed?
+          if !dependent.keg_only? && !dependent.linked_keg.exist?
+            test "brew", "link", dependent.name
+          end
           test "brew", "linkage", "--test", dependent.name
           if testable_dependents.include? dependent
             test "brew", "test", "--verbose", dependent.name
