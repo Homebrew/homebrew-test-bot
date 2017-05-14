@@ -293,8 +293,7 @@ module Homebrew
       @url = nil
       @formulae = []
       @added_formulae = []
-      @modified_formulae = []
-      @deleted_formulae = []
+      @modified_formula = []
       @steps = []
       @tap = options[:tap]
       if @tap
@@ -462,10 +461,9 @@ module Homebrew
       if @tap && !@test_bot_tap
         formula_path = @tap.formula_dir.to_s
         @added_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
-        @modified_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
-        @deleted_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
+        @modified_formula += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
         or_later_arg = "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$"
-        unless @modified_formulae.empty?
+        unless @modified_formula.empty?
           unless git("diff", or_later_arg, "--unified=0", diff_start_sha1, diff_end_sha1).strip.empty?
             # Test rather than build bottles if we're testing a `*_or_later`
             # bottle change.
@@ -481,7 +479,7 @@ module Homebrew
         @added_formulae = [testbottest]
       end
 
-      @formulae += @added_formulae + @modified_formulae
+      @formulae += @added_formulae + @modified_formula
     end
 
     def skip(formula_name)
@@ -778,11 +776,6 @@ module Homebrew
       test "brew", "uninstall", "--force", *unchanged_dependencies unless unchanged_dependencies.empty?
     end
 
-    def deleted_formula(formula_name)
-      @category = "#{__method__}.#{formula_name}"
-      test "brew", "uses", formula_name
-    end
-
     def homebrew
       @category = __method__
       return if @skip_homebrew
@@ -981,9 +974,6 @@ module Homebrew
         homebrew
         formulae.each do |f|
           formula(f)
-        end
-        @deleted_formulae.each do |f|
-          deleted_formula(f)
         end
       ensure
         cleanup_after
