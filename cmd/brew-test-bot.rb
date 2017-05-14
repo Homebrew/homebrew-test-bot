@@ -78,6 +78,8 @@
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
 #:
+#:    If `--overwrite` is passed, overwrite existing published artifacts on Bintray
+#:
 #
 #:    Influential environment variables include:
 #:    `TRAVIS_REPO_SLUG`: same as `--tap`
@@ -1101,6 +1103,7 @@ module Homebrew
 
         content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
+        content_url += "?override=1" if ARGV.include? "--overwrite"
         curl "--silent", "--fail", "-u#{bintray_user}:#{bintray_key}",
              "-T", filename, content_url
         puts
