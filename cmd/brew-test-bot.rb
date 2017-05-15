@@ -113,6 +113,7 @@ module Homebrew
 
   WELL_STYLED_TAPS = [
     "homebrew/core",
+    "homebrew/test-bot",
   ].freeze
 
   def fix_encoding!(str)
@@ -195,10 +196,14 @@ module Homebrew
       @status == :failed
     end
 
+    def self.travis_increment
+      @travis_step ||= 0
+      @travis_step += 1
+    end
+
     def puts_command
       if ENV["TRAVIS"]
-        @@travis_step_num ||= 0
-        @travis_fold_id = @command.first(2).join(".") + ".#{@@travis_step_num += 1}"
+        @travis_fold_id = @command.first(2).join(".") + ".#{Step.travis_increment}"
         @travis_timer_id = rand(2**32).to_s(16)
         puts "travis_fold:start:#{@travis_fold_id}"
         puts "travis_time:start:#{@travis_timer_id}"
@@ -339,35 +344,35 @@ module Homebrew
       @repository.cd { Utils.popen_read("git", *args) }
     end
 
+    def shorten_revision(revision)
+      git("rev-parse", "--short", revision).strip
+    end
+
+    def current_sha1
+      shorten_revision "HEAD"
+    end
+
+    def current_branch
+      git("symbolic-ref", "HEAD").gsub("refs/heads/", "").strip
+    end
+
+    def single_commit?(start_revision, end_revision)
+      git("rev-list", "--count", "#{start_revision}..#{end_revision}").to_i == 1
+    end
+
+    def diff_formulae(start_revision, end_revision, path, filter)
+      return unless @tap
+      git(
+        "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
+        start_revision, end_revision, "--", path
+      ).lines.map do |line|
+        file = Pathname.new line.chomp
+        next unless @tap.formula_file?(file)
+        @tap.formula_file_to_name(file)
+      end.compact
+    end
+
     def download
-      def shorten_revision(revision)
-        git("rev-parse", "--short", revision).strip
-      end
-
-      def current_sha1
-        shorten_revision "HEAD"
-      end
-
-      def current_branch
-        git("symbolic-ref", "HEAD").gsub("refs/heads/", "").strip
-      end
-
-      def single_commit?(start_revision, end_revision)
-        git("rev-list", "--count", "#{start_revision}..#{end_revision}").to_i == 1
-      end
-
-      def diff_formulae(start_revision, end_revision, path, filter)
-        return unless @tap
-        git(
-          "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
-          start_revision, end_revision, "--", path
-        ).lines.map do |line|
-          file = Pathname.new line.chomp
-          next unless @tap.formula_file?(file)
-          @tap.formula_file_to_name(file)
-        end.compact
-      end
-
       @category = __method__
       @start_branch = current_branch
 
@@ -535,6 +540,67 @@ module Homebrew
       end
     end
 
+    def cleanup_bottle_etc_var(formula)
+      return unless ARGV.include? "--cleanup"
+      bottle_prefix = formula.opt_prefix/".bottle"
+      # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+      Pathname.glob("#{bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
+        prefix_path = bottle_path.sub(bottle_prefix, HOMEBREW_PREFIX)
+        FileUtils.rm_rf prefix_path
+      end
+    end
+
+    def bottle_reinstall_formula(formula)
+      return unless formula.stable?
+      return if ARGV.include?("--fast")
+      return if ARGV.include?("--no-bottle")
+      return if formula.bottle_disabled?
+      bottle_args = ["--verbose", "--json", formula.name]
+      bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
+      bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
+      bottle_args << "--force-core-tap" if @test_default_formula
+      test "brew", "bottle", *bottle_args
+      bottle_step = steps.last
+      return unless bottle_step.passed?
+      return unless bottle_step.output?
+      bottle_filename =
+        bottle_step.output.gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
+      bottle_json_filename = bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
+      bottle_merge_args = ["--merge", "--write", "--no-commit", bottle_json_filename]
+      if ARGV.include?("--keep-old") && !new_formula
+        bottle_merge_args << "--keep-old"
+      end
+      test "brew", "bottle", *bottle_merge_args
+      test "brew", "uninstall", "--force", formula.name
+      FileUtils.ln bottle_filename, HOMEBREW_CACHE/bottle_filename, force: true
+      @formulae.delete(formula.name)
+      unless @unchanged_build_dependencies.empty?
+        test "brew", "uninstall", "--force", *@unchanged_build_dependencies
+        @unchanged_dependencies -= @unchanged_build_dependencies
+      end
+      test "brew", "install", bottle_filename
+    end
+
+    def install_bottled_dependent(dependent)
+      unless dependent.installed?
+        test "brew", "fetch", "--retry", dependent.name
+        return if steps.last.failed?
+        unlink_conflicts dependent
+        unless ARGV.include?("--fast")
+          run_as_not_developer { test "brew", "install", dependent.name }
+          return if steps.last.failed?
+        end
+      end
+      return unless dependent.installed?
+      if !dependent.keg_only? && !dependent.linked_keg.exist?
+        unlink_conflicts dependent
+        test "brew", "link", dependent.name
+      end
+      test "brew", "linkage", "--test", dependent.name
+      return unless @testable_dependents.include? dependent
+      test "brew", "test", "--verbose", dependent.name
+    end
+
     def formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
 
@@ -628,25 +694,27 @@ module Homebrew
       end
 
       dependencies -= installed
-      unchanged_dependencies = dependencies - @formulae
-      changed_dependences = dependencies - unchanged_dependencies
+      @unchanged_dependencies = dependencies - @formulae
+      changed_dependences = dependencies - @unchanged_dependencies
 
       runtime_dependencies = Utils.popen_read("brew", "deps", formula_name).split("\n")
       build_dependencies = dependencies - runtime_dependencies
-      unchanged_build_dependencies = build_dependencies - @formulae
+      @unchanged_build_dependencies = build_dependencies - @formulae
 
       dependents = Utils.popen_read("brew", "uses", "--recursive", formula_name).split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
 
       bottled_dependents = dependents.select(&:bottled?)
-      testable_dependents = dependents.select { |d| d.bottled? && d.test_defined? }
+      @testable_dependents = dependents.select { |d| d.bottled? && d.test_defined? }
 
       if (deps | reqs).any? { |d| d.name == "mercurial" && d.build? }
         run_as_not_developer { test "brew", "install", "mercurial" }
       end
 
-      test "brew", "fetch", "--retry", *unchanged_dependencies unless unchanged_dependencies.empty?
+      unless @unchanged_dependencies.empty?
+        test "brew", "fetch", "--retry", *@unchanged_dependencies
+      end
 
       unless changed_dependences.empty?
         test "brew", "fetch", "--retry", "--build-from-source", *changed_dependences
@@ -701,62 +769,17 @@ module Homebrew
         test "brew", "style", formula_name
       end
 
+      test_args = ["--verbose"]
+      test_args << "--keep-tmp" if ARGV.keep_tmp?
+
       if install_passed
-        if formula.stable? && !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
-          bottle_args = ["--verbose", "--json", formula_name]
-          bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
-          bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
-          bottle_args << "--force-core-tap" if @test_default_formula
-          test "brew", "bottle", *bottle_args
-          bottle_step = steps.last
-          if bottle_step.passed? && bottle_step.output?
-            bottle_filename =
-              bottle_step.output.gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
-            bottle_json_filename = bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
-            bottle_merge_args = ["--merge", "--write", "--no-commit", bottle_json_filename]
-            bottle_merge_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
-            test "brew", "bottle", *bottle_merge_args
-            test "brew", "uninstall", "--force", formula_name
-            FileUtils.ln bottle_filename, HOMEBREW_CACHE/bottle_filename, force: true
-            @formulae.delete(formula_name)
-            unless unchanged_build_dependencies.empty?
-              test "brew", "uninstall", "--force", *unchanged_build_dependencies
-              unchanged_dependencies -= unchanged_build_dependencies
-            end
-            test "brew", "install", bottle_filename
-          end
-        end
-        shared_test_args = ["--verbose"]
-        shared_test_args << "--keep-tmp" if ARGV.keep_tmp?
-        test "brew", "test", formula_name, *shared_test_args if formula.test_defined?
+        bottle_reinstall_formula(formula)
+
+        test "brew", "test", formula_name, *test_args if formula.test_defined?
         bottled_dependents.each do |dependent|
-          unless dependent.installed?
-            test "brew", "fetch", "--retry", dependent.name
-            next if steps.last.failed?
-            unlink_conflicts dependent
-            unless ARGV.include?("--fast")
-              run_as_not_developer { test "brew", "install", dependent.name }
-              next if steps.last.failed?
-            end
-          end
-          next unless dependent.installed?
-          if !dependent.keg_only? && !dependent.linked_keg.exist?
-            unlink_conflicts dependent
-            test "brew", "link", dependent.name
-          end
-          test "brew", "linkage", "--test", dependent.name
-          if testable_dependents.include? dependent
-            test "brew", "test", "--verbose", dependent.name
-          end
+          install_bottled_dependent(dependent)
         end
-        if ARGV.include? "--cleanup"
-          bottle_prefix = formula.opt_prefix/".bottle"
-          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-          Pathname.glob("#{bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
-            prefix_path = bottle_path.sub(bottle_prefix, HOMEBREW_PREFIX)
-            FileUtils.rm_rf prefix_path
-          end
-        end
+        cleanup_bottle_etc_var(formula)
         test "brew", "uninstall", "--force", formula_name
       end
 
@@ -770,24 +793,29 @@ module Homebrew
         devel_install_passed = steps.last.passed?
         test "brew", "audit", "--devel", *audit_args
         if devel_install_passed
-          test "brew", "test", "--devel", formula_name, *shared_test_args if formula.test_defined?
-          if ARGV.include? "--cleanup"
-            bottle_prefix = formula.opt_prefix/".bottle"
-            # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-            Pathname.glob("#{bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
-              prefix_path = bottle_path.sub(bottle_prefix, HOMEBREW_PREFIX)
-              FileUtils.rm_rf prefix_path
-            end
-          end
+          test "brew", "test", "--devel", formula_name, *test_args if formula.test_defined?
+          cleanup_bottle_etc_var(formula)
           test "brew", "uninstall", "--devel", "--force", formula_name
         end
       end
-      test "brew", "uninstall", "--force", *unchanged_dependencies unless unchanged_dependencies.empty?
+
+      return if @unchanged_dependencies.empty?
+      test "brew", "uninstall", "--force", *@unchanged_dependencies
     end
 
     def deleted_formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
       test "brew", "uses", formula_name
+    end
+
+    def coverage_args
+      return [] unless ARGV.include?("--coverage")
+      return [] if @test_bot_tap
+      if ENV["JENKINS_HOME"] || ENV["TRAVIS"]
+        return [] unless OS.mac?
+        return [] if MacOS.version != :sierra
+      end
+      coverage_args << "--coverage"
     end
 
     def homebrew
@@ -812,15 +840,6 @@ module Homebrew
         end
 
         test "brew", "style"
-
-        coverage_args = []
-        if ARGV.include?("--coverage") && !@test_bot_tap
-          if ENV["JENKINS_HOME"] || ENV["TRAVIS"]
-            coverage_args << "--coverage" if OS.mac? && MacOS.version == :sierra
-          else
-            coverage_args << "--coverage"
-          end
-        end
 
         test "brew", "tests", "--no-compat"
         test "brew", "tests", "--generic"
