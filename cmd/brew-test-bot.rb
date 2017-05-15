@@ -523,6 +523,18 @@ module Homebrew
       test "brew", "config"
     end
 
+    def unlink_conflicts(formula)
+      return if formula.keg_only?
+      return if formula.linked_keg.exist?
+      conflicts = formula.conflicts.map { |c| Formulary.factory(c.name) }.select(&:installed?)
+      formula.recursive_dependencies.each do |dependency|
+        conflicts += dependency.to_formula.conflicts.map { |c| Formulary.factory(c.name) }.select(&:installed?)
+      end
+      conflicts.each do |conflict|
+        test "brew", "unlink", conflict.name
+      end
+    end
+
     def formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
 
@@ -721,13 +733,7 @@ module Homebrew
           unless dependent.installed?
             test "brew", "fetch", "--retry", dependent.name
             next if steps.last.failed?
-            conflicts = dependent.conflicts.map { |c| Formulary.factory(c.name) }.select(&:installed?)
-            dependent.recursive_dependencies.each do |dependency|
-              conflicts += dependency.to_formula.conflicts.map { |c| Formulary.factory(c.name) }.select(&:installed?)
-            end
-            conflicts.each do |conflict|
-              test "brew", "unlink", conflict.name
-            end
+            unlink_conflicts dependent
             unless ARGV.include?("--fast")
               run_as_not_developer { test "brew", "install", dependent.name }
               next if steps.last.failed?
@@ -735,6 +741,7 @@ module Homebrew
           end
           next unless dependent.installed?
           if !dependent.keg_only? && !dependent.linked_keg.exist?
+            unlink_conflicts dependent
             test "brew", "link", dependent.name
           end
           test "brew", "linkage", "--test", dependent.name
