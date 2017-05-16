@@ -34,5 +34,5 @@ before_install:
   - ln -s "$PWD" "$HOMEBREW_TAP_DIR"
 
 script:
-  - brew test-bot
+  - brew test-bot --debug
   - brew test-bot --ci-upload --dry-run
