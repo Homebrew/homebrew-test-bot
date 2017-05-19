@@ -810,9 +810,7 @@ module Homebrew
     end
 
     def coverage_args
-      return [] unless ARGV.include?("--coverage")
-      return [] if @test_bot_tap
-      ["--coverage"]
+      ARGV.include?("--coverage") ? ["--coverage"] : []
     end
 
     def homebrew
