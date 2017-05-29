@@ -26,6 +26,9 @@ before_install:
       HOMEBREW_REPOSITORY="$HOME/Homebrew";
       git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY";
       export PATH="$HOMEBREW_REPOSITORY/bin:$PATH";
+      HOMEBREW_CORE_TAP_DIR="$(brew --repo "homebrew/core")";
+      mkdir -p "$HOMEBREW_CORE_TAP_DIR";
+      cp -r Formula "$HOMEBREW_CORE_TAP_DIR";
       umask 022;
     fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
