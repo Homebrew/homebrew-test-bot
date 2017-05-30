@@ -1,7 +1,8 @@
 language: ruby
 cache:
   directories:
-    - $HOME/.gem/ruby
+    # Re-add when the Bundler 1.15.0 issues are resolved
+    # - $HOME/.gem/ruby
     - $HOME/Library/Caches/Homebrew/style
     - $HOME/Library/Caches/Homebrew/tests
     - Library/Homebrew/vendor/bundle
