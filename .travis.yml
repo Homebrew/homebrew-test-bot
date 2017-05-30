@@ -4,7 +4,8 @@ cache:
     - $HOME/.gem/ruby
     - $HOME/Library/Caches/Homebrew/style
     - $HOME/Library/Caches/Homebrew/tests
-    - Library/Homebrew/vendor/bundle
+    - $HOME/Library/Homebrew/vendor/bundle
+    - /usr/local/Homebrew/Library/Homebrew/vendor/bundle
 
 matrix:
   include:
@@ -16,6 +17,7 @@ matrix:
       rvm: 2.0.0
 
 before_install:
+  - export HOMEBREW_NO_AUTO_UPDATE=1
   - export HOMEBREW_DEVELOPER=1
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
       HOMEBREW_REPOSITORY="$(brew --repo)";
