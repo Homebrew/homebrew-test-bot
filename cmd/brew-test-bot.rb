@@ -919,7 +919,7 @@ module Homebrew
 
       if ENV["TRAVIS"]
         # For Travis CI build caching.
-        test "brew", "install", "md5deep" if OS.mac?
+        test "brew", "install", "md5deep", "--debug" if OS.mac?
         return
       end
 
