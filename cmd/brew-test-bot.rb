@@ -249,7 +249,7 @@ module Homebrew
       # Step may produce arbitrary output and we read it bytewise, so must
       # buffer it as binary and convert to UTF-8 once complete
       output = "".encode!("BINARY")
-      working_dir = Pathname.new(@command.first == "git" ? @repository : Dir.pwd)
+      working_dir = Pathname.new((@command.first == "git") ? @repository : Dir.pwd)
       read, write = IO.pipe
 
       begin
@@ -1042,18 +1042,12 @@ module Homebrew
       jenkins = ENV["JENKINS_HOME"]
       job = ENV["UPSTREAM_JOB_NAME"]
       id = ENV["UPSTREAM_BUILD_ID"]
-      if !job || !id
-        unless ARGV.include?("--dry-run")
-          raise "Missing Jenkins variables!"
-        end
+      if (!job || !id) && !ARGV.include?("--dry-run")
+        raise "Missing Jenkins variables!"
       end
 
       bottles = Dir["#{jenkins}/jobs/#{job}/configurations/axis-version/*/builds/#{id}/archive/*.bottle*.*"]
-      if bottles.empty?
-        unless ARGV.include?("--dry-run")
-          raise "No bottles found!"
-        end
-      end
+      raise "No bottles found!" if bottles.empty? && !ARGV.include?("--dry-run")
 
       FileUtils.cp bottles, Dir.pwd, verbose: true
     end
@@ -1254,12 +1248,8 @@ module Homebrew
     jenkins = !ENV["JENKINS_HOME"].nil?
     jenkins_pipeline_pr = jenkins && !ENV["CHANGE_URL"].nil?
     jenkins_pipeline_branch = jenkins && !jenkins_pipeline_pr && !ENV["BRANCH_NAME"].nil?
-    if jenkins_pipeline_branch || jenkins_pipeline_pr
-      ARGV << "--ci-auto"
-    end
-    if jenkins_pipeline_branch
-      ARGV << "--no-pull"
-    end
+    ARGV << "--ci-auto" if jenkins_pipeline_branch || jenkins_pipeline_pr
+    ARGV << "--no-pull" if jenkins_pipeline_branch
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
