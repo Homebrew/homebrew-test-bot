@@ -853,7 +853,7 @@ module Homebrew
 
     def cleanup_shared
       cleanup_git_meta(HOMEBREW_REPOSITORY)
-      git "gc", "--auto", "--force"
+      test "git", "gc", "--auto", "--force"
       test "git", "clean", "-ffdx",
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor"
@@ -862,7 +862,7 @@ module Homebrew
         next if tap == "homebrew/core"
         next if tap == "homebrew/test-bot"
         next if tap == @tap.to_s
-        safe_system "brew", "untap", tap
+        test "brew", "untap", tap
       end
 
       prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
@@ -876,9 +876,9 @@ module Homebrew
 
       if @tap
         HOMEBREW_REPOSITORY.cd do
-          safe_system "git", "checkout", "-f", "master"
-          safe_system "git", "reset", "--hard", "origin/master"
-          safe_system "git", "clean", "-ffdx",
+          test "git", "checkout", "-f", "master"
+          test "git", "reset", "--hard", "origin/master"
+          test "git", "clean", "-ffdx",
             "--exclude=Library/Taps",
             "--exclude=Library/Homebrew/vendor"
         end
@@ -898,13 +898,13 @@ module Homebrew
       @category = __method__
       return if @skip_cleanup_before
       return unless ARGV.include? "--cleanup"
-      git "stash", "clear"
-      git "stash"
+      test "git", "stash", "clear"
+      test "git", "stash"
       git "am", "--abort"
       git "rebase", "--abort"
       unless ARGV.include? "--no-pull"
-        git "checkout", "-f", "master"
-        git "reset", "--hard", "origin/master"
+        test "git", "checkout", "-f", "master"
+        test "git", "reset", "--hard", "origin/master"
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
@@ -931,9 +931,9 @@ module Homebrew
       end
 
       if ARGV.include? "--cleanup"
-        git "reset", "--hard", "origin/master"
-        git "stash", "pop"
-        git "stash", "clear"
+        test "git", "reset", "--hard", "origin/master"
+        test "git", "stash", "pop"
+        test "git", "stash", "clear"
         test "brew", "cleanup", "--prune=7"
 
         cleanup_shared
