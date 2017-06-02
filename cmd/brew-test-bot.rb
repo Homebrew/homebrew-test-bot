@@ -888,8 +888,8 @@ module Homebrew
         cleanup_git_meta(git_repo)
         next if @repository == git_repo
         git_repo.cd do
-          safe_system "git", "checkout", "-f", "master"
-          safe_system "git", "reset", "--hard", "origin/master"
+          test "git", "checkout", "-f", "master"
+          test "git", "reset", "--hard", "origin/master"
         end
       end
     end
@@ -935,6 +935,9 @@ module Homebrew
         test "git", "stash", "pop"
         test "git", "stash", "clear"
         test "brew", "cleanup", "--prune=7"
+        test "pkill", "-f", HOMEBREW_CELLAR.to_s
+        sleep 1
+        test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s
 
         cleanup_shared
 
