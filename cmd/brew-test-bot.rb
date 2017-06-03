@@ -852,6 +852,7 @@ module Homebrew
     end
 
     def cleanup_shared
+      cleanup_git_meta(Pathname.pwd)
       cleanup_git_meta(HOMEBREW_REPOSITORY)
       test "git", "gc", "--auto", "--force"
       test "git", "clean", "-ffdx",
@@ -899,7 +900,6 @@ module Homebrew
       return if @skip_cleanup_before
       return unless ARGV.include? "--cleanup"
       test "git", "stash", "clear"
-      test "git", "stash"
       git "am", "--abort"
       git "rebase", "--abort"
       unless ARGV.include? "--no-pull"
@@ -932,7 +932,6 @@ module Homebrew
 
       if ARGV.include? "--cleanup"
         test "git", "reset", "--hard", "origin/master"
-        test "git", "stash", "pop"
         test "git", "stash", "clear"
         test "brew", "cleanup", "--prune=7"
         test "pkill", "-f", HOMEBREW_CELLAR.to_s
