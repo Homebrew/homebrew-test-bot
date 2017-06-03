@@ -249,7 +249,6 @@ module Homebrew
       # Step may produce arbitrary output and we read it bytewise, so must
       # buffer it as binary and convert to UTF-8 once complete
       output = "".encode!("BINARY")
-      working_dir = Pathname.new((@command.first == "git") ? @repository : Dir.pwd)
       read, write = IO.pipe
 
       begin
@@ -258,7 +257,7 @@ module Homebrew
           $stdout.reopen(write)
           $stderr.reopen(write)
           write.close
-          working_dir.cd { exec(*@command) }
+          exec(*@command)
         end
         write.close
         while buf = read.readpartial(4096)
@@ -852,12 +851,14 @@ module Homebrew
     end
 
     def cleanup_shared
-      cleanup_git_meta(HOMEBREW_REPOSITORY)
-      test "git", "clean", "-ffdx",
-        "--exclude=Library/Taps",
-        "--exclude=Library/Homebrew/vendor"
-      if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
-        test "git", "prune"
+      @repository.cd do
+        cleanup_git_meta(@repository)
+        test "git", "clean", "-ffdx",
+          "--exclude=Library/Taps",
+          "--exclude=Library/Homebrew/vendor"
+        if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
+          test "git", "prune"
+        end
       end
 
       Tap.names.each do |tap|
@@ -903,12 +904,14 @@ module Homebrew
       @category = __method__
       return if @skip_cleanup_before
       return unless ARGV.include? "--cleanup"
-      test "git", "stash", "clear"
-      git "am", "--abort"
-      git "rebase", "--abort"
-      unless ARGV.include? "--no-pull"
-        test "git", "checkout", "-f", "master"
-        test "git", "reset", "--hard", "origin/master"
+      @repository.cd do
+        test "git", "stash", "clear"
+        git "am", "--abort"
+        git "rebase", "--abort"
+        unless ARGV.include? "--no-pull"
+          test "git", "checkout", "-f", "master"
+          test "git", "reset", "--hard", "origin/master"
+        end
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
@@ -946,8 +949,10 @@ module Homebrew
       end
 
       if ARGV.include? "--cleanup"
-        test "git", "reset", "--hard", "origin/master"
-        test "git", "stash", "clear"
+        @repository.cd do
+          test "git", "reset", "--hard", "origin/master"
+          test "git", "stash", "clear"
+        end
         test "brew", "cleanup", "--prune=7"
         pkill_if_needed!
 
