@@ -852,12 +852,13 @@ module Homebrew
     end
 
     def cleanup_shared
-      cleanup_git_meta(Pathname.pwd)
       cleanup_git_meta(HOMEBREW_REPOSITORY)
-      test "git", "gc", "--auto", "--force"
       test "git", "clean", "-ffdx",
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor"
+      if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
+        test "git", "prune"
+      end
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
@@ -891,6 +892,9 @@ module Homebrew
         git_repo.cd do
           test "git", "checkout", "-f", "master"
           test "git", "reset", "--hard", "origin/master"
+          if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
+            test "git", "prune"
+          end
         end
       end
     end
@@ -912,6 +916,17 @@ module Homebrew
       cleanup_shared
     end
 
+    def pkill_if_needed!
+      pgrep = ["pgrep", "-f", HOMEBREW_CELLAR.to_s]
+      if quiet_system(*pgrep)
+        test "pkill", "-f", HOMEBREW_CELLAR.to_s
+        if quiet_system(*pgrep)
+          sleep 1
+          test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s if system(*pgrep)
+        end
+      end
+    end
+
     def cleanup_after
       @category = __method__
       return if @skip_cleanup_after
@@ -920,7 +935,7 @@ module Homebrew
       if ENV["TRAVIS"]
         # For Travis CI build caching.
         test "brew", "install", "md5deep" if OS.mac?
-        return
+        return if @tap.to_s != "homebrew/test-bot"
       end
 
       if @start_branch && !@start_branch.empty? && \
@@ -934,9 +949,7 @@ module Homebrew
         test "git", "reset", "--hard", "origin/master"
         test "git", "stash", "clear"
         test "brew", "cleanup", "--prune=7"
-        test "pkill", "-f", HOMEBREW_CELLAR.to_s
-        sleep 1
-        test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s
+        pkill_if_needed!
 
         cleanup_shared
 
