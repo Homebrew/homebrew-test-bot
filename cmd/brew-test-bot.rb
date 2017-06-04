@@ -186,10 +186,12 @@ module Homebrew
       root ? root + file : file
     end
 
-    def trim_paths(string)
-      string.gsub("/home/travis/", "")
-            .gsub("#{HOMEBREW_PREFIX}/", "")
-            .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
+    def command_trimmed
+      @command.reject { |arg| arg.to_s.start_with?("--exclude") }
+              .join(" ")
+              .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
+              .gsub("#{HOMEBREW_PREFIX}/", "")
+              .gsub("/home/travis/", "")
     end
 
     def command_short
@@ -224,13 +226,14 @@ module Homebrew
 
     def puts_command
       if ENV["TRAVIS"]
-        @travis_fold_id = @command.first(2).join(".") +
-                          ".#{Step.travis_increment}"
+        travis_fold_name = @command.first(2).join(".")
+        travis_fold_name = "git.#{@command[3]}" if travis_fold_name == "git.-C"
+        @travis_fold_id = "#{travis_fold_name}.#{Step.travis_increment}"
         @travis_timer_id = rand(2**32).to_s(16)
         puts "travis_fold:start:#{@travis_fold_id}"
         puts "travis_time:start:#{@travis_timer_id}"
       end
-      puts Formatter.headline(trim_paths(@command.join(" ")), color: :blue)
+      puts Formatter.headline(command_trimmed, color: :blue)
     end
 
     def puts_result
@@ -269,6 +272,10 @@ module Homebrew
         @status = :passed
         puts_result
         return
+      end
+
+      if @command[0] == "git" && @command[1] != "-C"
+        raise "git should always be called with -C!"
       end
 
       verbose = ARGV.verbose?
@@ -394,7 +401,7 @@ module Homebrew
 
       # Use Jenkins GitHub Pull Request Builder or Jenkins Pipeline plugin
       # variables for pull request jobs.
-      if ENV["ghprbPullLink"]
+      if ENV["JENKINS_HOME"] && (ENV["ghprbPullLink"] || ENV["CHANGE_URL"])
         @url = ENV["ghprbPullLink"] || ENV["CHANGE_URL"]
         @hash = nil
         test "git", "-C", @repository, "checkout", "origin/master"
@@ -485,7 +492,7 @@ module Homebrew
       # Output post-cleanup/download repository revisions.
       brew_version = Utils.popen_read(
         "git", "-C", HOMEBREW_REPOSITORY.to_s,
-               "describe", "--tags", "--abbrev", "--dirty", "--broken"
+               "describe", "--tags", "--abbrev", "--dirty"
       ).strip
       brew_commit_subject = Utils.popen_read(
         "git", "-C", HOMEBREW_REPOSITORY.to_s,
@@ -903,6 +910,7 @@ module Homebrew
         "-dx",
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor",
+        "--exclude=#{@brewbot_root.basename}",
       ]
       return if Utils.popen_read(
         "git", "-C", repository, "clean", "--dry-run", *clean_args
@@ -1376,7 +1384,8 @@ module Homebrew
       "git", "-C", Tap.fetch("homebrew/test-bot").path.to_s,
              "log", "-1", "--format=%h (%s)"
     ).strip
-    puts "Homebrew/homebrew-test-bot #{ARGV.join(" ")} #{test_bot_revision}"
+    puts "Homebrew/homebrew-test-bot #{test_bot_revision}"
+    puts "ARGV: #{ARGV.join(" ")}"
 
     return unless ARGV.include?("--local")
     ENV["HOMEBREW_CACHE"] = "#{ENV["HOME"]}/Library/Caches/Homebrew"
@@ -1398,7 +1407,6 @@ module Homebrew
       if !tap.path.exist?
         safe_system "brew", "tap", tap.name, "--full"
       elsif (tap.path/".git/shallow").exist?
-        ohai "Unshallowing #{tap}..."
         raise unless quiet_system "git", "-C", tap.path, "fetch", "--unshallow"
       end
     end
