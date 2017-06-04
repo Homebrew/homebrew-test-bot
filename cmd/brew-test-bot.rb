@@ -836,9 +836,9 @@ module Homebrew
 
         test "brew", "style"
 
-        test "brew", "tests", "--no-compat"
-        test "brew", "tests", "--generic"
-        test "brew", "tests", "--official-cmd-taps", *coverage_args
+        test "brew", "tests", "--no-compat", "--online"
+        test "brew", "tests", "--generic", "--online"
+        test "brew", "tests", "--official-cmd-taps", "--online", *coverage_args
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
