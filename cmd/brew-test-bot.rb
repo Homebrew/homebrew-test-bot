@@ -858,6 +858,7 @@ module Homebrew
         test "git", "clean", "-ffdx",
           "--exclude=Library/Taps",
           "--exclude=Library/Homebrew/vendor"
+        safe_system "git", "config", "--global", "gc.autoDetach", "false"
         gc_auto_output = Utils.popen_read("git gc --auto 2>&1")
         puts gc_auto_output
         if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
@@ -898,6 +899,7 @@ module Homebrew
         git_repo.cd do
           test "git", "checkout", "-f", "master"
           test "git", "reset", "--hard", "origin/master"
+          safe_system "git", "config", "--global", "gc.autoDetach", "false"
           gc_auto_output = Utils.popen_read("git gc --auto 2>&1")
           puts gc_auto_output
           if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
