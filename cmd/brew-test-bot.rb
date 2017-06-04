@@ -208,6 +208,7 @@ module Homebrew
         puts "travis_fold:start:#{@travis_fold_id}"
         puts "travis_time:start:#{@travis_timer_id}"
       end
+      puts Formatter.headline(Dir.pwd, color: :blue)
       puts Formatter.headline(@command.join(" "), color: :blue)
     end
 
