@@ -858,7 +858,8 @@ module Homebrew
         test "git", "clean", "-ffdx",
           "--exclude=Library/Taps",
           "--exclude=Library/Homebrew/vendor"
-        if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
+        gc_auto_output = Utils.popen_read("git gc --auto 2>&1")
+        if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
           test "git", "prune"
         end
       end
@@ -895,7 +896,8 @@ module Homebrew
         git_repo.cd do
           test "git", "checkout", "-f", "master"
           test "git", "reset", "--hard", "origin/master"
-          if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
+          gc_auto_output = Utils.popen_read("git gc --auto 2>&1")
+          if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
             test "git", "prune"
           end
         end
