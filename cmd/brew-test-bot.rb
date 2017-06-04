@@ -863,6 +863,7 @@ module Homebrew
         if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
           test "git", "prune"
         end
+        puts Utils.popen_read("ls -al #{@repository}/.git/")
       end
 
       Tap.names.each do |tap|
@@ -902,6 +903,7 @@ module Homebrew
           if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
             test "git", "prune"
           end
+          puts Utils.popen_read("ls -al #{@repository}/.git/")
         end
       end
     end
