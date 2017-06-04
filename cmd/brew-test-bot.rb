@@ -148,7 +148,9 @@ module Homebrew
       ENV["GIT_URL"] ||
       ENV["CIRCLE_REPOSITORY_URL"]
     return unless git_url
-    url_path = git_url.sub(%r{^https?://github\.com/}, "").chomp("/").sub(/\.git$/, "")
+    url_path = git_url.sub(%r{^https?://github\.com/}, "")
+                      .chomp("/")
+                      .sub(/\.git$/, "")
     begin
       return Tap.fetch(url_path) if url_path =~ HOMEBREW_TAP_REGEX
     rescue
@@ -184,8 +186,27 @@ module Homebrew
       root ? root + file : file
     end
 
+    def trim_paths(string)
+      string.gsub("/home/travis/", "")
+            .gsub("#{HOMEBREW_PREFIX}/", "")
+            .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
+    end
+
     def command_short
-      (@command - %w[brew --force --retry --verbose --build-bottle --build-from-source --json]).join(" ")
+      (@command - %W[
+        brew
+        git
+        -C
+        #{HOMEBREW_PREFIX}
+        #{HOMEBREW_REPOSITORY}
+        #{@repository}
+        --force
+        --retry
+        --verbose
+        --build-bottle
+        --build-from-source
+        --json
+      ].freeze).join(" ")
     end
 
     def passed?
@@ -203,12 +224,13 @@ module Homebrew
 
     def puts_command
       if ENV["TRAVIS"]
-        @travis_fold_id = @command.first(2).join(".") + ".#{Step.travis_increment}"
+        @travis_fold_id = @command.first(2).join(".") +
+                          ".#{Step.travis_increment}"
         @travis_timer_id = rand(2**32).to_s(16)
         puts "travis_fold:start:#{@travis_fold_id}"
         puts "travis_time:start:#{@travis_timer_id}"
       end
-      puts Formatter.headline(@command.join(" "), color: :blue)
+      puts Formatter.headline(trim_paths(@command.join(" ")), color: :blue)
     end
 
     def puts_result
@@ -217,7 +239,11 @@ module Homebrew
         travis_end_time = @end_time.to_i * 1_000_000_000
         travis_duration = travis_end_time - travis_start_time
         puts Formatter.headline(Formatter.success("PASSED")) if passed?
-        puts "travis_time:end:#{@travis_timer_id},start=#{travis_start_time},finish=#{travis_end_time},duration=#{travis_duration}"
+        travis_time = "travis_time:end:#{@travis_timer_id}"
+        travis_time += ",start=#{travis_start_time}"
+        travis_time += ",finish=#{travis_end_time}"
+        travis_time += ",duration=#{travis_duration}"
+        puts travis_time
         puts "travis_fold:end:#{@travis_fold_id}"
       end
       puts Formatter.headline(Formatter.error("FAILED")) if failed?
@@ -311,14 +337,16 @@ module Homebrew
       @skip_cleanup_before = options.fetch(:skip_cleanup_before, false)
       @skip_cleanup_after = options.fetch(:skip_cleanup_after, false)
 
-      if quiet_system "git", "-C", @repository.to_s, "rev-parse", "--verify", "-q", argument
+      if quiet_system("git", "-C", @repository, "rev-parse",
+                             "--verify", "-q", argument)
         @hash = argument
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
         @url = url_match[0]
       elsif canonical_formula_name = safe_formula_canonical_name(argument)
         @formulae = [canonical_formula_name]
       else
-        raise ArgumentError, "#{argument} is not a pull request URL, commit URL or formula name."
+        raise ArgumentError,
+          "#{argument} is not a pull request URL, commit URL or formula name."
       end
 
       @category = __method__
@@ -334,36 +362,23 @@ module Homebrew
       retry unless steps.last.failed?
       onoe e
       puts e.backtrace if ARGV.debug?
-    rescue FormulaUnavailableError, TapFormulaAmbiguityError, TapFormulaWithOldnameAmbiguityError => e
+    rescue FormulaUnavailableError, TapFormulaAmbiguityError,
+           TapFormulaWithOldnameAmbiguityError => e
       onoe e
       puts e.backtrace if ARGV.debug?
     end
 
-    def git(*args)
-      @repository.cd { Utils.popen_read("git", *args) }
-    end
-
-    def shorten_revision(revision)
-      git("rev-parse", "--short", revision).strip
-    end
-
     def current_sha1
-      shorten_revision "HEAD"
-    end
-
-    def current_branch
-      git("symbolic-ref", "HEAD").gsub("refs/heads/", "").strip
-    end
-
-    def single_commit?(start_revision, end_revision)
-      git("rev-list", "--count", "#{start_revision}..#{end_revision}").to_i == 1
+      Utils.popen_read("git", "-C", @repository,
+                              "rev-parse", "--short", "HEAD").strip
     end
 
     def diff_formulae(start_revision, end_revision, path, filter)
       return unless @tap
-      git(
-        "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
-        start_revision, end_revision, "--", path
+      Utils.popen_read(
+        "git", "-C", @repository,
+               "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
+               start_revision, end_revision, "--", path
       ).lines.map do |line|
         file = Pathname.new line.chomp
         next unless @tap.formula_file?(file)
@@ -373,19 +388,16 @@ module Homebrew
 
     def download
       @category = __method__
-      @start_branch = current_branch
+      @start_branch = Utils.popen_read(
+        "git", "-C", @repository, "symbolic-ref", "HEAD"
+      ).gsub("refs/heads/", "").strip
 
-      # Use Jenkins GitHub Pull Request Builder plugin variables for
-      # pull request jobs.
+      # Use Jenkins GitHub Pull Request Builder or Jenkins Pipeline plugin
+      # variables for pull request jobs.
       if ENV["ghprbPullLink"]
-        @url = ENV["ghprbPullLink"]
+        @url = ENV["ghprbPullLink"] || ENV["CHANGE_URL"]
         @hash = nil
-        @repository.cd { test "git", "checkout", "origin/master" }
-      # Use Jenkins Pipeline plugin variables for pull request jobs
-      elsif ENV["JENKINS_HOME"] && ENV["CHANGE_URL"]
-        @url = ENV["CHANGE_URL"]
-        @hash = nil
-        @repository.cd { test "git", "checkout", "origin/master" }
+        test "git", "-C", @repository, "checkout", "origin/master"
       # Use Jenkins Git plugin variables
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
@@ -409,36 +421,46 @@ module Homebrew
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
       # Use Jenkins Pipeline plugin variables for branch jobs
       elsif ENV["JENKINS_HOME"] && !ENV["CHANGE_URL"] && ENV["CHANGE_TARGET"]
-        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"]).strip
+        diff_start_sha1 =
+          Utils.popen_read("git", "-C", @repository, "rev-parse",
+                                  "--short", ENV["CHANGE_TARGET"]).strip
         diff_end_sha1 = current_sha1
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         diff_end_sha1 = diff_start_sha1 = current_sha1
       end
 
-      diff_start_sha1 = git("merge-base", diff_start_sha1, diff_end_sha1).strip
+      diff_start_sha1 =
+        Utils.popen_read("git", "-C", @repository, "merge-base",
+                                diff_start_sha1, diff_end_sha1).strip
 
-      # Handle no arguments being passed on the command-line e.g. `brew test-bot`.
+      # Handle no arguments being passed on the command-line
+      # e.g. `brew test-bot`
       if @hash == "HEAD"
-        if diff_start_sha1 == diff_end_sha1 || \
-           single_commit?(diff_start_sha1, diff_end_sha1)
+        diff_commit_count = Utils.popen_read(
+          "git", "-C", @repository, "rev-list", "--count",
+          "#{diff_start_sha1}..#{diff_end_sha1}"
+        )
+        if (diff_start_sha1 == diff_end_sha1) || (diff_commit_count.to_i == 1)
           @name = diff_end_sha1
         else
           @name = "#{diff_start_sha1}-#{diff_end_sha1}"
         end
-      # Handle formulae arguments being passed on the command-line e.g. `brew test-bot wget fish`.
+      # Handle formulae arguments being passed on the command-line
+      # e.g. `brew test-bot wget fish`
       elsif !@formulae.empty?
         @name = "#{@formulae.first}-#{diff_end_sha1}"
         diff_start_sha1 = diff_end_sha1
-      # Handle a hash being passed on the command-line e.g. `brew test-bot 1a2b3c`.
+      # Handle a hash being passed on the command-line
+      # e.g. `brew test-bot 1a2b3c`
       elsif @hash
-        test "git", "checkout", @hash
+        test "git", "-C", @repository, "checkout", @hash
         diff_start_sha1 = "#{@hash}^"
         diff_end_sha1 = @hash
         @name = @hash
       # Handle a URL being passed on the command-line or through Jenkins
       # environment variables e.g.
-      # `brew test-bot https://github.com/Homebrew/homebrew-core/pull/678`.
+      # `brew test-bot https://github.com/Homebrew/homebrew-core/pull/678`
       elsif @url
         unless ARGV.include?("--no-pull")
           diff_start_sha1 = current_sha1
@@ -460,6 +482,29 @@ module Homebrew
       @log_root = @brewbot_root + @name
       FileUtils.mkdir_p @log_root
 
+      # Output post-cleanup/download repository revisions.
+      brew_version = Utils.popen_read(
+        "git", "-C", HOMEBREW_REPOSITORY.to_s,
+               "describe", "--tags", "--abbrev", "--dirty", "--broken"
+      ).strip
+      brew_commit_subject = Utils.popen_read(
+        "git", "-C", HOMEBREW_REPOSITORY.to_s,
+               "log", "-1", "--format=%s"
+      ).strip
+      puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
+      core_revision = Utils.popen_read(
+        "git", "-C", CoreTap.instance.path.to_s,
+               "log", "-1", "--format=%h (%s)"
+      ).strip
+      puts "Homebrew/homebrew-core #{core_revision}"
+      if @tap && @tap.to_s != "homebrew/core"
+        tap_revision = Utils.popen_read(
+          "git", "-C", @tap.path.to_s,
+                 "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts "#{@tap} #{tap_revision}"
+      end
+
       return unless diff_start_sha1 != diff_end_sha1
       return if @url && steps.last && !steps.last.passed?
 
@@ -468,13 +513,16 @@ module Homebrew
         @added_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
         @modified_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
         @deleted_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
-        or_later_arg = "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$"
         unless @modified_formulae.empty?
-          unless git("diff", or_later_arg, "--unified=0", diff_start_sha1, diff_end_sha1).strip.empty?
-            # Test rather than build bottles if we're testing a `*_or_later`
-            # bottle change.
-            ARGV << "--no-bottle"
-          end
+          or_later_diff = Utils.popen_read(
+            "git", "-C", @repository, "diff",
+            "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$",
+            "--unified=0", diff_start_sha1, diff_end_sha1
+          ).strip.empty?
+
+          # Test rather than build bottles if we're testing a `*_or_later`
+          # bottle change.
+          ARGV << "--no-bottle" unless or_later_diff
         end
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
         # Build the default test formula.
@@ -850,16 +898,44 @@ module Homebrew
       FileUtils.rm_f "#{repository}/.git/gc.log"
     end
 
+    def clean_if_needed(repository)
+      clean_args = [
+        "-dx",
+        "--exclude=Library/Taps",
+        "--exclude=Library/Homebrew/vendor",
+      ]
+      return if Utils.popen_read(
+        "git", "-C", repository, "clean", "--dry-run", *clean_args
+      ).strip.empty?
+      test "git", "-C", repository, "clean", "-ff", *clean_args
+    end
+
+    def prune_if_needed(repository)
+      return unless Utils.popen_read(
+        "git -C '#{repository}' -c gc.autoDetach=false gc --auto 2>&1",
+      ).include?("git prune")
+      test "git", "-C", repository, "prune"
+    end
+
+    def checkout_branch_if_needed(repository, branch = "master")
+      current_branch = Utils.popen_read(
+        "git", "-C", repository, "symbolic-ref", "--short", "HEAD"
+      ).strip
+      return if branch == current_branch
+      checkout_args = [branch]
+      checkout_args << "-f" if ARGV.include? "--cleanup"
+      test "git", "-C", repository, "checkout", *checkout_args
+    end
+
+    def reset_if_needed(repository)
+      return if system("git", "-C", repository, "diff", "--quiet", "origin/master")
+      test "git", "-C", repository, "reset", "--hard", "origin/master"
+    end
+
     def cleanup_shared
-      @repository.cd do
-        cleanup_git_meta(@repository)
-        test "git", "clean", "-ffdx",
-          "--exclude=Library/Taps",
-          "--exclude=Library/Homebrew/vendor"
-        if Utils.popen_read("git -c gc.autoDetach=false gc --auto 2>&1").include?("git prune")
-          test "git", "prune"
-        end
-      end
+      cleanup_git_meta(@repository)
+      clean_if_needed(@repository)
+      prune_if_needed(@repository)
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
@@ -878,40 +954,37 @@ module Homebrew
       end
 
       if @tap
-        HOMEBREW_REPOSITORY.cd do
-          test "git", "checkout", "-f", "master"
-          test "git", "reset", "--hard", "origin/master"
-          test "git", "clean", "-ffdx",
-            "--exclude=Library/Taps",
-            "--exclude=Library/Homebrew/vendor"
-        end
+        checkout_branch_if_needed(HOMEBREW_REPOSITORY)
+        reset_if_needed(HOMEBREW_REPOSITORY)
+        clean_if_needed(HOMEBREW_REPOSITORY)
       end
 
       Pathname.glob("#{HOMEBREW_LIBRARY}/Taps/*/*").each do |git_repo|
         cleanup_git_meta(git_repo)
         next if @repository == git_repo
-        git_repo.cd do
-          test "git", "checkout", "-f", "master"
-          test "git", "reset", "--hard", "origin/master"
-          if Utils.popen_read("git -c gc.autoDetach=false gc --auto 2>&1").include?("git prune")
-            test "git", "prune"
-          end
-        end
+        checkout_branch_if_needed(git_repo)
+        reset_if_needed(git_repo)
+        prune_if_needed(git_repo)
       end
+    end
+
+    def clear_stash_if_needed(repository)
+      return if Utils.popen_read(
+        "git", "-C", repository, "stash", "list"
+      ).strip.empty?
+      test "git", "-C", repository, "stash", "clear"
     end
 
     def cleanup_before
       @category = __method__
       return if @skip_cleanup_before
       return unless ARGV.include? "--cleanup"
-      @repository.cd do
-        test "git", "stash", "clear"
-        git "am", "--abort"
-        git "rebase", "--abort"
-        unless ARGV.include? "--no-pull"
-          test "git", "checkout", "-f", "master"
-          test "git", "reset", "--hard", "origin/master"
-        end
+      clear_stash_if_needed(@repository)
+      quiet_system "git", "-C", @repository, "am", "--abort"
+      quiet_system "git", "-C", @repository, "rebase", "--abort"
+      unless ARGV.include?("--no-pull")
+        checkout_branch_if_needed(@repository)
+        reset_if_needed(@repository)
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
@@ -941,18 +1014,13 @@ module Homebrew
         return if @tap.to_s != "homebrew/test-bot"
       end
 
-      if @start_branch && !@start_branch.empty? && \
-         (ARGV.include?("--cleanup") || @url || @hash)
-        checkout_args = [@start_branch]
-        checkout_args << "-f" if ARGV.include? "--cleanup"
-        test "git", "checkout", *checkout_args
+      unless @start_branch.to_s.empty?
+        checkout_branch_if_needed(@repository, @start_branch)
       end
 
-      if ARGV.include? "--cleanup"
-        @repository.cd do
-          test "git", "reset", "--hard", "origin/master"
-          test "git", "stash", "clear"
-        end
+      if ARGV.include?("--cleanup")
+        clear_stash_if_needed(@repository)
+        reset_if_needed(@repository)
         test "brew", "cleanup", "--prune=7"
         pkill_if_needed!
 
@@ -1255,6 +1323,7 @@ module Homebrew
 
     ENV["HOMEBREW_DEVELOPER"] = "1"
     ENV["HOMEBREW_SANDBOX"] = "1"
+    ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
@@ -1287,13 +1356,10 @@ module Homebrew
     if ARGV.include?("--ci-auto")
       if travis_pr || jenkins_pr
         ARGV << "--ci-pr"
-        puts "Building in --ci-pr mode"
       elsif travis || jenkins_branch
         ARGV << "--ci-master"
-        puts "Building in --ci-master mode"
       else
         ARGV << "--ci-testing"
-        puts "Building in --ci-testing mode"
       end
     end
 
@@ -1305,6 +1371,12 @@ module Homebrew
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
+
+    test_bot_revision = Utils.popen_read(
+      "git", "-C", Tap.fetch("homebrew/test-bot").path.to_s,
+             "log", "-1", "--format=%h (%s)"
+    ).strip
+    puts "Homebrew/homebrew-test-bot #{ARGV.join(" ")} #{test_bot_revision}"
 
     return unless ARGV.include?("--local")
     ENV["HOMEBREW_CACHE"] = "#{ENV["HOME"]}/Library/Caches/Homebrew"
@@ -1323,8 +1395,12 @@ module Homebrew
     # At the same time, make sure Tap is not a shallow clone.
     # bottle rebuild and bottle upload rely on full clone.
     if tap
-      ENV["HOMEBREW_UPDATE_TO_TAG"] = "1"
-      safe_system "brew", "tap", tap.name, "--full"
+      if !tap.path.exist?
+        safe_system "brew", "tap", tap.name, "--full"
+      elsif (tap.path/".git/shallow").exist?
+        ohai "Unshallowing #{tap}..."
+        raise unless quiet_system "git", "-C", tap.path, "fetch", "--unshallow"
+      end
     end
 
     return test_ci_upload(tap) if ARGV.include?("--ci-upload")
