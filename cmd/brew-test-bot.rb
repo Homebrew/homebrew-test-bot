@@ -856,8 +856,7 @@ module Homebrew
         test "git", "clean", "-ffdx",
           "--exclude=Library/Taps",
           "--exclude=Library/Homebrew/vendor"
-        safe_system "git", "config", "--global", "gc.autoDetach", "false"
-        if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
+        if Utils.popen_read("git -c gc.autoDetach=false gc --auto 2>&1").include?("git prune")
           test "git", "prune"
         end
       end
@@ -894,8 +893,7 @@ module Homebrew
         git_repo.cd do
           test "git", "checkout", "-f", "master"
           test "git", "reset", "--hard", "origin/master"
-          safe_system "git", "config", "--global", "gc.autoDetach", "false"
-          if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
+          if Utils.popen_read("git -c gc.autoDetach=false gc --auto 2>&1").include?("git prune")
             test "git", "prune"
           end
         end
