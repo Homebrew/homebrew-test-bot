@@ -846,6 +846,7 @@ module Homebrew
     end
 
     def cleanup_git_meta(repository)
+      puts Formatter.headline("Cleaning up git meta in #{repository}", color: :blue)
       pr_locks = "#{repository}/.git/refs/remotes/*/pr/*/*.lock"
       Dir.glob(pr_locks) { |lock| FileUtils.rm_f lock }
       FileUtils.rm_f "#{repository}/.git/gc.log"
