@@ -380,12 +380,12 @@ module Homebrew
       if ENV["ghprbPullLink"]
         @url = ENV["ghprbPullLink"]
         @hash = nil
-        test "git", "checkout", "origin/master"
+        @repository.cd { test "git", "checkout", "origin/master" }
       # Use Jenkins Pipeline plugin variables for pull request jobs
       elsif ENV["JENKINS_HOME"] && ENV["CHANGE_URL"]
         @url = ENV["CHANGE_URL"]
         @hash = nil
-        test "git", "checkout", "origin/master"
+        @repository.cd { test "git", "checkout", "origin/master" }
       # Use Jenkins Git plugin variables
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
