@@ -208,7 +208,6 @@ module Homebrew
         puts "travis_fold:start:#{@travis_fold_id}"
         puts "travis_time:start:#{@travis_timer_id}"
       end
-      puts Formatter.headline(Dir.pwd, color: :blue)
       puts Formatter.headline(@command.join(" "), color: :blue)
     end
 
@@ -846,7 +845,6 @@ module Homebrew
     end
 
     def cleanup_git_meta(repository)
-      puts Formatter.headline("Cleaning up git meta in #{repository}", color: :blue)
       pr_locks = "#{repository}/.git/refs/remotes/*/pr/*/*.lock"
       Dir.glob(pr_locks) { |lock| FileUtils.rm_f lock }
       FileUtils.rm_f "#{repository}/.git/gc.log"
@@ -859,12 +857,9 @@ module Homebrew
           "--exclude=Library/Taps",
           "--exclude=Library/Homebrew/vendor"
         safe_system "git", "config", "--global", "gc.autoDetach", "false"
-        gc_auto_output = Utils.popen_read("git gc --auto 2>&1")
-        puts gc_auto_output
-        if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
+        if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
           test "git", "prune"
         end
-        puts Utils.popen_read("ls -al #{@repository}/.git/")
       end
 
       Tap.names.each do |tap|
@@ -900,12 +895,9 @@ module Homebrew
           test "git", "checkout", "-f", "master"
           test "git", "reset", "--hard", "origin/master"
           safe_system "git", "config", "--global", "gc.autoDetach", "false"
-          gc_auto_output = Utils.popen_read("git gc --auto 2>&1")
-          puts gc_auto_output
-          if gc_auto_output.include?("gc.log") || gc_auto_output.include?("git prune")
+          if Utils.popen_read("git gc --auto 2>&1").include?("git prune")
             test "git", "prune"
           end
-          puts Utils.popen_read("ls -al #{@repository}/.git/")
         end
       end
     end
