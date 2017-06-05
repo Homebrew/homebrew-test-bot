@@ -499,17 +499,24 @@ module Homebrew
                "log", "-1", "--format=%s"
       ).strip
       puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
-      core_revision = Utils.popen_read(
-        "git", "-C", CoreTap.instance.path.to_s,
-               "log", "-1", "--format=%h (%s)"
-      ).strip
-      puts "Homebrew/homebrew-core #{core_revision}"
-      if @tap && @tap.to_s != "homebrew/core"
+      if @tap.to_s != "homebrew/core"
+        core_revision = Utils.popen_read(
+          "git", "-C", CoreTap.instance.path.to_s,
+                 "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts "Homebrew/homebrew-core #{core_revision}"
+      end
+      if @tap
+        tap_origin_master_revision = Utils.popen_read(
+          "git", "-C", @tap.path.to_s,
+                 "log", "-1", "--format=%h (%s)", "origin/master"
+        ).strip
+        puts "#{@tap} origin/master #{tap_origin_master_revision}"
         tap_revision = Utils.popen_read(
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)"
         ).strip
-        puts "#{@tap} #{tap_revision}"
+        puts "#{@tap} HEAD #{tap_revision}"
       end
 
       return unless diff_start_sha1 != diff_end_sha1
