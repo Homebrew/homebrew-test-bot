@@ -900,7 +900,7 @@ module Homebrew
 
         test "brew", "tests", "--no-compat", "--online"
         test "brew", "tests", "--generic", "--online"
-        test "brew", "tests", "--official-cmd-taps", "--online", *coverage_args
+        test "brew", "tests", "--online", *coverage_args
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
