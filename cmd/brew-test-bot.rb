@@ -309,7 +309,7 @@ module Homebrew
 
       Process.wait(pid)
       @end_time = Time.now
-      @status = $?.success? ? :passed : :failed
+      @status = $CHILD_STATUS.success? ? :passed : :failed
       puts_result
 
       unless output.empty?
@@ -409,7 +409,7 @@ module Homebrew
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
-        if pr = $1
+        if pr = Regexp.last_match(1)
           @url = "#{git_url}/pull/#{pr}"
           @hash = nil
         end
