@@ -859,6 +859,7 @@ module Homebrew
         devel_install_passed = steps.last.passed?
         test "brew", "audit", "--devel", *audit_args
         if devel_install_passed
+          test "brew", "postinstall", formula_name
           test "brew", "test", "--devel", formula_name, *test_args if formula.test_defined?
           cleanup_bottle_etc_var(formula)
           test "brew", "uninstall", "--devel", "--force", formula_name
