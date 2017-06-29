@@ -552,7 +552,7 @@ module Homebrew
     end
 
     def satisfied_requirements?(formula, spec, dependency = nil)
-      requirements = formula.send(spec).requirements
+      requirements = formula.send(spec).recursive_requirements
 
       unsatisfied_requirements = requirements.reject do |requirement|
         satisfied = false
