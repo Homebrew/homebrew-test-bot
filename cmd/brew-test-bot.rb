@@ -899,8 +899,11 @@ module Homebrew
 
         test "brew", "style"
 
-        test "brew", "tests", "--no-compat", "--online"
-        test "brew", "tests", "--generic", "--online"
+        if OS.linux?
+          test "brew", "tests", "--no-compat", "--online"
+          test "brew", "tests", "--generic", "--online"
+        end
+
         test "brew", "tests", "--online", *coverage_args
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
