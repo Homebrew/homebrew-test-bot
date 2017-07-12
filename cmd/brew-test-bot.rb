@@ -1029,8 +1029,8 @@ module Homebrew
 
       if ENV["TRAVIS"]
         # For Travis CI build caching.
-        test "brew", "install", "md5deep" if OS.mac?
-        return if @tap.to_s != "homebrew/test-bot"
+        test "brew", "install", "md5deep", "libyaml" if OS.mac?
+        return if @tap && @tap.to_s != "homebrew/test-bot"
       end
 
       unless @start_branch.to_s.empty?
