@@ -1043,7 +1043,7 @@ module Homebrew
         test "brew", "cleanup", "--prune=7"
         pkill_if_needed!
 
-        cleanup_shared
+        cleanup_shared unless ENV["TRAVIS"]
 
         if ARGV.include? "--local"
           FileUtils.rm_rf ENV["HOMEBREW_HOME"]
