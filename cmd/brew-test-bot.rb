@@ -878,6 +878,8 @@ module Homebrew
         git "reset", "--hard", "origin/master"
       end
 
+      Pathname.glob("*.bottle*.*").each(&:unlink)
+
       cleanup_shared
     end
 
@@ -950,11 +952,11 @@ module Homebrew
     end
 
     def head_only_tap?(formula)
-      formula.head && formula.devel.nil? && formula.stable.nil? && formula.tap == "homebrew/homebrew-head-only"
+      formula.head && formula.devel.nil? && formula.stable.nil? && formula.tap.to_s.downcase !~ %r{[-/]head-only$}
     end
 
     def devel_only_tap?(formula)
-      formula.devel && formula.stable.nil? && formula.tap == "homebrew/homebrew-devel-only"
+      formula.devel && formula.stable.nil? && formula.tap.to_s.downcase !~ %r{[-/]devel-only$}
     end
 
     def run
@@ -1124,6 +1126,7 @@ module Homebrew
     ENV["HOMEBREW_SANDBOX"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
+    ENV["HOMEBREW_EXPERIMENTAL_FILTER_FLAGS_ON_DEPS"] = "1"
     ENV["HOMEBREW_CHECK_RECURSIVE_VERSION_DEPENDENCIES"] = "1"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
