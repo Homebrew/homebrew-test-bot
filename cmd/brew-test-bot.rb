@@ -878,7 +878,9 @@ module Homebrew
         git "reset", "--hard", "origin/master"
       end
 
-      Pathname.glob("*.bottle*.*").each(&:unlink)
+      # FIXME: I have no idea if this change is safe for Circle CI or not,
+      # so temporarily make it Mac-only until we can safely experiment.
+      Pathname.glob("*.bottle*.*").each(&:unlink) if OS.mac?
 
       cleanup_shared
     end
