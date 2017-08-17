@@ -553,7 +553,8 @@ module Homebrew
     end
 
     def satisfied_requirements?(formula, spec, dependency = nil)
-      fi = FormulaInstaller.new(formula)
+      f = Formulary.factory(formula.full_name, spec)
+      fi = FormulaInstaller.new(f)
       unsatisfied_requirements, = fi.expand_requirements
 
       if unsatisfied_requirements.empty?
