@@ -852,7 +852,9 @@ module Homebrew
         HOMEBREW_REPOSITORY.cd do
           safe_system "git", "checkout", "-f", "master"
           safe_system "git", "reset", "--hard", "origin/master"
-          safe_system "git", "clean", "-ffdx", "--exclude=Library/Taps"
+          safe_system "git", "clean", "-ffdx",
+            "--exclude=Library/Taps",
+            "--exclude=Library/Homebrew/vendor"
         end
       end
 
