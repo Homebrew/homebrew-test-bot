@@ -1170,6 +1170,7 @@ module Homebrew
       ARGV << "--cleanup"
       ARGV << "--test-default-formula" if OS.mac?
       ARGV << "--local" << "--junit" if ENV["JENKINS_HOME"]
+      ARGV << "--junit" if ENV["CIRCLECI"]
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
