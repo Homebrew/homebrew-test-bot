@@ -1085,7 +1085,18 @@ module Homebrew
       changed_formulae_dependents = {}
 
       @formulae.each do |formula|
-        formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", formula).split("\n")
+        begin
+          formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", formula).split("\n")
+          # deps can fail if deps are not tapped
+          unless $?.success?
+            Formulary.factory(formula).recursive_dependencies
+          end
+        rescue TapFormulaUnavailableError => e
+          raise if e.tap.installed?
+          e.tap.clear_cache
+          safe_system "brew", "tap", e.tap.name
+          retry
+        end
         unchanged_dependencies = formula_dependencies - @formulae
         changed_dependences = formula_dependencies - unchanged_dependencies
         changed_dependences.each do |changed_formula|
