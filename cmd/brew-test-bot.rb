@@ -530,7 +530,7 @@ module Homebrew
         unless @modified_formulae.empty?
           or_later_diff = Utils.popen_read(
             "git", "-C", @repository, "diff",
-            "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$",
+            "-G    sha256 ['\"][a-f0-9]*['\"] => :\w+_or_later$",
             "--unified=0", diff_start_sha1, diff_end_sha1
           ).strip.empty?
 
