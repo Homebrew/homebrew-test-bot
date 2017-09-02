@@ -680,7 +680,6 @@ module Homebrew
 
       fetch_args = [formula_name]
       fetch_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
-      fetch_args << "--build-from-source" if ARGV.include?("--no-bottle")
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
       new_formula = @added_formulae.include?(formula_name)
@@ -801,7 +800,6 @@ module Homebrew
       shared_install_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
       # install_args is just for the main (stable, or devel if in a devel-only tap) spec
       install_args = []
-      install_args << "--build-from-source" if ARGV.include?("--no-bottle")
       install_args << "--HEAD" if ARGV.include? "--HEAD"
 
       # Pass --devel or --HEAD to install in the event formulae lack stable. Supports devel-only/head-only.
