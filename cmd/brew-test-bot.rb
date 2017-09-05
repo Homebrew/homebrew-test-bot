@@ -613,14 +613,6 @@ module Homebrew
       installed = Utils.popen_read("brew", "list").split("\n")
       dependencies = Utils.popen_read("brew", "deps", "--include-build", formula_name).split("\n")
 
-      (installed & dependencies).each do |installed_dependency|
-        installed_dependency_formula = Formulary.factory(installed_dependency)
-        next unless installed_dependency_formula.installed?
-        next if installed_dependency_formula.keg_only?
-        next if installed_dependency_formula.linked_keg.exist?
-        test "brew", "link", installed_dependency
-      end
-
       dependencies -= installed
       unchanged_dependencies = dependencies - @formulae
       changed_dependences = dependencies - unchanged_dependencies
@@ -809,11 +801,6 @@ module Homebrew
         test "brew", "tests", "--no-compat"
         test "brew", "tests", "--generic"
         test "brew", "tests", "--official-cmd-taps", *coverage_args
-
-        if OS.mac?
-          run_as_not_developer { test "brew", "tap", "caskroom/cask" }
-          test "brew", "cask-tests", *coverage_args
-        end
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
@@ -1131,6 +1118,7 @@ module Homebrew
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["HOMEBREW_CHECK_RECURSIVE_VERSION_DEPENDENCIES"] = "1"
+    ENV["HOMEBREW_NO_CHECK_UNLINKED_DEPENDENCIES"] = "1"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
     travis = !ENV["TRAVIS"].nil?
