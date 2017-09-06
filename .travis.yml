@@ -30,6 +30,7 @@ before_install:
       HOMEBREW_CORE_TAP_DIR="$(brew --repo "homebrew/core")";
       mkdir -p "$HOMEBREW_CORE_TAP_DIR";
       ln -s .git Formula "$HOMEBREW_CORE_TAP_DIR";
+      chmod 644 Formula/*.rb;
       umask 022;
     fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
