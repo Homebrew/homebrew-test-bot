@@ -289,7 +289,7 @@ module Homebrew
       @repository = @tap ? @tap.path : HOMEBREW_REPOSITORY
       @skip_homebrew = options.fetch(:skip_homebrew, false)
 
-      if valid_git_ref?(argument)
+      if quiet_system "git", "-C", @repository.to_s, "rev-parse", "--verify", "-q", argument
         @hash = argument
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
         @url = url_match[0]
@@ -801,6 +801,11 @@ module Homebrew
         test "brew", "tests", "--no-compat"
         test "brew", "tests", "--generic"
         test "brew", "tests", "--official-cmd-taps", *coverage_args
+
+        if OS.mac?
+          run_as_not_developer { test "brew", "tap", "caskroom/cask" }
+          test "brew", "cask-tests", *coverage_args
+        end
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
@@ -1007,12 +1012,12 @@ module Homebrew
     first_formula_name = bottles_hash.keys.first
     tap = Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || "homebrew/core")
 
-    if OS.linux? || tap.linux?
-      ENV["GIT_AUTHOR_NAME"] = ENV["GIT_COMMITTER_NAME"] = "LinuxbrewTestBot"
-      ENV["GIT_AUTHOR_EMAIL"] = ENV["GIT_COMMITTER_EMAIL"] = "testbot@linuxbrew.sh"
-    elsif OS.mac?
+    if OS.mac?
       ENV["GIT_AUTHOR_NAME"] = ENV["GIT_COMMITTER_NAME"] = "BrewTestBot"
       ENV["GIT_AUTHOR_EMAIL"] = ENV["GIT_COMMITTER_EMAIL"] = "brew-test-bot@googlegroups.com"
+    elsif OS.linux?
+      ENV["GIT_AUTHOR_NAME"] = ENV["GIT_COMMITTER_NAME"] = "LinuxbrewTestBot"
+      ENV["GIT_AUTHOR_EMAIL"] = ENV["GIT_COMMITTER_EMAIL"] = "testbot@linuxbrew.sh"
     end
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
@@ -1117,6 +1122,7 @@ module Homebrew
     ENV["HOMEBREW_SANDBOX"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
+    ENV["HOMEBREW_EXPERIMENTAL_FILTER_FLAGS_ON_DEPS"] = "1" if OS.mac?
     ENV["HOMEBREW_CHECK_RECURSIVE_VERSION_DEPENDENCIES"] = "1"
     ENV["HOMEBREW_NO_CHECK_UNLINKED_DEPENDENCIES"] = "1"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
