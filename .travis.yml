@@ -17,7 +17,7 @@ before_install:
       git -C "$HOMEBREW_REPOSITORY" reset --hard origin/master;
     else
       HOMEBREW_REPOSITORY="$HOME/Homebrew";
-      git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY";
+      git clone https://github.com/Linuxbrew/brew "$HOMEBREW_REPOSITORY";
       export PATH="$HOMEBREW_REPOSITORY/bin:$PATH";
       umask 022;
     fi
