@@ -304,13 +304,6 @@ module Homebrew
       FileUtils.mkdir_p @brewbot_root
     end
 
-    def valid_git_ref?(ref)
-      quiet_system "git",
-        "--git-dir", (@repository/".git").to_s,
-        "--work-tree", @repository.to_s,
-        "rev-parse", "--verify", "-q", ref
-    end
-
     def no_args?
       @hash == "HEAD"
     end
