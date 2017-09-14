@@ -615,7 +615,7 @@ module Homebrew
       end
     end
 
-    def bottle_reinstall_formula(formula)
+    def bottle_reinstall_formula(formula, new_formula)
       return unless formula.stable?
       return if ARGV.include?("--fast")
       return if ARGV.include?("--no-bottle")
@@ -837,7 +837,7 @@ module Homebrew
       test_args << "--keep-tmp" if ARGV.keep_tmp?
 
       if install_passed
-        bottle_reinstall_formula(formula)
+        bottle_reinstall_formula(formula, new_formula)
 
         test "brew", "test", formula_name, *test_args if formula.test_defined?
         bottled_dependents.each do |dependent|
