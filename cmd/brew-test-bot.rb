@@ -46,7 +46,7 @@
 #:
 #:    If `--fail-fast` is passed, immediately exit on a failing step.
 #:
-#:    If `--verbose` is passed, print test step output in real time. Has
+#:    If `--verbose` (or `-v`) is passed, print test step output in real time. Has
 #:    the side effect of passing output as raw bytes instead of
 #:    re-encoding in UTF-8.
 #:
@@ -146,6 +146,8 @@ module Homebrew
     begin
       return Tap.fetch(url_path) if url_path =~ HOMEBREW_TAP_REGEX
     rescue
+      # Don't care if tap fetch fails
+      nil
     end
   end
 
@@ -257,6 +259,8 @@ module Homebrew
           output << buf
         end
       rescue EOFError
+        # End of file is expected eventually
+        nil
       ensure
         read.close
       end
@@ -836,9 +840,9 @@ module Homebrew
 
       prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
       prefix_paths_to_keep << "bin/brew"
-      prefix_paths_to_keep.map! {|path| "#{HOMEBREW_PREFIX}/#{path}"}
+      prefix_paths_to_keep.map! { |path| "#{HOMEBREW_PREFIX}/#{path}" }
       Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
-        next if path.start_with?("#{HOMEBREW_REPOSITORY}")
+        next if path.start_with?(HOMEBREW_REPOSITORY.to_s)
         next if prefix_paths_to_keep.include?(path)
         FileUtils.rm_rf path
       end
@@ -1009,7 +1013,7 @@ module Homebrew
 
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
-      deep_merge_hashes hash, JSON.load(IO.read(json_file))
+      deep_merge_hashes hash, JSON.parse(IO.read(json_file))
     end
 
     first_formula_name = bottles_hash.keys.first
