@@ -134,10 +134,9 @@ module Homebrew
       end
     end
 
-    # Get tap from Jenkins CHANGE_URL, UPSTREAM_GIT_URL, GIT_URL or
+    # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
     # Circle CI's CIRCLE_REPOSITORY_URL.
     git_url =
-      ENV["CHANGE_URL"] ||
       ENV["UPSTREAM_GIT_URL"] ||
       ENV["GIT_URL"] ||
       ENV["CIRCLE_REPOSITORY_URL"]
@@ -309,10 +308,6 @@ module Homebrew
       FileUtils.mkdir_p @brewbot_root
     end
 
-    def no_args?
-      @hash == "HEAD"
-    end
-
     def safe_formula_canonical_name(formula_name)
       Formulary.factory(formula_name).full_name
     rescue TapFormulaUnavailableError => e
@@ -376,11 +371,12 @@ module Homebrew
         @hash = nil
         test "git", "checkout", "origin/master"
       # Use Jenkins Pipeline plugin variables for pull request jobs
-      elsif ENV["CHANGE_URL"]
+      elsif ENV["JENKINS_HOME"] && ENV["CHANGE_URL"]
         @url = ENV["CHANGE_URL"]
         @hash = nil
+        test "git", "checkout", "origin/master"
       # Use Jenkins Git plugin variables
-      elsif ENV["GIT_URL"] && ENV["GIT_BRANCH"]
+      elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
         pr = $1
@@ -403,9 +399,9 @@ module Homebrew
       # Use Travis CI Git variables for master or branch jobs.
       elsif ENV["TRAVIS_COMMIT_RANGE"]
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
-      # Use Jenkins Pipeline plugin variables for pull request jobs
-      elsif ENV["CHANGE_TARGET"]
-        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"])
+      # Use Jenkins Pipeline plugin variables for branch jobs
+      elsif ENV["JENKINS_HOME"] && !ENV["CHANGE_URL"] && ENV["CHANGE_TARGET"]
+        diff_start_sha1 = git("rev-parse", "--short", ENV["CHANGE_TARGET"]).strip
         diff_end_sha1 = current_sha1
       # Use CircleCI Git variables.
       elsif ENV["CIRCLE_SHA1"]
@@ -423,7 +419,7 @@ module Homebrew
       end
 
       # Handle no arguments being passed on the command-line e.g. `brew test-bot`.
-      if no_args?
+      if @hash == "HEAD"
         if diff_start_sha1 == diff_end_sha1 || \
            single_commit?(diff_start_sha1, diff_end_sha1)
           @name = diff_end_sha1
@@ -1035,8 +1031,9 @@ module Homebrew
     safe_system "git", "reset", "--hard", "origin/master"
     safe_system "brew", "update"
 
-    # These variables are for Jenkins and Circle CI respectively.
-    pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CIRCLE_PR_NUMBER"]
+    # These variables are for Jenkins, Jenkins pipeline and
+    # Circle CI respectively.
+    pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CHANGE_ID"] || ENV["CIRCLE_PR_NUMBER"]
     upstream_number = ENV["UPSTREAM_BUILD_NUMBER"] || ENV["CIRCLE_BUILD_NUM"]
     remote = "git@github.com:#{ENV["GIT_AUTHOR_NAME"]}/homebrew-#{tap.repo}.git"
     git_tag = if pr
@@ -1141,6 +1138,16 @@ module Homebrew
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
+    jenkins = !ENV["JENKINS_HOME"].nil?
+    jenkins_pipeline_pr = jenkins && !ENV["CHANGE_URL"].nil?
+    jenkins_pipeline_branch = jenkins && !jenkins_pipeline_pr && !ENV["BRANCH_NAME"].nil?
+    if jenkins_pipeline_branch || jenkins_pipeline_pr
+      ARGV << "--ci-auto"
+    end
+    if jenkins_pipeline_branch
+      ARGV << "--no-pull"
+    end
+
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
     if OS.mac? && (ENV["CODECOV_TOKEN"] || travis)
@@ -1151,7 +1158,9 @@ module Homebrew
     circle_pr = ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
     jenkins_pr = !ENV["ghprbPullLink"].nil?
     jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
+    jenkins_pr ||= jenkins_pipeline_pr
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
+    jenkins_branch ||= jenkins_pipeline_branch
 
     if ARGV.include?("--ci-auto")
       if travis_pr || circle_pr || jenkins_pr
