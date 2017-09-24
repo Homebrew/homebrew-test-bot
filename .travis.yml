@@ -5,7 +5,6 @@ cache:
     - $HOME/Library/Caches/Homebrew/style
     - $HOME/Library/Caches/Homebrew/tests
     - $HOME/Library/Homebrew/vendor/bundle
-
 matrix:
   include:
     - os: osx
@@ -13,7 +12,7 @@ matrix:
       rvm: system
     - os: linux
       sudo: false
-      rvm: 2.0.0
+      rvm: 2.3.3
 
 before_install:
   - export HOMEBREW_NO_AUTO_UPDATE=1
@@ -24,6 +23,7 @@ before_install:
       git -C "$HOMEBREW_REPOSITORY" fetch;
       git -C "$HOMEBREW_REPOSITORY" reset --hard origin/master;
     else
+      umask 022;
       HOMEBREW_REPOSITORY="$HOME/Homebrew";
       git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY";
       export PATH="$HOMEBREW_REPOSITORY/bin:$PATH";
@@ -31,7 +31,6 @@ before_install:
       mkdir -p "$HOMEBREW_CORE_TAP_DIR";
       ln -s .git Formula "$HOMEBREW_CORE_TAP_DIR";
       chmod 644 Formula/*.rb;
-      umask 022;
     fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
   - mkdir -p "$HOMEBREW_TAP_DIR"
