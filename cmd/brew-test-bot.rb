@@ -823,7 +823,7 @@ module Homebrew
     def cleanup_shared
       cleanup_git_meta(HOMEBREW_REPOSITORY)
       git "gc", "--auto", "--force"
-      test "git", "clean", "-ffdx", "--exclude=Library/Taps"
+      test "git", "clean", "-ffdx", "--exclude=Library/Taps", "--exclude=Library/Homebrew/vendor/portable-ruby"
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
