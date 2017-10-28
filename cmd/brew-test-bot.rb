@@ -1185,7 +1185,7 @@ module Homebrew
     end
 
     first_formula_name = bottles_hash.keys.first
-    tap = Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || tap || "homebrew/core")
+    tap = Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || "homebrew/core")
 
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
@@ -1251,7 +1251,7 @@ module Homebrew
       bintray_repo = bottle_hash["bintray"]["repository"]
       bintray_packages_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
-      bottle_hash["bottle"]["tags"].each_value do |tag_hash|
+      bottle_hash["bottle"]["tags"].each do |_tag, tag_hash|
         filename = tag_hash["filename"]
         bintray_filename_url =
           "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
