@@ -1185,7 +1185,7 @@ module Homebrew
     end
 
     first_formula_name = bottles_hash.keys.first
-    tap = Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || tap || "homebrew/core")
+    tap ||= Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || "homebrew/core")
 
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
