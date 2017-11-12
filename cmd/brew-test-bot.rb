@@ -721,7 +721,17 @@ module Homebrew
         deps.each do |dep|
           CompilerSelector.select_for(dep.to_formula)
         end
-        CompilerSelector.select_for(formula)
+        if formula.devel && formula.stable? \
+           && !ARGV.include?("--HEAD") && !ARGV.include?("--fast")
+          CompilerSelector.select_for(formula)
+          CompilerSelector.select_for(formula.devel)
+        elsif ARGV.include?("--HEAD")
+          CompilerSelector.select_for(formula.head)
+        elsif formula.stable
+          CompilerSelector.select_for(formula)
+        elsif formula.devel
+          CompilerSelector.select_for(formula.devel)
+        end
       rescue CompilerSelectionError => e
         unless installed_gcc
           run_as_not_developer { test "brew", "install", "gcc" }
