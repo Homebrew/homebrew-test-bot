@@ -1298,7 +1298,7 @@ module Homebrew
             EOS
             if ARGV.include?("--dry-run")
               puts <<-EOS.undent
-                curl --user $BINTRAY_USER:$BINTRAY_KEY
+                curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                      --header Content-Type: application/json
                      --data #{package_blob.delete("\n")}
                      #{bintray_packages_url}
@@ -1317,7 +1317,7 @@ module Homebrew
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
         if ARGV.include?("--dry-run")
           puts <<-EOS.undent
-            curl --user $BINTRAY_USER:$BINTRAY_KEY
+            curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                  --upload-file #{filename}
                  #{content_url}
           EOS
