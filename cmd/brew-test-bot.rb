@@ -1237,7 +1237,7 @@ module Homebrew
 
     # These variables are for Jenkins and Circle CI respectively.
     upstream_number = ENV["UPSTREAM_BUILD_NUMBER"] || ENV["CIRCLE_BUILD_NUM"]
-    remote = "git@github.com:#{ENV["GIT_AUTHOR_NAME"]}/homebrew-#{tap.repo}.git"
+    remote = "git@github.com:#{ENV["HOMEBREW_GIT_NAME"]}/homebrew-#{tap.repo}.git"
     git_tag = if pr
       "pr-#{pr}"
     elsif upstream_number
