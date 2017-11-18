@@ -1199,6 +1199,9 @@ module Homebrew
 
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
+    ENV["HOMEBREW_GIT_NAME"] = ARGV.value("git-name") || "BrewTestBot"
+    ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
+                                "brew-test-bot@googlegroups.com"
 
     if ARGV.include?("--dry-run")
       puts <<-EOS.undent
@@ -1351,12 +1354,6 @@ module Homebrew
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
-    ENV["GIT_AUTHOR_NAME"] =
-      ENV["GIT_COMMITTER_NAME"] =
-        ARGV.value("git-name") || "BrewTestBot"
-    ENV["GIT_AUTHOR_EMAIL"] =
-      ENV["GIT_COMMITTER_EMAIL"] =
-        ARGV.value("git-email") || "brew-test-bot@googlegroups.com"
 
     travis = !ENV["TRAVIS"].nil?
     if travis
