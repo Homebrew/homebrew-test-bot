@@ -583,7 +583,6 @@ module Homebrew
       test "brew", "doctor"
       test "brew", "--env"
       test "brew", "config"
-      test "brew", "install", "xz"
     end
 
     def unlink_conflicts(formula)
@@ -621,6 +620,8 @@ module Homebrew
       return if ARGV.include?("--fast")
       return if ARGV.include?("--no-bottle")
       return if formula.bottle_disabled?
+      xz_formula = Formulary.factory("xz")
+      test "brew", "install", "xz" unless xz_formula.installed?
       bottle_args = ["--verbose", "--json", formula.name]
       bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
       bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
