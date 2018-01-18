@@ -558,10 +558,6 @@ module Homebrew
         satisfied = false
         satisfied ||= requirement.satisfied?
         satisfied ||= requirement.optional?
-        if !satisfied && requirement.default_formula?
-          default = Formula[requirement.default_formula]
-          satisfied = satisfied_requirements?(default, :stable, formula.full_name)
-        end
         satisfied
       end
 
