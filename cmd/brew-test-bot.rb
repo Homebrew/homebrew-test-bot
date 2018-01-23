@@ -1200,7 +1200,7 @@ module Homebrew
                                 "brew-test-bot@googlegroups.com"
 
     if ARGV.include?("--dry-run")
-      puts <<-EOS.undent
+      puts <<~EOS
         git am --abort
         git rebase --abort
         git checkout -f master
@@ -1274,7 +1274,7 @@ module Homebrew
         end
 
         if filename_already_published
-          raise <<-EOS.undent
+          raise <<~EOS
             #{filename} is already published. Please remove it manually from
             https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
           EOS
@@ -1290,13 +1290,13 @@ module Homebrew
           end
 
           unless package_exists
-            package_blob = <<-EOS.undent
+            package_blob = <<~EOS
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
                "public_stats": true}
             EOS
             if ARGV.include?("--dry-run")
-              puts <<-EOS.undent
+              puts <<~EOS
                 curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                      --header Content-Type: application/json
                      --data #{package_blob.delete("\n")}
@@ -1315,7 +1315,7 @@ module Homebrew
         content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
         if ARGV.include?("--dry-run")
-          puts <<-EOS.undent
+          puts <<~EOS
             curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                  --upload-file #{filename}
                  #{content_url}
