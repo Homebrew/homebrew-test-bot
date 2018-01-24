@@ -251,7 +251,6 @@ module Homebrew
       # Step may produce arbitrary output and we read it bytewise, so must
       # buffer it as binary and convert to UTF-8 once complete
       output = "".encode!("BINARY")
-      working_dir = Pathname.new((@command.first == "git") ? @repository : Dir.pwd)
       read, write = IO.pipe
 
       begin
@@ -260,7 +259,7 @@ module Homebrew
           $stdout.reopen(write)
           $stderr.reopen(write)
           write.close
-          working_dir.cd { exec(*@command) }
+          exec(*@command)
         end
         write.close
         while buf = read.readpartial(4096)
@@ -390,12 +389,12 @@ module Homebrew
       if ENV["ghprbPullLink"]
         @url = ENV["ghprbPullLink"]
         @hash = nil
-        test "git", "checkout", "origin/master"
+        @repository.cd { test "git", "checkout", "origin/master" }
       # Use Jenkins Pipeline plugin variables for pull request jobs
       elsif ENV["JENKINS_HOME"] && ENV["CHANGE_URL"]
         @url = ENV["CHANGE_URL"]
         @hash = nil
-        test "git", "checkout", "origin/master"
+        @repository.cd { test "git", "checkout", "origin/master" }
       # Use Jenkins Git plugin variables
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
@@ -881,11 +880,15 @@ module Homebrew
     end
 
     def cleanup_shared
-      cleanup_git_meta(HOMEBREW_REPOSITORY)
-      test "git", "gc", "--auto", "--force"
-      test "git", "clean", "-ffdx",
-        "--exclude=Library/Taps",
-        "--exclude=Library/Homebrew/vendor"
+      @repository.cd do
+        cleanup_git_meta(@repository)
+        test "git", "clean", "-ffdx",
+          "--exclude=Library/Taps",
+          "--exclude=Library/Homebrew/vendor"
+        if Utils.popen_read("git -c gc.autoDetach=false gc --auto 2>&1").include?("git prune")
+          test "git", "prune"
+        end
+      end
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
@@ -921,6 +924,9 @@ module Homebrew
         git_repo.cd do
           test "git", "checkout", "-f", "master"
           test "git", "reset", "--hard", "origin/master"
+          if Utils.popen_read("git -c gc.autoDetach=false gc --auto 2>&1").include?("git prune")
+            test "git", "prune"
+          end
         end
       end
     end
@@ -929,13 +935,14 @@ module Homebrew
       @category = __method__
       return if @skip_cleanup_before
       return unless ARGV.include? "--cleanup"
-      test "git", "stash", "clear"
-      test "git", "stash"
-      git "am", "--abort"
-      git "rebase", "--abort"
-      unless ARGV.include? "--no-pull"
-        test "git", "checkout", "-f", "master"
-        test "git", "reset", "--hard", "origin/master"
+      @repository.cd do
+        test "git", "stash", "clear"
+        git "am", "--abort"
+        git "rebase", "--abort"
+        unless ARGV.include? "--no-pull"
+          test "git", "checkout", "-f", "master"
+          test "git", "reset", "--hard", "origin/master"
+        end
       end
 
       # FIXME: I have no idea if this change is safe for Circle CI or not,
@@ -943,6 +950,17 @@ module Homebrew
       Pathname.glob("*.bottle*.*").each(&:unlink) if OS.mac?
 
       cleanup_shared
+    end
+
+    def pkill_if_needed!
+      pgrep = ["pgrep", "-f", HOMEBREW_CELLAR.to_s]
+      if quiet_system(*pgrep)
+        test "pkill", "-f", HOMEBREW_CELLAR.to_s
+        if quiet_system(*pgrep)
+          sleep 1
+          test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s if system(*pgrep)
+        end
+      end
     end
 
     def cleanup_after
@@ -953,7 +971,7 @@ module Homebrew
       if ENV["TRAVIS"]
         # For Travis CI build caching.
         test "brew", "install", "md5deep" if OS.mac?
-        return
+        return if @tap.to_s != "homebrew/test-bot"
       end
 
       if @start_branch && !@start_branch.empty? && \
@@ -964,13 +982,12 @@ module Homebrew
       end
 
       if ARGV.include? "--cleanup"
-        test "git", "reset", "--hard", "origin/master"
-        test "git", "stash", "pop"
-        test "git", "stash", "clear"
+        @repository.cd do
+          test "git", "reset", "--hard", "origin/master"
+          test "git", "stash", "clear"
+        end
         test "brew", "cleanup", "--prune=7"
-        test "pkill", "-f", HOMEBREW_CELLAR.to_s
-        sleep 1
-        test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s
+        pkill_if_needed!
 
         cleanup_shared
 
