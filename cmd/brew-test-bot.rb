@@ -744,7 +744,17 @@ module Homebrew
         deps.each do |dep|
           CompilerSelector.select_for(dep.to_formula)
         end
-        CompilerSelector.select_for(formula)
+        if formula.devel && formula.stable? \
+           && !ARGV.include?("--HEAD") && !ARGV.include?("--fast")
+          CompilerSelector.select_for(formula)
+          CompilerSelector.select_for(formula.devel)
+        elsif ARGV.include?("--HEAD")
+          CompilerSelector.select_for(formula.head)
+        elsif formula.stable
+          CompilerSelector.select_for(formula)
+        elsif formula.devel
+          CompilerSelector.select_for(formula.devel)
+        end
       rescue CompilerSelectionError => e
         unless installed_gcc
           run_as_not_developer { test "brew", "install", "gcc" }
@@ -1214,7 +1224,7 @@ module Homebrew
     end
 
     first_formula_name = bottles_hash.keys.first
-    tap = Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || "homebrew/core")
+    tap ||= Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || "homebrew/core")
 
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
@@ -1290,7 +1300,7 @@ module Homebrew
       bintray_repo = bottle_hash["bintray"]["repository"]
       bintray_packages_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
-      bottle_hash["bottle"]["tags"].each do |_tag, tag_hash|
+      bottle_hash["bottle"]["tags"].each_value do |tag_hash|
         filename = tag_hash["filename"]
         bintray_filename_url =
           "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
@@ -1332,7 +1342,7 @@ module Homebrew
             EOS
             if ARGV.include?("--dry-run")
               puts <<-EOS.undent
-                curl --user $BINTRAY_USER:$BINTRAY_KEY
+                curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                      --header Content-Type: application/json
                      --data #{package_blob.delete("\n")}
                      #{bintray_packages_url}
@@ -1352,7 +1362,7 @@ module Homebrew
         content_url += "?override=1" if ARGV.include? "--overwrite"
         if ARGV.include?("--dry-run")
           puts <<-EOS.undent
-            curl --user $BINTRAY_USER:$BINTRAY_KEY
+            curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                  --upload-file #{filename}
                  #{content_url}
           EOS
@@ -1382,6 +1392,7 @@ module Homebrew
 
     ENV["HOMEBREW_DEVELOPER"] = "1"
     ENV["HOMEBREW_SANDBOX"] = "1"
+    ENV["HOMEBREW_ENV_FILTERING"] = "1"
     ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
