@@ -115,7 +115,6 @@ module Homebrew
 
   WELL_STYLED_TAPS = [
     "homebrew/core",
-    "homebrew/versions",
   ].freeze
 
   def fix_encoding!(str)
@@ -300,7 +299,12 @@ module Homebrew
       @deleted_formulae = []
       @steps = []
       @tap = options[:tap]
-      @repository = @tap ? @tap.path : HOMEBREW_REPOSITORY
+      if @tap
+        @repository = @tap.path
+        @test_bot_tap = @tap.to_s == "homebrew/test-bot"
+      else
+        @repository = HOMEBREW_REPOSITORY
+      end
       @skip_homebrew = options.fetch(:skip_homebrew, false)
 
       if quiet_system "git", "-C", @repository.to_s, "rev-parse", "--verify", "-q", argument
@@ -473,7 +477,7 @@ module Homebrew
       return unless diff_start_sha1 != diff_end_sha1
       return if @url && steps.last && !steps.last.passed?
 
-      if @tap
+      if @tap && !@test_bot_tap
         formula_path = @tap.formula_dir.to_s
         @added_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
         if merge_commit? diff_end_sha1
@@ -790,8 +794,9 @@ module Homebrew
       @category = __method__
       return if @skip_homebrew
 
-      test_brew = !@tap || @tap.to_s == "homebrew/test-bot"
+      test_brew = !@tap || @test_bot_tap
       test_no_formulae = @formulae.empty? || @test_default_formula
+
       if test_brew && test_no_formulae
         # verify that manpages are up-to-date
         test "brew", "man", "--fail-if-changed"
@@ -809,7 +814,7 @@ module Homebrew
         test "brew", "style"
 
         coverage_args = []
-        if ARGV.include?("--coverage")
+        if ARGV.include?("--coverage") && !@test_bot_tap
           if ENV["JENKINS_HOME"] || ENV["TRAVIS"]
             coverage_args << "--coverage" if OS.mac? && MacOS.version == :sierra
           else
