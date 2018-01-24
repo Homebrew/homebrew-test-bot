@@ -1074,7 +1074,7 @@ module Homebrew
         filename = tag_hash["filename"]
         if system "curl", "-I", "--silent", "--fail", "--output", "/dev/null",
                   "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
-          message = <<-EOS.undent
+          message = <<~EOS
             #{filename} is already published. Please remove it manually from
             https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
           EOS
@@ -1088,7 +1088,7 @@ module Homebrew
         unless formula_packaged[formula_name]
           package_url = "#{bintray_repo_url}/#{bintray_package}"
           unless system "curl", "--silent", "--fail", "--output", "/dev/null", package_url
-            package_blob = <<-EOS.undent
+            package_blob = <<~EOS
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
                "public_stats": true}
