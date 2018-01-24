@@ -306,6 +306,8 @@ module Homebrew
         @repository = HOMEBREW_REPOSITORY
       end
       @skip_homebrew = options.fetch(:skip_homebrew, false)
+      @skip_cleanup_before = options.fetch(:skip_cleanup_before, false)
+      @skip_cleanup_after = options.fetch(:skip_cleanup_after, false)
 
       if quiet_system "git", "-C", @repository.to_s, "rev-parse", "--verify", "-q", argument
         @hash = argument
@@ -676,9 +678,9 @@ module Homebrew
       # shared_*_args are applied to both the main and --devel spec
       shared_install_args = ["--verbose"]
       shared_install_args << "--keep-tmp" if ARGV.keep_tmp?
+      shared_install_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
       # install_args is just for the main (stable, or devel if in a devel-only tap) spec
       install_args = []
-      install_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
       install_args << "--build-from-source" if ARGV.include?("--no-bottle")
       install_args << "--HEAD" if ARGV.include? "--HEAD"
 
@@ -701,9 +703,6 @@ module Homebrew
       run_as_not_developer do
         if !ARGV.include?("--fast") || formula_bottled || formula.bottle_unneeded?
           test "brew", "install", "--only-dependencies", *install_args unless dependencies.empty?
-          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/etc"
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/var"
           test "brew", "install", *install_args
           install_passed = steps.last.passed?
         end
@@ -772,9 +771,13 @@ module Homebrew
             test "brew", "test", "--verbose", dependent.name
           end
         end
-        after_linkage = Utils.popen_read("brew", "list").split("\n")
-        installed_by_linkage = after_linkage - before_linkage
-        test "brew", "uninstall", "--force", *installed_by_linkage unless installed_by_linkage.empty? || OS.mac?
+        if ARGV.include? "--cleanup"
+          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+          Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
+            prefix_path = bottle_path.sub(formula.bottle_prefix, HOMEBREW_PREFIX)
+            FileUtils.rm_rf prefix_path
+          end
+        end
         test "brew", "uninstall", "--force", formula_name
       end
 
@@ -784,15 +787,19 @@ module Homebrew
          && satisfied_requirements?(formula, :devel)
         test "brew", "fetch", "--retry", "--devel", *fetch_args
         run_as_not_developer do
-          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/etc"
-          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/var"
           test "brew", "install", "--devel", formula_name, *shared_install_args
         end
         devel_install_passed = steps.last.passed?
         test "brew", "audit", "--devel", *audit_args
         if devel_install_passed
           test "brew", "test", "--devel", formula_name, *shared_test_args if formula.test_defined?
+          if ARGV.include? "--cleanup"
+            # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+            Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
+              prefix_path = bottle_path.sub(formula.bottle_prefix, HOMEBREW_PREFIX)
+              FileUtils.rm_rf prefix_path
+            end
+          end
           test "brew", "uninstall", "--devel", "--force", formula_name
         end
       end
@@ -900,6 +907,7 @@ module Homebrew
 
     def cleanup_before
       @category = __method__
+      return if @skip_cleanup_before
       return unless ARGV.include? "--cleanup"
       git "stash", "clear"
       git "stash"
@@ -919,7 +927,8 @@ module Homebrew
 
     def cleanup_after
       @category = __method__
-      return if ENV["TRAVIS"]
+      return if @skip_cleanup_after
+      return if ENV["TRAVIS"] || ENV["CIRCLE_CI"]
 
       if @start_branch && !@start_branch.empty? && \
          (ARGV.include?("--cleanup") || @url || @hash)
@@ -1072,14 +1081,14 @@ module Homebrew
               Utils::Bottles.tag => {
                 "filename" => "testbottest-1.0.0.#{Utils::Bottles.tag}.bottle.tar.gz",
                 "sha256" => "20cdde424f5fe6d4fdb6a24cff41d2f7aefcd1ef2f98d46f6c074c36a1eef81e",
-              }
-            }
+              },
+            },
           },
           "bintray" => {
             "package" => "testbottest",
             "repository" => "bottles",
           },
-        }
+        },
       }
     end
 
@@ -1339,17 +1348,25 @@ module Homebrew
     tests = []
     any_errors = false
     skip_homebrew = ARGV.include?("--skip-homebrew")
+    skip_cleanup_before = false
     if ARGV.named.empty?
       # With no arguments just build the most recent commit.
-      current_test = Test.new("HEAD", tap: tap, skip_homebrew: skip_homebrew)
+      current_test = Test.new("HEAD", tap: tap,
+                                      skip_homebrew: skip_homebrew,
+                                      skip_cleanup_before: skip_cleanup_before)
       any_errors = !current_test.run
       tests << current_test
     else
       ARGV.named.each do |argument|
+        skip_cleanup_after = argument != ARGV.named.last
         test_error = false
         begin
-          current_test = Test.new(argument, tap: tap, skip_homebrew: skip_homebrew)
+          current_test = Test.new(argument, tap: tap,
+                                            skip_homebrew: skip_homebrew,
+                                            skip_cleanup_before: skip_cleanup_before,
+                                            skip_cleanup_after: skip_cleanup_after)
           skip_homebrew = true
+          skip_cleanup_before = true
         rescue ArgumentError => e
           test_error = true
           ofail e.message
