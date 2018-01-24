@@ -393,13 +393,10 @@ module Homebrew
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
-        pr = $1
-        @url = "#{git_url}/pull/#{pr}"
-        @hash = nil
-      # Use Travis CI pull-request variables for pull request jobs.
-      elsif travis_pr
-        @url = "https://github.com/#{ENV["TRAVIS_REPO_SLUG"]}/pull/#{ENV["TRAVIS_PULL_REQUEST"]}"
-        @hash = nil
+        if pr = $1
+          @url = "#{git_url}/pull/#{pr}"
+          @hash = nil
+        end
       # Use Circle CI pull-request variables for pull request jobs.
       elsif circle_pr
         @url = ENV["CI_PULL_REQUEST"]
@@ -704,6 +701,9 @@ module Homebrew
       run_as_not_developer do
         if !ARGV.include?("--fast") || formula_bottled || formula.bottle_unneeded?
           test "brew", "install", "--only-dependencies", *install_args unless dependencies.empty?
+          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/etc"
+          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/var"
           test "brew", "install", *install_args
           install_passed = steps.last.passed?
         end
@@ -784,6 +784,9 @@ module Homebrew
          && satisfied_requirements?(formula, :devel)
         test "brew", "fetch", "--retry", "--devel", *fetch_args
         run_as_not_developer do
+          # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
+          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/etc"
+          FileUtils.rm_rf "#{HOMEBREW_PREFIX}/var"
           test "brew", "install", "--devel", formula_name, *shared_install_args
         end
         devel_install_passed = steps.last.passed?
@@ -1016,7 +1019,15 @@ module Homebrew
     bintray_user = ENV["HOMEBREW_BINTRAY_USER"]
     bintray_key = ENV["HOMEBREW_BINTRAY_KEY"]
     if !bintray_user || !bintray_key
-      raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!"
+      unless ARGV.include?("--dry-run")
+        raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!"
+      end
+    end
+
+    # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
+    bintray_org = ARGV.value("bintray-org") || "homebrew"
+    if bintray_org == "homebrew" && !OS.mac?
+      ENV["HOMEBREW_FORCE_HOMEBREW_ORG"] = "1"
     end
 
     # Don't pass keys/cookies to subprocesses
@@ -1029,11 +1040,18 @@ module Homebrew
       jenkins = ENV["JENKINS_HOME"]
       job = ENV["UPSTREAM_JOB_NAME"]
       id = ENV["UPSTREAM_BUILD_ID"]
-      return unless jenkins
-      raise "Missing Jenkins variables!" if !job || !id
+      if !job || !id
+        unless ARGV.include?("--dry-run")
+          raise "Missing Jenkins variables!"
+        end
+      end
 
       bottles = Dir["#{jenkins}/jobs/#{job}/configurations/axis-version/*/builds/#{id}/archive/*.bottle*.*"]
-      return if bottles.empty?
+      if bottles.empty?
+        unless ARGV.include?("--dry-run")
+          raise "No bottles found!"
+        end
+      end
 
       FileUtils.cp bottles, Dir.pwd, verbose: true
     end
@@ -1041,6 +1059,28 @@ module Homebrew
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
       deep_merge_hashes hash, JSON.parse(IO.read(json_file))
+    end
+
+    if ARGV.include?("--dry-run")
+      bottles_hash = {
+        "testbottest" => {
+          "formula" => {
+            "pkg_version" => "1.0.0",
+          },
+          "bottle" => {
+            "tags" => {
+              Utils::Bottles.tag => {
+                "filename" => "testbottest-1.0.0.#{Utils::Bottles.tag}.bottle.tar.gz",
+                "sha256" => "20cdde424f5fe6d4fdb6a24cff41d2f7aefcd1ef2f98d46f6c074c36a1eef81e",
+              }
+            }
+          },
+          "bintray" => {
+            "package" => "testbottest",
+            "repository" => "bottles",
+          },
+        }
+      }
     end
 
     first_formula_name = bottles_hash.keys.first
@@ -1051,15 +1091,39 @@ module Homebrew
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
 
-    quiet_system "git", "am", "--abort"
-    quiet_system "git", "rebase", "--abort"
-    safe_system "git", "checkout", "-f", "master"
-    safe_system "git", "reset", "--hard", "origin/master"
-    safe_system "brew", "update"
+    if ARGV.include?("--dry-run")
+      puts <<-EOS.undent
+        git am --abort
+        git rebase --abort
+        git checkout -f master
+        git reset --hard origin/master
+        brew update
+      EOS
+    else
+      quiet_system "git", "am", "--abort"
+      quiet_system "git", "rebase", "--abort"
+      safe_system "git", "checkout", "-f", "master"
+      safe_system "git", "reset", "--hard", "origin/master"
+      safe_system "brew", "update"
+    end
 
     # These variables are for Jenkins, Jenkins pipeline and
     # Circle CI respectively.
     pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CHANGE_ID"] || ENV["CIRCLE_PR_NUMBER"]
+    if pr
+      pull_pr = "https://github.com/#{tap.user}/homebrew-#{tap.repo}/pull/#{pr}"
+      safe_system "brew", "pull", "--clean", pull_pr
+    end
+
+    if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
+      system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
+    elsif !ARGV.include?("--dry-run")
+      system "brew", "bottle", "--merge", "--write", *json_files
+    else
+      puts "brew bottle --merge --write $JSON_FILES"
+    end
+
+    # These variables are for Jenkins and Circle CI respectively.
     upstream_number = ENV["UPSTREAM_BUILD_NUMBER"] || ENV["CIRCLE_BUILD_NUM"]
     remote = "git@github.com:#{ENV["GIT_AUTHOR_NAME"]}/homebrew-#{tap.repo}.git"
     git_tag = if pr
@@ -1068,9 +1132,16 @@ module Homebrew
       "testing-#{upstream_number}"
     elsif (number = ENV["BUILD_NUMBER"])
       "other-#{number}"
+    elsif ARGV.include?("--dry-run")
+      "$GIT_TAG"
     end
+
     if git_tag
-      safe_system "git", "push", "--force", remote, "master:master", ":refs/tags/#{git_tag}"
+      if ARGV.include?("--dry-run")
+        puts "git push --force #{remote} master:master :refs/tags/#{git_tag}"
+      else
+        safe_system "git", "push", "--force", remote, "master:master", ":refs/tags/#{git_tag}"
+      end
     end
 
     if pr
@@ -1088,19 +1159,21 @@ module Homebrew
     bottles_hash.each do |formula_name, bottle_hash|
       version = bottle_hash["formula"]["pkg_version"]
       bintray_package = bottle_hash["bintray"]["package"]
-      bintray_org = ARGV.value("bintray-org") || "homebrew"
       bintray_repo = bottle_hash["bintray"]["repository"]
       bintray_packages_url = "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
       bottle_hash["bottle"]["tags"].each do |_tag, tag_hash|
         filename = tag_hash["filename"]
-        bintray_filename_url = "https://api.bintray.com/file_version/#{bintray_org}/#{bintray_repo}/#{filename}"
-        filename_already_published = begin
-          output, = curl_output bintray_filename_url
-          json = JSON.parse output
-          json["published"]
-        rescue JSON::ParserError
+        bintray_filename_url =
+          "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
+        filename_already_published = if ARGV.include?("--dry-run")
+          puts "curl -I --output /dev/null #{bintray_filename_url}"
           false
+        else
+          begin
+            system(*curl_args(extra_args: ["-I", "--output", "/dev/null",
+                                           bintray_filename_url]))
+          end
         end
 
         if filename_already_published
@@ -1117,16 +1190,32 @@ module Homebrew
 
         unless formula_packaged[formula_name]
           package_url = "#{bintray_packages_url}/#{bintray_package}"
-          unless system(*curl_args(extra_args: ["--output", "/dev/null", package_url]))
+          package_exists = if ARGV.include?("--dry-run")
+            puts "curl --output /dev/null #{package_url}"
+            false
+          else
+            system(*curl_args(extra_args: ["--output", "/dev/null", package_url]))
+          end
+
+          unless package_exists
             package_blob = <<-EOS.undent
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
                "public_stats": true}
             EOS
-            curl "--user", "#{bintray_user}:#{bintray_key}",
-                 "--header", "Content-Type: application/json",
-                 "--data", package_blob, bintray_packages_url
-            puts
+            if ARGV.include?("--dry-run")
+              puts <<-EOS.undent
+                curl --user $BINTRAY_USER:$BINTRAY_KEY
+                     --header Content-Type: application/json
+                     --data #{package_blob.delete("\n")}
+                     #{bintray_packages_url}
+              EOS
+            else
+              curl "--user", "#{bintray_user}:#{bintray_key}",
+                   "--header", "Content-Type: application/json",
+                   "--data", package_blob, bintray_packages_url
+              puts
+            end
           end
           formula_packaged[formula_name] = true
         end
@@ -1134,15 +1223,29 @@ module Homebrew
         content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
         content_url += "?override=1" if ARGV.include? "--overwrite"
-        curl "--user", "#{bintray_user}:#{bintray_key}",
-             "--upload-file", filename, content_url
-        puts
+        if ARGV.include?("--dry-run")
+          puts <<-EOS.undent
+            curl --user $BINTRAY_USER:$BINTRAY_KEY
+                 --upload-file #{filename}
+                 #{content_url}
+          EOS
+        else
+          curl "--user", "#{bintray_user}:#{bintray_key}",
+               "--upload-file", filename, content_url
+          puts
+        end
       end
     end
 
     return unless git_tag
-    safe_system "git", "tag", "--force", git_tag
-    safe_system "git", "push", "--force", remote, "refs/tags/#{git_tag}"
+
+    if ARGV.include?("--dry-run")
+      puts "git tag --force #{git_tag}"
+      puts "git push --force #{remote} master:master refs/tags/#{git_tag}"
+    else
+      safe_system "git", "tag", "--force", git_tag
+      safe_system "git", "push", "--force", remote, "master:master", "refs/tags/#{git_tag}"
+    end
   end
 
   def sanitize_argv_and_env
