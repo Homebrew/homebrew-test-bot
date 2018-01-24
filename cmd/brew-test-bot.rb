@@ -638,7 +638,7 @@ module Homebrew
       end
     end
 
-    def bottle_reinstall_formula(formula)
+    def bottle_reinstall_formula(formula, new_formula)
       return unless formula.stable?
       return if ARGV.include?("--fast")
       return if ARGV.include?("--no-bottle")
@@ -703,7 +703,6 @@ module Homebrew
 
       fetch_args = [formula_name]
       fetch_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
-      fetch_args << "--build-from-source" if ARGV.include?("--no-bottle")
       fetch_args << "--force" if ARGV.include? "--cleanup"
 
       new_formula = @added_formulae.include?(formula_name)
@@ -824,7 +823,6 @@ module Homebrew
       shared_install_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
       # install_args is just for the main (stable, or devel if in a devel-only tap) spec
       install_args = []
-      install_args << "--build-from-source" if ARGV.include?("--no-bottle")
       install_args << "--HEAD" if ARGV.include? "--HEAD"
 
       # Pass --devel or --HEAD to install in the event formulae lack stable. Supports devel-only/head-only.
@@ -862,7 +860,7 @@ module Homebrew
       test_args << "--keep-tmp" if ARGV.keep_tmp?
 
       if install_passed
-        bottle_reinstall_formula(formula)
+        bottle_reinstall_formula(formula, new_formula)
 
         test "brew", "test", formula_name, *test_args if formula.test_defined?
         bottled_dependents.each do |dependent|
@@ -1072,7 +1070,7 @@ module Homebrew
         test "brew", "cleanup", "--prune=7"
         pkill_if_needed!
 
-        cleanup_shared
+        cleanup_shared unless ENV["TRAVIS"]
 
         if ARGV.include? "--local"
           FileUtils.rm_rf ENV["HOMEBREW_HOME"]
@@ -1301,8 +1299,7 @@ module Homebrew
           false
         else
           begin
-            system(*curl_args(extra_args: ["-I", "--output", "/dev/null",
-                                           bintray_filename_url]))
+            system(*curl_args("-I", "--output", "/dev/null", bintray_filename_url))
           end
         end
 
@@ -1324,7 +1321,7 @@ module Homebrew
             puts "curl --output /dev/null #{package_url}"
             false
           else
-            system(*curl_args(extra_args: ["--output", "/dev/null", package_url]))
+            system(*curl_args("--output", "/dev/null", package_url))
           end
 
           unless package_exists
