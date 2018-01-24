@@ -619,17 +619,28 @@ module Homebrew
       formula.recursive_dependencies.each do |dependency|
         conflicts += dependency.to_formula.conflicts
       end
-
-      conflicts.each do |conflict|
-        confict_formula = Formulary.factory(conflict.name)
-
-        if confict_formula.installed? && confict_formula.linked_keg.exist?
-          test "brew", "unlink", "--force", conflict.name
-        end
-      end
+      unlink_formulae = conflicts.map(&:name)
 
       installed = Utils.popen_read("brew", "list").split("\n")
       dependencies = Utils.popen_read("brew", "deps", "--include-build", formula_name).split("\n")
+      installed_non_dependencies = installed - dependencies
+      installed_dependencies = installed & dependencies
+
+      unlink_formulae += installed_non_dependencies if ARGV.include?("--cleanup")
+
+      unlink_formulae.uniq.each do |name|
+        unlink_formula = Formulary.factory(name)
+        next unless unlink_formula.installed?
+        next unless unlink_formula.linked_keg.exist?
+        test "brew", "unlink", "--force", name
+      end
+
+      installed_dependencies.each do |name|
+        link_formula = Formulary.factory(name)
+        next if link_formula.keg_only?
+        next if link_formula.linked_keg.exist?
+        test "brew", "link", name
+      end
 
       dependencies -= installed
       unchanged_dependencies = dependencies - @formulae
@@ -1009,11 +1020,7 @@ module Homebrew
     end
 
     # Don't pass keys/cookies to subprocesses
-    ENV["HOMEBREW_BINTRAY_KEY"] = nil
-    ENV["HUDSON_SERVER_COOKIE"] = nil
-    ENV["JENKINS_SERVER_COOKIE"] = nil
-    ENV["HUDSON_COOKIE"] = nil
-    ENV["COVERALLS_REPO_TOKEN"] = nil
+    ENV.clear_sensitive_environment!
 
     ARGV << "--verbose"
 
@@ -1089,7 +1096,7 @@ module Homebrew
         filename = tag_hash["filename"]
         bintray_filename_url = "https://api.bintray.com/file_version/#{bintray_org}/#{bintray_repo}/#{filename}"
         filename_already_published = begin
-          output, _ = curl_output bintray_filename_url
+          output, = curl_output bintray_filename_url
           json = JSON.parse output
           json["published"]
         rescue JSON::ParserError
@@ -1110,7 +1117,7 @@ module Homebrew
 
         unless formula_packaged[formula_name]
           package_url = "#{bintray_packages_url}/#{bintray_package}"
-          unless curl "--output", "/dev/null", package_url
+          unless system(*curl_args(extra_args: ["--output", "/dev/null", package_url]))
             package_blob = <<-EOS.undent
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
