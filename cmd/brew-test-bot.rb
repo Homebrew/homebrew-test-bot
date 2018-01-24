@@ -66,11 +66,11 @@
 #:    If `--bintray-org=<bintray-org>` is passed, upload to the given Bintray
 #:    organisation.
 #:
-#:    If `--git-name=<git-name>` is passed, set the upload Git
+#:    If `--git-name=<git-name>` is passed, set the Git
 #:    author/committer names to the given name.
 #:
-#:    If `--git-email=<git-email>` is passed, set the upload Git
-#:    author/committer email to the given name.
+#:    If `--git-email=<git-email>` is passed, set the Git
+#:    author/committer email to the given email.
 #:
 #:    If `--ci-master` is passed, use the Homebrew master branch CI
 #:    options. Implies `--cleanup`: use with care!
@@ -575,7 +575,7 @@ module Homebrew
     end
 
     def satisfied_requirements?(formula, spec, dependency = nil)
-      requirements = formula.send(spec).requirements
+      requirements = formula.send(spec).recursive_requirements
 
       unsatisfied_requirements = requirements.reject do |requirement|
         satisfied = false
@@ -883,6 +883,7 @@ module Homebrew
         devel_install_passed = steps.last.passed?
         test "brew", "audit", "--devel", *audit_args
         if devel_install_passed
+          test "brew", "postinstall", formula_name
           test "brew", "test", "--devel", formula_name, *test_args if formula.test_defined?
           cleanup_bottle_etc_var(formula)
           test "brew", "uninstall", "--devel", "--force", formula_name
@@ -922,8 +923,11 @@ module Homebrew
 
         test "brew", "style"
 
-        test "brew", "tests", "--no-compat", "--online"
-        test "brew", "tests", "--generic", "--online"
+        if OS.linux?
+          test "brew", "tests", "--no-compat", "--online"
+          test "brew", "tests", "--generic", "--online"
+        end
+
         test "brew", "tests", "--online", *coverage_args
 
       elsif @tap
@@ -1054,8 +1058,8 @@ module Homebrew
 
       if ENV["TRAVIS"]
         # For Travis CI build caching.
-        test "brew", "install", "md5deep" if OS.mac?
-        return if @tap.to_s != "homebrew/test-bot"
+        test "brew", "install", "md5deep", "libyaml" if OS.mac?
+        return if @tap && @tap.to_s != "homebrew/test-bot"
       end
 
       unless @start_branch.to_s.empty?
@@ -1214,8 +1218,6 @@ module Homebrew
     first_formula_name = bottles_hash.keys.first
     tap = Tap.fetch(first_formula_name.rpartition("/").first.chuzzle || "homebrew/core")
 
-    ENV["GIT_AUTHOR_NAME"] = ENV["GIT_COMMITTER_NAME"] = ARGV.value("git-name") || "BrewTestBot"
-    ENV["GIT_AUTHOR_EMAIL"] = ENV["GIT_COMMITTER_EMAIL"] = ARGV.value("git-email") || "brew-test-bot@googlegroups.com"
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
 
@@ -1387,6 +1389,12 @@ module Homebrew
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
+    ENV["GIT_AUTHOR_NAME"] =
+      ENV["GIT_COMMITTER_NAME"] =
+        ARGV.value("git-name") || "BrewTestBot"
+    ENV["GIT_AUTHOR_EMAIL"] =
+      ENV["GIT_COMMITTER_EMAIL"] =
+        ARGV.value("git-email") || "brew-test-bot@googlegroups.com"
 
     travis = !ENV["TRAVIS"].nil?
     circle = !ENV["CIRCLECI"].nil?
