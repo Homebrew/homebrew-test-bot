@@ -296,7 +296,8 @@ module Homebrew
       @url = nil
       @formulae = []
       @added_formulae = []
-      @modified_formula = []
+      @modified_formulae = []
+      @deleted_formulae = []
       @steps = []
       @tap = options[:tap]
       @repository = @tap ? @tap.path : HOMEBREW_REPOSITORY
@@ -478,12 +479,13 @@ module Homebrew
         if merge_commit? diff_end_sha1
           # Test formulae whose bottles were updated.
           summaries = git("log", "--pretty=%s", "#{diff_start_sha1}..#{diff_end_sha1}").lines
-          @modified_formula = summaries.map { |s| s[/^([^:]+): update .* bottle\.$/, 1] }.compact
+          @modified_formulae = summaries.map { |s| s[/^([^:]+): update .* bottle\.$/, 1] }.compact
         else
-          @modified_formula += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
+          @modified_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
         end
+        @deleted_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
         or_later_arg = "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$"
-        unless @modified_formula.empty?
+        unless @modified_formulae.empty?
           unless git("diff", or_later_arg, "--unified=0", diff_start_sha1, diff_end_sha1).strip.empty?
             # Test rather than build bottles if we're testing a `*_or_later`
             # bottle change.
@@ -499,7 +501,7 @@ module Homebrew
         @added_formulae = [testbottest]
       end
 
-      @formulae += @added_formulae + @modified_formula
+      @formulae += @added_formulae + @modified_formulae
     end
 
     def skip(formula_name)
@@ -779,6 +781,11 @@ module Homebrew
       test "brew", "uninstall", "--force", *unchanged_dependencies unless unchanged_dependencies.empty?
     end
 
+    def deleted_formula(formula_name)
+      @category = "#{__method__}.#{formula_name}"
+      test "brew", "uses", formula_name
+    end
+
     def homebrew
       @category = __method__
       return if @skip_homebrew
@@ -976,6 +983,9 @@ module Homebrew
         formulae.each do |f|
           formula(f)
         end
+        @deleted_formulae.each do |f|
+          deleted_formula(f)
+        end
       ensure
         cleanup_after
       end
@@ -1074,7 +1084,8 @@ module Homebrew
         filename = tag_hash["filename"]
         bintray_filename_url = "https://api.bintray.com/file_version/#{bintray_org}/#{bintray_repo}/#{filename}"
         filename_already_published = begin
-          json = JSON.parse curl_output bintray_filename_url
+          output, _ = curl_output bintray_filename_url
+          json = JSON.parse output
           json["published"]
         rescue JSON::ParserError
           false
@@ -1100,7 +1111,7 @@ module Homebrew
                "public_download_numbers": true,
                "public_stats": true}
             EOS
-            curl "--user#{bintray_user}:#{bintray_key}",
+            curl "--user", "#{bintray_user}:#{bintray_key}",
                  "--header", "Content-Type: application/json",
                  "--data", package_blob, bintray_packages_url
             puts
@@ -1111,7 +1122,7 @@ module Homebrew
         content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
         content_url += "?override=1" if ARGV.include? "--overwrite"
-        curl "--user#{bintray_user}:#{bintray_key}",
+        curl "--user", "#{bintray_user}:#{bintray_key}",
              "--upload-file", filename, content_url
         puts
       end

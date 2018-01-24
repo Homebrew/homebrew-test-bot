@@ -22,9 +22,8 @@ before_install:
       umask 022;
     fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
-  - HOMEBREW_TAP_ROOT="$(dirname "$HOMEBREW_TAP_DIR")"
-  - rm -rf "$HOMEBREW_TAP_ROOT"
-  - mkdir -p "$HOMEBREW_TAP_ROOT"
+  - mkdir -p "$HOMEBREW_TAP_DIR"
+  - rm -rf "$HOMEBREW_TAP_DIR"
   - ln -s "$PWD" "$HOMEBREW_TAP_DIR"
 
 script:
