@@ -502,11 +502,8 @@ module Homebrew
         end
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
         # Build the default test formula.
-        HOMEBREW_CACHE_FORMULA.mkpath
-        testbottest = "#{HOMEBREW_LIBRARY}/Homebrew/test/support/fixtures/testbottest.rb"
-        FileUtils.cp testbottest, HOMEBREW_CACHE_FORMULA
         @test_default_formula = true
-        @added_formulae = [testbottest]
+        @modified_formulae = ["testbottest"]
       end
 
       @formulae += @added_formulae + @modified_formulae
@@ -545,8 +542,7 @@ module Homebrew
     def setup
       @category = __method__
       return if ARGV.include? "--skip-setup"
-      # TODO: try to fix this on Linux at some stage.
-      test "brew", "doctor" if OS.mac?
+      test "brew", "doctor"
       test "brew", "--env"
       test "brew", "config"
     end
@@ -671,6 +667,7 @@ module Homebrew
         deps.each { |d| d.to_formula.recursive_dependencies }
       rescue TapFormulaUnavailableError => e
         raise if e.tap.installed?
+        e.tap.clear_cache
         safe_system "brew", "tap", e.tap.name
         retry
       end
@@ -833,13 +830,7 @@ module Homebrew
     end
 
     def coverage_args
-      return [] unless ARGV.include?("--coverage")
-      return [] if @test_bot_tap
-      if ENV["JENKINS_HOME"] || ENV["TRAVIS"]
-        return [] unless OS.mac?
-        return [] if MacOS.version != :sierra
-      end
-      coverage_args << "--coverage"
+      ARGV.include?("--coverage") ? ["--coverage"] : []
     end
 
     def homebrew
@@ -853,15 +844,12 @@ module Homebrew
         # verify that manpages are up-to-date
         test "brew", "man", "--fail-if-changed"
 
-        # TODO: try to fix this on Linux at some stage.
-        if OS.mac?
-          # test update from origin/master to current commit.
-          test "brew", "update-test"
-          # test update from origin/master to current tag.
-          test "brew", "update-test", "--to-tag"
-          # test no-op update from current commit (to current commit, a no-op).
-          test "brew", "update-test", "--commit=HEAD"
-        end
+        # test update from origin/master to current commit.
+        test "brew", "update-test"
+        # test update from origin/master to current tag.
+        test "brew", "update-test", "--to-tag"
+        # test no-op update from current commit (to current commit, a no-op).
+        test "brew", "update-test", "--commit=HEAD"
 
         test "brew", "style"
 
@@ -1317,7 +1305,7 @@ module Homebrew
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? && (ENV["CODECOV_TOKEN"] || travis)
+    if OS.mac? && MacOS.version == :sierra && (ENV["CODECOV_TOKEN"] || travis)
       ARGV << "--coverage"
     end
 
@@ -1345,7 +1333,7 @@ module Homebrew
     if ARGV.include?("--ci-master") || ARGV.include?("--ci-pr") \
        || ARGV.include?("--ci-testing")
       ARGV << "--cleanup"
-      ARGV << "--test-default-formula" if OS.mac?
+      ARGV << "--test-default-formula"
       ARGV << "--local" << "--junit" if ENV["JENKINS_HOME"]
       ARGV << "--junit" if ENV["CIRCLECI"]
     end
