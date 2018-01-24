@@ -396,7 +396,7 @@ module Homebrew
     end
 
     def merge_commit?(commit)
-      git("rev-list", "--parents", "-n1", commit).count(" ") > 1
+      Utils.popen_read("git", "rev-list", "--parents", "-n1", commit).count(" ") > 1
     end
 
     def download
@@ -452,7 +452,7 @@ module Homebrew
       end
 
       if merge_commit? diff_end_sha1
-        diff_start_sha1 = git("rev-parse", "#{diff_end_sha1}^1").strip
+        diff_start_sha1 = Utils.popen_read("git", "rev-parse", "#{diff_end_sha1}^1").strip
       else
         diff_start_sha1 = Utils.popen_read("git", "-C", @repository, "merge-base",
                                 diff_start_sha1, diff_end_sha1).strip
@@ -544,7 +544,7 @@ module Homebrew
         @added_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
         if merge_commit? diff_end_sha1
           # Test formulae whose bottles were updated.
-          summaries = git("log", "--pretty=%s", "#{diff_start_sha1}..#{diff_end_sha1}").lines
+          summaries = Utils.popen_read("git", "log", "--pretty=%s", "#{diff_start_sha1}..#{diff_end_sha1}").lines
           @modified_formulae = summaries.map { |s| s[/^([^:]+): update .* bottle\.$/, 1] }.compact
         else
           @modified_formulae += diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
