@@ -311,7 +311,7 @@ module Homebrew
 
       Process.wait(pid)
       @end_time = Time.now
-      @status = $?.success? ? :passed : :failed
+      @status = $CHILD_STATUS.success? ? :passed : :failed
       puts_result
 
       unless output.empty?
@@ -419,7 +419,7 @@ module Homebrew
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
-        if pr = $1
+        if pr = Regexp.last_match(1)
           @url = "#{git_url}/pull/#{pr}"
           @hash = nil
         end
@@ -516,17 +516,24 @@ module Homebrew
                "log", "-1", "--format=%s"
       ).strip
       puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
-      core_revision = Utils.popen_read(
-        "git", "-C", CoreTap.instance.path.to_s,
-               "log", "-1", "--format=%h (%s)"
-      ).strip
-      puts "Homebrew/homebrew-core #{core_revision}"
-      if @tap && @tap.to_s != "homebrew/core"
+      if @tap.to_s != "homebrew/core"
+        core_revision = Utils.popen_read(
+          "git", "-C", CoreTap.instance.path.to_s,
+                 "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts "Homebrew/homebrew-core #{core_revision}"
+      end
+      if @tap
+        tap_origin_master_revision = Utils.popen_read(
+          "git", "-C", @tap.path.to_s,
+                 "log", "-1", "--format=%h (%s)", "origin/master"
+        ).strip
+        puts "#{@tap} origin/master #{tap_origin_master_revision}"
         tap_revision = Utils.popen_read(
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)"
         ).strip
-        puts "#{@tap} #{tap_revision}"
+        puts "#{@tap} HEAD #{tap_revision}"
       end
 
       return unless diff_start_sha1 != diff_end_sha1
@@ -915,14 +922,10 @@ module Homebrew
 
         test "brew", "style"
 
-        test "brew", "tests", "--no-compat"
-        test "brew", "tests", "--generic"
-        test "brew", "tests"
+        test "brew", "tests", "--no-compat", "--online"
+        test "brew", "tests", "--generic", "--online"
+        test "brew", "tests", "--online", *coverage_args
 
-        if OS.mac?
-          run_as_not_developer { test "brew", "tap", "caskroom/cask" }
-          test "brew", "cask-tests", *coverage_args
-        end
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
