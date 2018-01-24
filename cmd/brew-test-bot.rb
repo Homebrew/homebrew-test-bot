@@ -581,10 +581,6 @@ module Homebrew
         satisfied = false
         satisfied ||= requirement.satisfied?
         satisfied ||= requirement.optional?
-        if !satisfied && requirement.default_formula?
-          default = Formula[requirement.default_formula]
-          satisfied = satisfied_requirements?(default, :stable, formula.full_name)
-        end
         satisfied
       end
 
@@ -1228,9 +1224,12 @@ module Homebrew
 
     ENV["GIT_WORK_TREE"] = tap.path
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
+    ENV["HOMEBREW_GIT_NAME"] = ARGV.value("git-name") || "BrewTestBot"
+    ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
+                                "brew-test-bot@googlegroups.com"
 
     if ARGV.include?("--dry-run")
-      puts <<-EOS.undent
+      puts <<~EOS
         git am --abort
         git rebase --abort
         git checkout -f master
@@ -1263,7 +1262,7 @@ module Homebrew
 
     # These variables are for Jenkins and Circle CI respectively.
     upstream_number = ENV["UPSTREAM_BUILD_NUMBER"] || ENV["CIRCLE_BUILD_NUM"]
-    remote = "git@github.com:#{ENV["GIT_AUTHOR_NAME"]}/homebrew-#{tap.repo}.git"
+    remote = "git@github.com:#{ENV["HOMEBREW_GIT_NAME"]}/homebrew-#{tap.repo}.git"
     git_tag = if pr
       "pr-#{pr}"
     elsif upstream_number
@@ -1314,7 +1313,7 @@ module Homebrew
         end
 
         if filename_already_published
-          raise <<-EOS.undent
+          raise <<~EOS
             #{filename} is already published. Please remove it manually from
             https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
           EOS
@@ -1335,13 +1334,13 @@ module Homebrew
           end
 
           unless package_exists
-            package_blob = <<-EOS.undent
+            package_blob = <<~EOS
               {"name": "#{bintray_package}",
                "public_download_numbers": true,
                "public_stats": true}
             EOS
             if ARGV.include?("--dry-run")
-              puts <<-EOS.undent
+              puts <<~EOS
                 curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                      --header Content-Type: application/json
                      --data #{package_blob.delete("\n")}
@@ -1361,7 +1360,7 @@ module Homebrew
         content_url += "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
         content_url += "?override=1" if ARGV.include? "--overwrite"
         if ARGV.include?("--dry-run")
-          puts <<-EOS.undent
+          puts <<~EOS
             curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                  --upload-file #{filename}
                  #{content_url}
@@ -1397,12 +1396,6 @@ module Homebrew
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["PATH"] = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
-    ENV["GIT_AUTHOR_NAME"] =
-      ENV["GIT_COMMITTER_NAME"] =
-        ARGV.value("git-name") || "BrewTestBot"
-    ENV["GIT_AUTHOR_EMAIL"] =
-      ENV["GIT_COMMITTER_EMAIL"] =
-        ARGV.value("git-email") || "brew-test-bot@googlegroups.com"
 
     travis = !ENV["TRAVIS"].nil?
     circle = !ENV["CIRCLECI"].nil?
