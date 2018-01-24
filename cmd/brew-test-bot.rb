@@ -622,10 +622,7 @@ module Homebrew
 
       installed = Utils.popen_read("brew", "list").split("\n")
       dependencies = Utils.popen_read("brew", "deps", "--include-build", formula_name).split("\n")
-      installed_non_dependencies = installed - dependencies
       installed_dependencies = installed & dependencies
-
-      unlink_formulae += installed_non_dependencies if ARGV.include?("--cleanup")
 
       unlink_formulae.uniq.each do |name|
         unlink_formula = Formulary.factory(name)
@@ -766,15 +763,19 @@ module Homebrew
             end
           end
           next unless dependent.installed?
+          if !dependent.keg_only? && !dependent.linked_keg.exist?
+            test "brew", "link", dependent.name
+          end
           test "brew", "linkage", "--test", dependent.name
           if testable_dependents.include? dependent
             test "brew", "test", "--verbose", dependent.name
           end
         end
         if ARGV.include? "--cleanup"
+          bottle_prefix = formula.opt_prefix/".bottle"
           # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-          Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
-            prefix_path = bottle_path.sub(formula.bottle_prefix, HOMEBREW_PREFIX)
+          Pathname.glob("#{bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
+            prefix_path = bottle_path.sub(bottle_prefix, HOMEBREW_PREFIX)
             FileUtils.rm_rf prefix_path
           end
         end
@@ -794,9 +795,10 @@ module Homebrew
         if devel_install_passed
           test "brew", "test", "--devel", formula_name, *shared_test_args if formula.test_defined?
           if ARGV.include? "--cleanup"
+            bottle_prefix = formula.opt_prefix/".bottle"
             # Nuke etc/var to have them be clean to detect bottle etc/var file additions.
-            Pathname.glob("#{formula.bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
-              prefix_path = bottle_path.sub(formula.bottle_prefix, HOMEBREW_PREFIX)
+            Pathname.glob("#{bottle_prefix}/{etc,var}/**/*").each do |bottle_path|
+              prefix_path = bottle_path.sub(bottle_prefix, HOMEBREW_PREFIX)
               FileUtils.rm_rf prefix_path
             end
           end
@@ -865,7 +867,9 @@ module Homebrew
     def cleanup_shared
       cleanup_git_meta(HOMEBREW_REPOSITORY)
       git "gc", "--auto", "--force"
-      test "git", "clean", "-ffdx", "--exclude=Library/Taps", "--exclude=Library/Homebrew/vendor/portable-ruby"
+      test "git", "clean", "-ffdx",
+        "--exclude=Library/Taps",
+        "--exclude=Library/Homebrew/vendor"
 
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
@@ -928,7 +932,13 @@ module Homebrew
     def cleanup_after
       @category = __method__
       return if @skip_cleanup_after
-      return if ENV["TRAVIS"] || ENV["CIRCLE_CI"]
+      return if ENV["CIRCLE_CI"]
+
+      if ENV["TRAVIS"]
+        # For Travis CI build caching.
+        test "brew", "install", "md5deep" if OS.mac?
+        return
+      end
 
       if @start_branch && !@start_branch.empty? && \
          (ARGV.include?("--cleanup") || @url || @hash)
