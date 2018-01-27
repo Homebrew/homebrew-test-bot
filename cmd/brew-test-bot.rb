@@ -1248,7 +1248,7 @@ module Homebrew
     pr = ENV["UPSTREAM_PULL_REQUEST"] || ENV["CHANGE_ID"] || ENV["CIRCLE_PR_NUMBER"]
     if pr
       pull_pr = "#{tap.remote.chomp(".git")}/pull/#{pr}"
-      safe_system "brew", "pull", "--clean", pull_pr
+      safe_system "brew", "pull", "--clean", *("--tap=#{tap}" if tap), pull_pr
     end
 
     if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
@@ -1279,16 +1279,6 @@ module Homebrew
         safe_system "git", "push", "--force", remote, "master:master", ":refs/tags/#{git_tag}"
       end
     end
-
-    if pr
-      pull_pr = "#{tap.remote}/pull/#{pr}"
-      safe_system "brew", "pull", "--clean", *[tap ? "--tap=#{tap}" : nil, pull_pr].compact
-    end
-
-    args = []
-    args << "--keep-old" if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] || ENV["BOT_PARAMS"].to_s.include?("--keep-old") || ARGV.include?("--keep-old")
-    args << "--keep-going" if ARGV.include?("--keep-going")
-    safe_system "brew", "bottle", "--merge", "--write", *args, *json_files
 
     formula_packaged = {}
 
