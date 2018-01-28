@@ -93,6 +93,7 @@
 #:    `GIT_URL`: if set to URL of a tap remote, same as `--tap`
 
 require "formula"
+require "formula_installer"
 require "utils"
 require "date"
 require "rexml/document"
@@ -552,14 +553,9 @@ module Homebrew
     end
 
     def satisfied_requirements?(formula, spec, dependency = nil)
-      requirements = formula.send(spec).recursive_requirements
-
-      unsatisfied_requirements = requirements.reject do |requirement|
-        satisfied = false
-        satisfied ||= requirement.satisfied?
-        satisfied ||= requirement.optional?
-        satisfied
-      end
+      f = Formulary.factory(formula.full_name, spec)
+      fi = FormulaInstaller.new(f)
+      unsatisfied_requirements, = fi.expand_requirements
 
       if unsatisfied_requirements.empty?
         true
