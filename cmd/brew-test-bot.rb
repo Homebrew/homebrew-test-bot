@@ -564,7 +564,7 @@ module Homebrew
         name += " (#{spec})" unless spec == :stable
         name += " (#{dependency} dependency)" if dependency
         skip name
-        puts unsatisfied_requirements.values.first.map(&:message)
+        puts unsatisfied_requirements.values.flatten.map(&:message)
         false
       end
     end
