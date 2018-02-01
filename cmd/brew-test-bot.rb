@@ -688,7 +688,8 @@ module Homebrew
     def formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
 
-      test "brew", "uses", "--recursive", formula_name
+      args = ["--recursive"] unless OS.linux?
+      test "brew", "uses", *args, formula_name
 
       formula = Formulary.factory(formula_name)
 
@@ -795,7 +796,8 @@ module Homebrew
       build_dependencies = dependencies - runtime_dependencies
       @unchanged_build_dependencies = build_dependencies - @formulae
 
-      dependents = Utils.popen_read("brew", "uses", "--recursive", formula_name).split("\n")
+      args = ["--recursive"] unless OS.linux?
+      dependents = Utils.popen_read("brew", "uses", *args, formula_name).split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
 
