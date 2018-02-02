@@ -612,6 +612,10 @@ module Homebrew
       return if ARGV.include?("--fast")
       return if ARGV.include?("--no-bottle")
       return if formula.bottle_disabled?
+      if OS.mac?
+        xz_formula = Formulary.factory("xz")
+        test "brew", "install", "xz" unless xz_formula.installed?
+      end
       bottle_args = ["--verbose", "--json", formula.name]
       bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
       bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
@@ -622,7 +626,7 @@ module Homebrew
       return unless bottle_step.output?
       bottle_filename =
         bottle_step.output.gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
-      bottle_json_filename = bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
+      bottle_json_filename = bottle_filename.gsub(/\.(\d+\.)?tar\.(?:gz|xz)$/, ".json")
       bottle_merge_args = ["--merge", "--write", "--no-commit", bottle_json_filename]
       if ARGV.include?("--keep-old") && !new_formula
         bottle_merge_args << "--keep-old"
@@ -1499,7 +1503,7 @@ module Homebrew
     if ARGV.include? "--clean-cache"
       HOMEBREW_CACHE.children.each(&:rmtree)
     else
-      Dir.glob("*.bottle*.tar.gz") do |bottle_file|
+      Dir.glob("*.bottle*.tar.*") do |bottle_file|
         FileUtils.rm_f HOMEBREW_CACHE/bottle_file
       end
     end
