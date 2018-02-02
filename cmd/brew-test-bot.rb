@@ -620,8 +620,10 @@ module Homebrew
       return if ARGV.include?("--fast")
       return if ARGV.include?("--no-bottle")
       return if formula.bottle_disabled?
-      xz_formula = Formulary.factory("xz")
-      test "brew", "install", "xz" unless xz_formula.installed?
+      if OS.mac?
+        xz_formula = Formulary.factory("xz")
+        test "brew", "install", "xz" unless xz_formula.installed?
+      end
       bottle_args = ["--verbose", "--json", formula.name]
       bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
       bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
