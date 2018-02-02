@@ -990,6 +990,7 @@ module Homebrew
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
         next if tap == "homebrew/test-bot"
+        next if tap == "caskroom/cask"
         next if tap == "linuxbrew/xorg"
         next if tap == @tap.to_s
         test "brew", "untap", tap
@@ -1063,7 +1064,7 @@ module Homebrew
 
       if ENV["TRAVIS"]
         # For Travis CI build caching.
-        test "brew", "install", "md5deep", "libyaml" if OS.mac?
+        test "brew", "install", "md5deep", "libyaml", "gmp", "openssl" if OS.mac?
         return if @tap && @tap.to_s != "homebrew/test-bot"
       end
 
