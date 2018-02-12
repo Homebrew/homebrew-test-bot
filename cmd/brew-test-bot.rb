@@ -1081,7 +1081,7 @@ module Homebrew
         begin
           formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", formula).split("\n")
           # deps can fail if deps are not tapped
-          unless $?.success?
+          unless $CHILD_STATUS.success?
             Formulary.factory(formula).recursive_dependencies
           end
         rescue TapFormulaUnavailableError => e
