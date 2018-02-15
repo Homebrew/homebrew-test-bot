@@ -1056,7 +1056,7 @@ module Homebrew
     def cleanup_after
       @category = __method__
       return if @skip_cleanup_after
-      return if ENV["CIRCLE_CI"]
+      return if ENV["CIRCLECI"]
 
       if ENV["TRAVIS"]
         # For Travis CI build caching.
