@@ -987,6 +987,7 @@ module Homebrew
         next if tap == "homebrew/core"
         next if tap == "homebrew/test-bot"
         next if tap == "caskroom/cask"
+        next if tap == "linuxbrew/extra"
         next if tap == "linuxbrew/test-bot"
         next if tap == "linuxbrew/xorg"
         next if tap == @tap.to_s
