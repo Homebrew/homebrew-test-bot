@@ -555,13 +555,15 @@ module Homebrew
     def satisfied_requirements?(formula, spec, dependency = nil)
       f = Formulary.factory(formula.full_name, spec)
       fi = FormulaInstaller.new(f)
+      stable_spec = spec == :stable
+      fi.build_bottle = stable_spec && !ARGV.include?("--no-bottle")
       unsatisfied_requirements, = fi.expand_requirements
 
       if unsatisfied_requirements.empty?
         true
       else
         name = formula.full_name
-        name += " (#{spec})" unless spec == :stable
+        name += " (#{spec})" unless stable_spec
         name += " (#{dependency} dependency)" if dependency
         skip name
         puts unsatisfied_requirements.values.flatten.map(&:message)
