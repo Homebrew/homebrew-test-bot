@@ -828,8 +828,6 @@ module Homebrew
       shared_install_args = ["--verbose"]
       shared_install_args << "--keep-tmp" if ARGV.keep_tmp?
       shared_install_args << "--build-bottle" if !ARGV.include?("--fast") && !ARGV.include?("--no-bottle") && !formula.bottle_disabled?
-      # Work around a failure on TravisCI on Linux.
-      shared_install_args << "--env=std" if @test_default_formula && ENV["TRAVIS"] && OS.linux?
       # install_args is just for the main (stable, or devel if in a devel-only tap) spec
       install_args = []
       install_args << "--HEAD" if ARGV.include? "--HEAD"
