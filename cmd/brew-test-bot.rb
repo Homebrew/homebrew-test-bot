@@ -578,13 +578,15 @@ module Homebrew
     def satisfied_requirements?(formula, spec, dependency = nil)
       f = Formulary.factory(formula.full_name, spec)
       fi = FormulaInstaller.new(f)
+      stable_spec = spec == :stable
+      fi.build_bottle = stable_spec && !ARGV.include?("--no-bottle")
       unsatisfied_requirements, = fi.expand_requirements
 
       if unsatisfied_requirements.empty?
         true
       else
         name = formula.full_name
-        name += " (#{spec})" unless spec == :stable
+        name += " (#{spec})" unless stable_spec
         name += " (#{dependency} dependency)" if dependency
         skip name
         puts unsatisfied_requirements.values.flatten.map(&:message)
@@ -1116,7 +1118,7 @@ module Homebrew
         begin
           formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", formula).split("\n")
           # deps can fail if deps are not tapped
-          unless $?.success?
+          unless $CHILD_STATUS.success?
             Formulary.factory(formula).recursive_dependencies
           end
         rescue TapFormulaUnavailableError => e
@@ -1409,6 +1411,7 @@ module Homebrew
     end
 
     jenkins = !ENV["JENKINS_HOME"].nil?
+    ENV["CI"] = "1" if jenkins
     jenkins_pipeline_pr = jenkins && !ENV["CHANGE_URL"].nil?
     jenkins_pipeline_branch = jenkins && !jenkins_pipeline_pr && !ENV["BRANCH_NAME"].nil?
     ARGV << "--ci-auto" if jenkins_pipeline_branch || jenkins_pipeline_pr
