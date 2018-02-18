@@ -658,7 +658,8 @@ module Homebrew
         test "brew", "uninstall", "--force", *@unchanged_build_dependencies
         @unchanged_dependencies -= @unchanged_build_dependencies
       end
-      test "brew", "install", bottle_filename
+      install_args = *("--force-bottle" if @test_default_formula)
+      test "brew", "install", *install_args, bottle_filename
     end
 
     def install_bottled_dependent(dependent)
