@@ -34,17 +34,17 @@ before_install:
       chmod 644 Formula/*.rb;
     fi
   - if [ "$MACOS" ]; then
-      travis_retry git -C "$HOMEBREW_CORE_TAP_DIR" fetch --depth=1 origin;
-    fi
-  - if [ "$MACOS" ]; then
       travis_retry git -C "$HOMEBREW_REPOSITORY" fetch --depth=50 origin;
     else
       travis_retry git clone --depth=50 https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY";
     fi
   - if [ "$LINUX" ]; then
       HOMEBREW_CORE_TAP_DIR="$(brew --repo "homebrew/core")";
-      mkdir -p "$HOMEBREW_CORE_TAP_DIR";
-      ln -s .git Formula "$HOMEBREW_CORE_TAP_DIR";
+    fi
+  - if [ "$MACOS" ]; then
+      travis_retry git -C "$HOMEBREW_CORE_TAP_DIR" fetch --depth=1 origin;
+    else
+      travis_retry git clone --depth=1 https://github.com/Homebrew/homebrew-core "$HOMEBREW_CORE_TAP_DIR";
     fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
   - mkdir -p "$HOMEBREW_TAP_DIR"
@@ -52,10 +52,6 @@ before_install:
   - ln -s "$PWD" "$HOMEBREW_TAP_DIR"
   # trigger vendored ruby installation
   - brew help
-  # can be removed after 1.5.3 is tagged
-  - if [ "$LINUX" ]; then
-      export HOMEBREW_FORCE_VENDOR_RUBY=1;
-    fi
 
 script:
   - brew test-bot
