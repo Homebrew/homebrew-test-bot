@@ -1,21 +1,21 @@
 class Testbottest < Formula
-  desc "Minimal C program and Makefile used for testing Homebrew"
-  homepage "https://github.com/Homebrew/brew"
-  url "file://#{File.expand_path("..", __FILE__)}/tarballs/testbottest-0.1.tbz"
-  sha256 "246c4839624d0b97338ce976100d56bd9331d9416e178eb0f74ef050c1dbdaad"
-  head "https://github.com/Homebrew/homebrew-test-bot.git"
+  desc 'Minimal C program and Makefile used for testing Homebrew'
+  homepage 'https://github.com/Homebrew/brew'
+  url "file://#{File.expand_path('..', __FILE__)}/tarballs/testbottest-0.1.tbz"
+  sha256 '246c4839624d0b97338ce976100d56bd9331d9416e178eb0f74ef050c1dbdaad'
+  head 'https://github.com/Homebrew/homebrew-test-bot.git'
 
-  depends_on :java => ["1.0+", :optional]
+  depends_on java: ['1.0+', :optional]
 
   fails_with :gcc do
     build 1
-    cause "testing"
+    cause 'testing'
   end
 
   def install
     odie "whoops, shouldn't be using java!" if build.with?(:java)
 
-    system "make", "install", "PREFIX=#{prefix}"
+    system 'make', 'install', "PREFIX=#{prefix}"
   end
 
   def post_install
