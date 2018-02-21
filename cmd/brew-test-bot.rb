@@ -899,6 +899,8 @@ module Homebrew
         # test no-op update from current commit (to current commit, a no-op).
         test "brew", "update-test", "--commit=HEAD"
 
+        test "brew", "readall", "--aliases"
+
         test "brew", "style"
 
         if OS.linux?
