@@ -34,9 +34,6 @@ before_install:
       chmod 644 Formula/*.rb;
     fi
   - if [ "$MACOS" ]; then
-      travis_retry git -C "$HOMEBREW_CORE_TAP_DIR" fetch --depth=1 origin;
-    fi
-  - if [ "$MACOS" ]; then
       travis_retry git -C "$HOMEBREW_REPOSITORY" fetch --depth=50 origin;
     else
       travis_retry git clone --depth=50 https://github.com/Linuxbrew/brew "$HOMEBREW_REPOSITORY";
@@ -49,13 +46,18 @@ before_install:
   - brew help
   - if [ "$LINUX" ]; then
       HOMEBREW_CORE_TAP_DIR="$(brew --repo "homebrew/core")";
-      mkdir -p "$HOMEBREW_CORE_TAP_DIR";
-      ln -s .git Formula "$HOMEBREW_CORE_TAP_DIR";
+    fi
+  - if [ "$MACOS" ]; then
+      travis_retry git -C "$HOMEBREW_CORE_TAP_DIR" fetch --depth=1 origin;
+    else
+      travis_retry git clone --depth=1 https://github.com/Homebrew/homebrew-core "$HOMEBREW_CORE_TAP_DIR";
     fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
   - mkdir -p "$HOMEBREW_TAP_DIR"
   - rm -rf "$HOMEBREW_TAP_DIR"
   - ln -s "$PWD" "$HOMEBREW_TAP_DIR"
+  # trigger vendored ruby installation
+  - brew help
 
 script:
   - brew test-bot
