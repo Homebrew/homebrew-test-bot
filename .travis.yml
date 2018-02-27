@@ -38,14 +38,6 @@ before_install:
     else
       travis_retry git clone --depth=50 https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY";
     fi
-  - if [ "$LINUX" ]; then
-      HOMEBREW_CORE_TAP_DIR="$(brew --repo "homebrew/core")";
-    fi
-  - if [ "$MACOS" ]; then
-      travis_retry git -C "$HOMEBREW_CORE_TAP_DIR" fetch --depth=1 origin;
-    else
-      travis_retry git clone --depth=1 https://github.com/Homebrew/homebrew-core "$HOMEBREW_CORE_TAP_DIR";
-    fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
   - mkdir -p "$HOMEBREW_TAP_DIR"
   - rm -rf "$HOMEBREW_TAP_DIR"
