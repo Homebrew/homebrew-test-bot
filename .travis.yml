@@ -3,7 +3,8 @@ cache:
   directories:
     - $HOME/Library/Caches/Homebrew/style
     - $HOME/Library/Caches/Homebrew/tests
-    - $HOME/Library/Homebrew/vendor/bundle
+    - $HOME/Homebrew/Library/Homebrew/vendor/bundle
+    - /usr/local/Homebrew/Library/Homebrew/vendor/bundle
 branches:
   only:
     - master
@@ -32,6 +33,8 @@ before_install:
   - if [ "$LINUX" ]; then
       umask 022;
       chmod 644 Formula/*.rb;
+      mv $HOMEBREW_REPOSITORY/Library/Homebrew/vendor/bundle $HOME/homebrew-vendor-bundle;
+      rm -rf $HOMEBREW_REPOSITORY;
     fi
   - if [ "$MACOS" ]; then
       travis_retry git -C "$HOMEBREW_REPOSITORY" fetch --depth=50 origin;
@@ -45,12 +48,7 @@ before_install:
   # trigger vendored ruby installation
   - brew help
   - if [ "$LINUX" ]; then
-      HOMEBREW_CORE_TAP_DIR="$(brew --repo "homebrew/core")";
-    fi
-  - if [ "$MACOS" ]; then
-      travis_retry git -C "$HOMEBREW_CORE_TAP_DIR" fetch --depth=1 origin;
-    else
-      travis_retry git clone --depth=1 https://github.com/Homebrew/homebrew-core "$HOMEBREW_CORE_TAP_DIR";
+      mv $HOME/homebrew-vendor-bundle $HOME/Homebrew/Library/Homebrew/vendor/bundle;
     fi
   - HOMEBREW_TAP_DIR="$(brew --repo "$TRAVIS_REPO_SLUG")"
   - mkdir -p "$HOMEBREW_TAP_DIR"

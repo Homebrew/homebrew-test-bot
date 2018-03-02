@@ -277,7 +277,7 @@ module Homebrew
         return
       end
 
-      if @command[0] == "git" && @command[1] != "-C"
+      if @command[0] == "git" && !%w[-C clone].include?(@command[1])
         raise "git should always be called with -C!"
       end
 
@@ -518,8 +518,20 @@ module Homebrew
       ).strip
       puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
       if @tap.to_s != "homebrew/core"
+        core_path = CoreTap.instance.path
+        if core_path.exist?
+          if ENV["TRAVIS"]
+            test "git", "-C", core_path.to_s, "fetch", "--depth=1", "origin"
+            test "git", "-C", core_path.to_s, "reset", "--hard", "origin/master"
+          end
+        else
+          test "git", "clone", "--depth=1",
+               "https://github.com/Homebrew/homebrew-core",
+               core_path.to_s
+        end
+
         core_revision = Utils.popen_read(
-          "git", "-C", CoreTap.instance.path.to_s,
+          "git", "-C", core_path.to_s,
                  "log", "-1", "--format=%h (%s)"
         ).strip
         puts "Homebrew/homebrew-core #{core_revision}"
@@ -1068,7 +1080,7 @@ module Homebrew
 
       if ENV["TRAVIS"]
         # For Travis CI build caching.
-        test "brew", "install", "md5deep", "libyaml", "gmp", "openssl" if OS.mac?
+        test "brew", "install", "md5deep", "libyaml", "gmp", "openssl@1.1" if OS.mac?
         return if @tap && @tap.to_s != "homebrew/test-bot"
       end
 
