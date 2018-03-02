@@ -870,6 +870,7 @@ module Homebrew
         bottle_reinstall_formula(formula, new_formula)
 
         test "brew", "test", formula_name, *test_args if formula.test_defined?
+        test "brew", "linkage", "--test", formula_name
         bottled_dependents.each do |dependent|
           install_bottled_dependent(dependent)
         end
