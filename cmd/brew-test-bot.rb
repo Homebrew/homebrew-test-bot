@@ -757,7 +757,7 @@ module Homebrew
       unlink_formulae = conflicts.map(&:name)
 
       installed = Utils.popen_read("brew", "list").split("\n")
-      dependencies = Utils.popen_read("brew", "deps", "--include-build", formula_name).split("\n")
+      dependencies = Utils.popen_read("brew", "deps", "--include-build", "--include-test", formula_name).split("\n")
       installed_dependencies = installed & dependencies
 
       unlink_formulae.uniq.each do |name|
@@ -1095,7 +1095,7 @@ module Homebrew
 
       @formulae.each do |formula|
         begin
-          formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", formula).split("\n")
+          formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", "--include-test", formula).split("\n")
           # deps can fail if deps are not tapped
           unless $CHILD_STATUS.success?
             Formulary.factory(formula).recursive_dependencies
