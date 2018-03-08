@@ -778,8 +778,8 @@ module Homebrew
       @unchanged_dependencies = dependencies - @formulae
       changed_dependences = dependencies - @unchanged_dependencies
 
-      runtime_dependencies = Utils.popen_read("brew", "deps", formula_name).split("\n")
-      build_dependencies = dependencies - runtime_dependencies
+      runtime_or_test_dependencies = Utils.popen_read("brew", "deps", "--include-test", formula_name).split("\n")
+      build_dependencies = dependencies - runtime_or_test_dependencies
       @unchanged_build_dependencies = build_dependencies - @formulae
 
       dependents = Utils.popen_read("brew", "uses", "--recursive", formula_name).split("\n")
