@@ -669,6 +669,10 @@ module Homebrew
       end
       test "brew", "linkage", "--test", dependent.name
       return unless @testable_dependents.include? dependent
+      installed = Utils.popen_read("brew", "list").split("\n")
+      test_dependencies = Utils.popen_read("brew", "deps", "--include-test", dependent.name).split("\n")
+      missing_test_dependencies = test_dependencies - installed
+      test "brew", "install", *missing_test_dependencies unless missing_test_dependencies.empty?
       test "brew", "test", "--verbose", dependent.name
     end
 
