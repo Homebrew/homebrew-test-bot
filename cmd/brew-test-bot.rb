@@ -669,7 +669,7 @@ module Homebrew
       dependencies -= installed
       @unchanged_dependencies = dependencies - @formulae
       unless @unchanged_dependencies.empty?
-        test "brew", "fetch", "--retry", *unchanged_dependencies
+        test "brew", "fetch", "--retry", *@unchanged_dependencies
       end
 
       changed_dependencies = dependencies - @unchanged_dependencies
