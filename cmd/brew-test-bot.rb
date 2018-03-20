@@ -693,6 +693,10 @@ module Homebrew
       end
       test "brew", "linkage", "--test", dependent.name
       return unless @testable_dependents.include? dependent
+      installed = Utils.popen_read("brew", "list").split("\n")
+      test_dependencies = Utils.popen_read("brew", "deps", "--include-test", dependent.name).split("\n")
+      missing_test_dependencies = test_dependencies - installed
+      test "brew", "install", *missing_test_dependencies unless missing_test_dependencies.empty?
       test "brew", "test", "--verbose", dependent.name
     end
 
@@ -782,7 +786,7 @@ module Homebrew
       unlink_formulae = conflicts.map(&:name)
 
       installed = Utils.popen_read("brew", "list").split("\n")
-      dependencies = Utils.popen_read("brew", "deps", "--include-build", formula_name).split("\n")
+      dependencies = Utils.popen_read("brew", "deps", "--include-build", "--include-test", formula_name).split("\n")
       installed_dependencies = installed & dependencies
 
       unlink_formulae.uniq.each do |name|
@@ -803,8 +807,8 @@ module Homebrew
       @unchanged_dependencies = dependencies - @formulae
       changed_dependences = dependencies - @unchanged_dependencies
 
-      runtime_dependencies = Utils.popen_read("brew", "deps", formula_name).split("\n")
-      build_dependencies = dependencies - runtime_dependencies
+      runtime_or_test_dependencies = Utils.popen_read("brew", "deps", "--include-test", formula_name).split("\n")
+      build_dependencies = dependencies - runtime_or_test_dependencies
       @unchanged_build_dependencies = build_dependencies - @formulae
 
       args = ["--recursive"] unless OS.linux?
@@ -1129,7 +1133,7 @@ module Homebrew
 
       @formulae.each do |formula|
         begin
-          formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", formula).split("\n")
+          formula_dependencies = Utils.popen_read("brew", "deps", "--full-name", "--include-build", "--include-test", formula).split("\n")
           # deps can fail if deps are not tapped
           unless $CHILD_STATUS.success?
             Formulary.factory(formula).recursive_dependencies
