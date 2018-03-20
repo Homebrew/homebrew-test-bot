@@ -672,6 +672,7 @@ module Homebrew
         test "brew", "uninstall", "--force", *@unchanged_build_dependencies
         @unchanged_dependencies -= @unchanged_build_dependencies
       end
+      test "brew", "install", "--only-dependencies", bottle_filename
       install_args = *("--force-bottle" if @test_default_formula)
       test "brew", "install", *install_args, bottle_filename
     end
@@ -682,7 +683,10 @@ module Homebrew
         return if steps.last.failed?
         unlink_conflicts dependent
         unless ARGV.include?("--fast")
-          run_as_not_developer { test "brew", "install", dependent.name }
+          run_as_not_developer do
+            test "brew", "install", "--only-dependencies", dependent.name
+            test "brew", "install", dependent.name
+          end
           return if steps.last.failed?
         end
       end
@@ -691,12 +695,10 @@ module Homebrew
         unlink_conflicts dependent
         test "brew", "link", dependent.name
       end
+      test "brew", "install", "--only-dependencies", dependent.name
       test "brew", "linkage", "--test", dependent.name
       return unless @testable_dependents.include? dependent
-      installed = Utils.popen_read("brew", "list").split("\n")
-      test_dependencies = Utils.popen_read("brew", "deps", "--include-test", dependent.name).split("\n")
-      missing_test_dependencies = test_dependencies - installed
-      test "brew", "install", *missing_test_dependencies unless missing_test_dependencies.empty?
+      test "brew", "install", "--only-dependencies", "--include-test", dependent.name
       test "brew", "test", "--verbose", dependent.name
     end
 
@@ -866,7 +868,7 @@ module Homebrew
       install_passed = false
       run_as_not_developer do
         if !ARGV.include?("--fast") || formula_bottled || formula.bottle_unneeded?
-          test "brew", "install", "--only-dependencies", *install_args unless dependencies.empty?
+          test "brew", "install", "--only-dependencies", *install_args
           test "brew", "install", *install_args
           install_passed = steps.last.passed?
         end
@@ -900,6 +902,7 @@ module Homebrew
          && satisfied_requirements?(formula, :devel)
         test "brew", "fetch", "--retry", "--devel", *fetch_args
         run_as_not_developer do
+          test "brew", "install", "--devel", "--only-dependencies", formula_name, *shared_install_args
           test "brew", "install", "--devel", formula_name, *shared_install_args
         end
         devel_install_passed = steps.last.passed?
