@@ -1343,11 +1343,6 @@ module Homebrew
             #{filename} is already published. Please remove it manually from
             https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
           EOS
-          if ARGV.include? "--keep-going"
-            opoo message
-          else
-            raise message
-          end
         end
 
         unless formula_packaged[formula_name]
