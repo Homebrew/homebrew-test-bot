@@ -1417,8 +1417,9 @@ module Homebrew
 
     travis = !ENV["TRAVIS"].nil?
     circle = !ENV["CIRCLECI"].nil?
-    if travis || circle
-      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
+    ARGV << "--ci-auto" << "--no-pull" if travis || circle
+    if travis
+      ARGV << "--verbose"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
