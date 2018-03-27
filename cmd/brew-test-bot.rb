@@ -403,9 +403,6 @@ module Homebrew
     def download
       @category = __method__
 
-      travis_pr = ENV["TRAVIS_PULL_REQUEST"] && ENV["TRAVIS_PULL_REQUEST"] != "false"
-      circle_pr = ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
-
       @start_branch = Utils.popen_read(
         "git", "-C", @repository, "symbolic-ref", "HEAD"
       ).gsub("refs/heads/", "").strip
@@ -425,7 +422,7 @@ module Homebrew
           @hash = nil
         end
       # Use Circle CI pull-request variables for pull request jobs.
-      elsif circle_pr
+      elsif ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
         @url = ENV["CI_PULL_REQUEST"]
         @hash = nil
       end
