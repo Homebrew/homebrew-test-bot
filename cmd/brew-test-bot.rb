@@ -66,6 +66,9 @@
 #:    If `--bintray-org=<bintray-org>` is passed, upload to the given Bintray
 #:    organisation.
 #:
+#:    If `--root-url` is passed, use the specified <URL> as the root of the
+#:    bottle's URL instead of Homebrew's default.
+#:
 #:    If `--git-name=<git-name>` is passed, set the Git
 #:    author/committer names to the given name.
 #:
@@ -764,10 +767,12 @@ module Homebrew
       return if ARGV.include?("--no-bottle")
       return if formula.bottle_disabled?
 
+      root_url = ARGV.value("root-url")
       bottle_args = ["--verbose", "--json", formula.name]
       bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
       bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
       bottle_args << "--force-core-tap" if @test_default_formula
+      bottle_args << "--root-url=#{root_url}" if root_url
       test "brew", "bottle", *bottle_args
 
       bottle_step = steps.last
