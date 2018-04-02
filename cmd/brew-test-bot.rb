@@ -837,7 +837,7 @@ module Homebrew
 
     def fetch_formula(fetch_args, audit_args, spec_args = [])
       test "brew", "fetch", "--retry", *spec_args, *fetch_args
-      test "brew", "audit", *spec_args, *audit_args
+      test "brew", "audit", *audit_args
     end
 
     def formula(formula_name)
@@ -971,8 +971,6 @@ module Homebrew
           test "brew", "install", "--devel", formula_name, *shared_install_args
         end
         devel_install_passed = steps.last.passed?
-
-        test "brew", "audit", "--devel", *audit_args
 
         if devel_install_passed
           test "brew", "postinstall", formula_name
