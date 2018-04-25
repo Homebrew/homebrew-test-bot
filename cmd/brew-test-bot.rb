@@ -75,6 +75,8 @@
 #:    If `--git-email=<git-email>` is passed, set the Git
 #:    author/committer email to the given email.
 #:
+#:    If `--or-later` is passed, append _or_later to the bottle tag.
+#:
 #:    If `--ci-master` is passed, use the Homebrew master branch CI
 #:    options. Implies `--cleanup`: use with care!
 #:
@@ -773,6 +775,7 @@ module Homebrew
       bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
       bottle_args << "--force-core-tap" if @test_default_formula
       bottle_args << "--root-url=#{root_url}" if root_url
+      bottle_args << "--or-later" if ARGV.include? "--or-later"
       test "brew", "bottle", *bottle_args
 
       bottle_step = steps.last
