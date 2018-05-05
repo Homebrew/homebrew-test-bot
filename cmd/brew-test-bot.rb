@@ -950,8 +950,12 @@ module Homebrew
       if install_passed
         bottle_reinstall_formula(formula, new_formula)
 
-        test "brew", "test", formula_name, *test_args if formula.test_defined?
-        test "brew", "linkage", "--test", formula_name
+        if formula.test_defined?
+          test "brew", "install", "--only-dependencies", "--include-test",
+                                  formula_name
+          test "brew", "test", formula_name, *test_args
+          test "brew", "linkage", "--test", formula_name
+        end
 
         @bottled_dependents.each do |dependent|
           install_bottled_dependent(dependent)
@@ -980,6 +984,8 @@ module Homebrew
           test "brew", "postinstall", formula_name
 
           if formula.test_defined?
+            test "brew", "install", "--devel", "--only-dependencies",
+                                    "--include-test", formula_name
             test "brew", "test", "--devel", formula_name, *test_args
           end
 
