@@ -350,6 +350,7 @@ module Homebrew
       else
         HOMEBREW_REPOSITORY
       end
+      @skip_setup = options.fetch(:skip_setup, false)
       @skip_homebrew = options.fetch(:skip_homebrew, false)
       @skip_cleanup_before = options.fetch(:skip_cleanup_before, false)
       @skip_cleanup_after = options.fetch(:skip_cleanup_after, false)
@@ -614,7 +615,7 @@ module Homebrew
 
     def setup
       @category = __method__
-      return if ARGV.include? "--skip-setup"
+      return if @skip_setup
       test "brew", "doctor"
       test "brew", "--env"
       test "brew", "config"
@@ -1619,11 +1620,13 @@ module Homebrew
 
     tests = []
     any_errors = false
+    skip_setup = ARGV.include?("--skip-setup")
     skip_homebrew = ARGV.include?("--skip-homebrew")
     skip_cleanup_before = false
     if ARGV.named.empty?
       # With no arguments just build the most recent commit.
       current_test = Test.new("HEAD", tap: tap,
+                                      skip_setup: skip_setup,
                                       skip_homebrew: skip_homebrew,
                                       skip_cleanup_before: skip_cleanup_before)
       any_errors = !current_test.run
@@ -1635,9 +1638,11 @@ module Homebrew
         begin
           current_test =
             Test.new(argument, tap: tap,
+                               skip_setup: skip_setup,
                                skip_homebrew: skip_homebrew,
                                skip_cleanup_before: skip_cleanup_before,
                                skip_cleanup_after: skip_cleanup_after)
+          skip_setup = true
           skip_homebrew = true
           skip_cleanup_before = true
         rescue ArgumentError => e
