@@ -654,7 +654,7 @@ module Homebrew
           DevelopmentTools.clear_version_cache
           retry
         end
-        skip formula_name
+        skip formula.name
         puts e.message
         return
       end
