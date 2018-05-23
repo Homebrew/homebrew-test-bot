@@ -357,7 +357,7 @@ module Homebrew
                              "--verify", "-q", argument)
         @hash = argument
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
-        @url, _, _, pr = url_match
+        @url, _, _, pr = url_match.to_a
         @pr_url = @url if pr
       elsif canonical_formula_name = safe_formula_canonical_name(argument)
         @formulae = [canonical_formula_name]
