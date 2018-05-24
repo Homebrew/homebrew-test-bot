@@ -1160,7 +1160,7 @@ module Homebrew
 
       if ARGV.include?("--cleanup")
         clear_stash_if_needed(@repository)
-        reset_if_needed(@repository)
+        reset_if_needed(@repository) unless ENV["TRAVIS"]
 
         test "brew", "cleanup", "--prune=7"
 
