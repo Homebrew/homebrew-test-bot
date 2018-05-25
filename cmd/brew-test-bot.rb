@@ -1074,6 +1074,7 @@ module Homebrew
         next if tap == "homebrew/core"
         next if tap == "homebrew/test-bot"
         next if tap == "caskroom/cask"
+        next if tap == "homebrew/cask"
         next if tap == @tap.to_s
         test "brew", "untap", tap
       end
