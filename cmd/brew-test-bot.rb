@@ -359,7 +359,8 @@ module Homebrew
                              "--verify", "-q", argument)
         @hash = argument
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
-        @url = url_match[0]
+        @url, _, _, pr = url_match
+        @pr_url = @url if pr
       elsif canonical_formula_name = safe_formula_canonical_name(argument)
         @formulae = [canonical_formula_name]
       else
@@ -864,7 +865,10 @@ module Homebrew
       fetch_args << "--force" if ARGV.include? "--cleanup"
       new_formula = @added_formulae.include?(formula_name)
       audit_args = [formula_name, "--online"]
-      audit_args << "--new-formula" if new_formula
+      if new_formula
+        audit_args << "--new-formula"
+        ENV["HOMEBREW_NEW_FORMULA_PULL_REQUEST_URL"] = @pr_url
+      end
 
       if formula.stable
         unless satisfied_requirements?(formula, :stable)
