@@ -359,7 +359,7 @@ module Homebrew
                              "--verify", "-q", argument)
         @hash = argument
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
-        @url, _, _, pr = url_match
+        @url, _, _, pr = *url_match
         @pr_url = @url if pr
       elsif canonical_formula_name = safe_formula_canonical_name(argument)
         @formulae = [canonical_formula_name]
@@ -1098,7 +1098,7 @@ module Homebrew
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
         next if tap == "homebrew/test-bot"
-        next if tap == "caskroom/cask"
+        next if tap == "homebrew/cask"
         next if tap == "linuxbrew/extra"
         next if tap == "linuxbrew/test-bot"
         next if tap == "linuxbrew/xorg"
@@ -1190,7 +1190,7 @@ module Homebrew
 
       if ARGV.include?("--cleanup")
         clear_stash_if_needed(@repository)
-        reset_if_needed(@repository)
+        reset_if_needed(@repository) unless ENV["TRAVIS"]
 
         test "brew", "cleanup", "--prune=7"
 
@@ -1533,8 +1533,6 @@ module Homebrew
     end
 
     ENV["HOMEBREW_DEVELOPER"] = "1"
-    ENV["HOMEBREW_SANDBOX"] = "1"
-    ENV["HOMEBREW_ENV_FILTERING"] = "1"
     ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"

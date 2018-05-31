@@ -61,3 +61,5 @@ before_install:
 script:
   - brew test-bot
   - brew test-bot --ci-upload --dry-run
+  - brew test-bot --ci-pr https://github.com/Homebrew/brew/pull/4170 --dry-run
+  - brew test-bot --ci-pr https://github.com/Homebrew/brew/commit/dc96e6f73551fbadd0c2169c3a79c47a936f71ae --dry-run
