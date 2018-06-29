@@ -1417,7 +1417,7 @@ module Homebrew
       bottle_hash["bottle"]["tags"].each_value do |tag_hash|
         filename = tag_hash["filename"]
         bintray_filename_url =
-          "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
+          "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename}"
         filename_already_published = if ARGV.include?("--dry-run")
           puts "curl -I --output /dev/null #{bintray_filename_url}"
           false
