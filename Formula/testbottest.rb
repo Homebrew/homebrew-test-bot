@@ -5,9 +5,6 @@ class Testbottest < Formula
   sha256 "246c4839624d0b97338ce976100d56bd9331d9416e178eb0f74ef050c1dbdaad"
   head "https://github.com/Homebrew/homebrew-test-bot.git"
 
-  bottle do
-  end
-
   depends_on :java => ["1.0+", :optional]
 
   fails_with :gcc do
