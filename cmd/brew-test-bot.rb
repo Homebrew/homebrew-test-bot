@@ -1447,7 +1447,7 @@ module Homebrew
       bottle_hash["bottle"]["tags"].each_value do |tag_hash|
         filename = tag_hash["filename"]
         bintray_filename_url =
-          "#{BottleSpecification::DEFAULT_DOMAIN}/#{bintray_repo}/#{filename}"
+          "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename}"
         filename_already_published = if ARGV.include?("--dry-run")
           puts "curl -I --output /dev/null #{bintray_filename_url}"
           false
@@ -1535,7 +1535,6 @@ module Homebrew
     ENV["HOMEBREW_DEVELOPER"] = "1"
     ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
-    ENV["HOMEBREW_LINKAGE_CACHE"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["PATH"] =
       "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
@@ -1559,7 +1558,7 @@ module Homebrew
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? && MacOS.version == :sierra && (ENV["CODECOV_TOKEN"] || travis)
+    if OS.mac? && MacOS.version == :high_sierra && (ENV["CODECOV_TOKEN"] || travis)
       ARGV << "--coverage"
     end
 
