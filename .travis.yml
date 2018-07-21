@@ -41,10 +41,6 @@ before_install:
     else
       travis_retry git clone --depth=50 https://github.com/Linuxbrew/brew "$HOMEBREW_REPOSITORY";
     fi
-  # can be removed after 1.5.3 is tagged
-  - if [ "$LINUX" ]; then
-      export HOMEBREW_FORCE_VENDOR_RUBY=1;
-    fi
   # trigger vendored ruby installation
   - brew help
   - if [ "$LINUX" ]; then
