@@ -356,6 +356,9 @@ module Homebrew
       if quiet_system("git", "-C", @repository, "rev-parse",
                              "--verify", "-q", argument)
         @hash = argument
+        # TODO: remove when https://github.com/Homebrew/brew/pull/3835 is
+        # working as expected
+        p [:hash_arg, @hash]
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
         @url, _, _, pr = *url_match
         @pr_url = @url if pr
@@ -364,6 +367,9 @@ module Homebrew
         p [:url_and_pr, @url, pr, @pr_url]
       elsif canonical_formula_name = safe_formula_canonical_name(argument)
         @formulae = [canonical_formula_name]
+        # TODO: remove when https://github.com/Homebrew/brew/pull/3835 is
+        # working as expected
+        p [:formulae_canonical, @formulae]
       else
         raise ArgumentError,
           "#{argument} is not a pull request URL, commit URL or formula name."
