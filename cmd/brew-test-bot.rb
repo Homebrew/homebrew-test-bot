@@ -849,9 +849,6 @@ module Homebrew
           _, _, _, pr = *url_match
           ENV["HOMEBREW_NEW_FORMULA_PULL_REQUEST_URL"] = @url if pr
         end
-        # TODO: remove when https://github.com/Homebrew/brew/pull/3835 is
-        # working as expected
-        p [:new_formula_env, @url, ENV["HOMEBREW_NEW_FORMULA_PULL_REQUEST_URL"]]
       end
 
       if formula.stable
