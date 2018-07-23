@@ -361,6 +361,9 @@ module Homebrew
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
         @url, _, _, pr = *url_match
         @pr_url = @url if pr
+        # TODO: remove when https://github.com/Homebrew/brew/pull/3835 is
+        # working as expected
+        p [:url_and_pr, @url, pr, @pr_url]
       elsif canonical_formula_name = safe_formula_canonical_name(argument)
         @formulae = [canonical_formula_name]
       else
@@ -868,6 +871,9 @@ module Homebrew
       if new_formula
         audit_args << "--new-formula"
         ENV["HOMEBREW_NEW_FORMULA_PULL_REQUEST_URL"] = @pr_url
+        # TODO: remove when https://github.com/Homebrew/brew/pull/3835 is
+        # working as expected
+        p [:new_formula_env, @url, @pr_url, ENV["HOMEBREW_NEW_FORMULA_PULL_REQUEST_URL"]]
       end
 
       if formula.stable
