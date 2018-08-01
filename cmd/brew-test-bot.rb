@@ -1426,8 +1426,8 @@ module Homebrew
           false
         else
           begin
-            system(*curl_args("-I", "--output", "/dev/null",
-                              bintray_filename_url))
+            system(curl_executable, *curl_args("-I", "--output", "/dev/null",
+                   bintray_filename_url))
           end
         end
 
@@ -1444,7 +1444,7 @@ module Homebrew
             puts "curl --output /dev/null #{package_url}"
             false
           else
-            system(*curl_args("--output", "/dev/null", package_url))
+            system(curl_executable, *curl_args("--output", "/dev/null", package_url))
           end
 
           unless package_exists
