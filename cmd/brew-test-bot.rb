@@ -1514,6 +1514,7 @@ module Homebrew
     travis = !ENV["TRAVIS"].nil?
     if travis
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
+      ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
 
