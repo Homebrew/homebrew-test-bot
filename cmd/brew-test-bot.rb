@@ -1321,6 +1321,7 @@ module Homebrew
             "pkg_version" => "1.0.0",
           },
           "bottle" => {
+            "rebuild" => 0,
             "tags" => {
               Utils::Bottles.tag => {
                 "filename" =>
@@ -1417,23 +1418,25 @@ module Homebrew
       bintray_packages_url =
         "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
 
-      bottle_hash["bottle"]["tags"].each_value do |tag_hash|
-        filename = tag_hash["filename"]
-        bintray_filename_url =
-          "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename}"
+      rebuild = bottle_hash["bottle"]["rebuild"]
+
+      bottle_hash["bottle"]["tags"].each do |tag, tag_hash|
+        filename = Bottle::Filename.new(formula_name, version, tag, rebuild)
+        bintray_url =
+          "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename.bintray}"
         filename_already_published = if ARGV.include?("--dry-run")
-          puts "curl -I --output /dev/null #{bintray_filename_url}"
+          puts "curl -I --output /dev/null #{bintray_url}"
           false
         else
           begin
             system(curl_executable, *curl_args("-I", "--output", "/dev/null",
-                   bintray_filename_url))
+                   bintray_url))
           end
         end
 
         if filename_already_published
           raise <<~EOS
-            #{filename} is already published. Please remove it manually from
+            #{filename.bintray} is already published. Please remove it manually from
             https://bintray.com/#{bintray_org}/#{bintray_repo}/#{bintray_package}/view#files
           EOS
         end
@@ -1472,7 +1475,7 @@ module Homebrew
 
         content_url = "https://api.bintray.com/content/#{bintray_org}"
         content_url +=
-          "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename}"
+          "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename.bintray}"
         if ARGV.include?("--dry-run")
           puts <<~EOS
             curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
