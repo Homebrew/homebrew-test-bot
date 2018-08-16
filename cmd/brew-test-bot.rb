@@ -1348,7 +1348,7 @@ module Homebrew
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
     ENV["HOMEBREW_GIT_NAME"] = ARGV.value("git-name") || "BrewTestBot"
     ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
-                                "brew-test-bot@googlegroups.com"
+                                "homebrew-test-bot@lists.sfconservancy.org"
 
     if ARGV.include?("--dry-run")
       puts <<~EOS
