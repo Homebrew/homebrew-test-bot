@@ -719,8 +719,9 @@ module Homebrew
       build_dependencies = dependencies - runtime_or_test_dependencies
       @unchanged_build_dependencies = build_dependencies - @formulae
 
+      args = ["--recursive"] unless OS.linux?
       dependents =
-        Utils.popen_read("brew", "uses", "--recursive", formula_name)
+        Utils.popen_read("brew", "uses", *args, formula_name)
              .split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
