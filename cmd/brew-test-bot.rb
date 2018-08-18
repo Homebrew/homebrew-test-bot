@@ -4,9 +4,6 @@
 #:    If `--dry-run` is passed, print what would be done rather than doing
 #:    it.
 #:
-#:    If `--local` is passed, perform only local operations (i.e. don't
-#:    push or create PR).
-#:
 #:    If `--keep-logs` is passed, write and keep log files under
 #:    `./brewbot/`.
 #:
