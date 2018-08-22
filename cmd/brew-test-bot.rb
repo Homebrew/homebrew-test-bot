@@ -459,11 +459,15 @@ module Homebrew
       end
 
       if merge_commit? diff_end_sha1
+        old_start_sha1 = diff_start_sha1
         diff_start_sha1 = Utils.popen_read("git", "rev-parse", "#{diff_end_sha1}^1").strip
+        puts "Merge commit: #{old_start_sha1}..#{diff_start_sha1}..#{diff_end_sha1}"
       else
         diff_start_sha1 = Utils.popen_read("git", "-C", @repository, "merge-base",
                                 diff_start_sha1, diff_end_sha1).strip
       end
+
+      puts "Testing commits: #{diff_start_sha1}..#{diff_end_sha1}"
 
       # Handle no arguments being passed on the command-line
       # e.g. `brew test-bot`
