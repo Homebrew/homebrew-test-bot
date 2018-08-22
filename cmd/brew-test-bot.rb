@@ -571,7 +571,7 @@ module Homebrew
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
         if merge_commit? diff_end_sha1
           # Test formulae whose bottles were updated.
-          summaries = Utils.popen_read("git", "log", "--pretty=%s", "#{diff_start_sha1}..#{diff_end_sha1}").lines
+          summaries = Utils.popen_read("git", "-C", @repository, "log", "--pretty=%s", "#{diff_start_sha1}..#{diff_end_sha1}").lines
           @modified_formulae = summaries.map { |s| s[/^([^:]+): update .* bottle\.$/, 1] }.compact
         else
           @modified_formulae +=
