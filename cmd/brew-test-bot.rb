@@ -725,7 +725,7 @@ module Homebrew
              .split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
-      dependents = [] if ARGV.include "--skip-dependents"
+      dependents = [] if ARGV.include? "--skip-dependents"
 
       @bottled_dependents = dependents.select(&:bottled?)
       @testable_dependents = dependents.select do |d|
