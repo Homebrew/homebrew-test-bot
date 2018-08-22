@@ -406,7 +406,9 @@ module Homebrew
     end
 
     def merge_commit?(commit)
-      Utils.popen_read("git", "rev-list", "--parents", "-n1", commit).count(" ") > 1
+      parent_commits = Utils.popen_read("git", "rev-list", "--parents", "-n1", commit)
+      puts "Parent commits: #{parent_commits}"
+      parent_commits.count(" ") > 1
     end
 
     def download
