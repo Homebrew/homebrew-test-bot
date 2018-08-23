@@ -980,7 +980,9 @@ module Homebrew
 
     def deleted_formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
-      test "brew", "uses", formula_name
+      test "brew", "uses", "--include-build",
+                           "--include-optional",
+                           formula_name
     end
 
     def coverage_args
