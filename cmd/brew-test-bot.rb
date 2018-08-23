@@ -982,6 +982,7 @@ module Homebrew
       @category = "#{__method__}.#{formula_name}"
       test "brew", "uses", "--include-build",
                            "--include-optional",
+                           "--include-test",
                            formula_name
     end
 
