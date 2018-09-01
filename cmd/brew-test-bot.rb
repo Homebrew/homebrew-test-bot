@@ -775,7 +775,17 @@ module Homebrew
       test "brew", "bottle", *bottle_merge_args
       test "brew", "uninstall", "--force", formula.name
 
-      FileUtils.ln bottle_filename, HOMEBREW_CACHE/bottle_filename, force: true
+      bottle_json = JSON.parse(File.read(bottle_json_filename))
+      root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
+      filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
+
+      download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
+
+      FileUtils.ln bottle_filename, download_strategy.cached_location, force: true
+      FileUtils.ln_s download_strategy.cached_location.relative_path_from(download_strategy.symlink_location),
+                     download_strategy.symlink_location,
+                     force: true
+
       @formulae.delete(formula.name)
 
       unless @unchanged_build_dependencies.empty?
