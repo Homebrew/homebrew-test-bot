@@ -4,9 +4,6 @@
 #:    If `--dry-run` is passed, print what would be done rather than doing
 #:    it.
 #:
-#:    If `--local` is passed, perform only local operations (i.e. don't
-#:    push or create PR).
-#:
 #:    If `--keep-logs` is passed, write and keep log files under
 #:    `./brewbot/`.
 #:
@@ -804,7 +801,17 @@ module Homebrew
       test "brew", "bottle", *bottle_merge_args
       test "brew", "uninstall", "--force", formula.name
 
-      FileUtils.ln bottle_filename, HOMEBREW_CACHE/bottle_filename, force: true
+      bottle_json = JSON.parse(File.read(bottle_json_filename))
+      root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
+      filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
+
+      download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
+
+      FileUtils.ln bottle_filename, download_strategy.cached_location, force: true
+      FileUtils.ln_s download_strategy.cached_location.relative_path_from(download_strategy.symlink_location),
+                     download_strategy.symlink_location,
+                     force: true
+
       @formulae.delete(formula.name)
 
       unless @unchanged_build_dependencies.empty?
@@ -1013,7 +1020,10 @@ module Homebrew
 
     def deleted_formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
-      test "brew", "uses", formula_name
+      test "brew", "uses", "--include-build",
+                           "--include-optional",
+                           "--include-test",
+                           formula_name
     end
 
     def coverage_args
@@ -1384,7 +1394,7 @@ module Homebrew
     ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
     ENV["HOMEBREW_GIT_NAME"] = ARGV.value("git-name") || "BrewTestBot"
     ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
-                                "brew-test-bot@googlegroups.com"
+                                "homebrew-test-bot@lists.sfconservancy.org"
 
     if ARGV.include?("--dry-run")
       puts <<~EOS
@@ -1513,6 +1523,7 @@ module Homebrew
         content_url +=
           "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename.bintray}"
         content_url += "?override=1" if ARGV.include? "--overwrite"
+
         if ARGV.include?("--dry-run")
           puts <<~EOS
             curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
