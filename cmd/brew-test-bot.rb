@@ -594,6 +594,8 @@ module Homebrew
     def setup
       @category = __method__
       return if @skip_setup
+      # install newer Git when needed
+      test "brew", "install", "git" if OS.mac? && MacOS.version < :sierra
       test "brew", "doctor"
       test "brew", "--env"
       test "brew", "config"
