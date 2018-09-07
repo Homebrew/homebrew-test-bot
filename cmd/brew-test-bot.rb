@@ -595,7 +595,10 @@ module Homebrew
       @category = __method__
       return if @skip_setup
       # install newer Git when needed
-      test "brew", "install", "git" if OS.mac? && MacOS.version < :sierra
+      if OS.mac? && MacOS.version < :sierra
+        test "brew", "install", "git"
+        ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
+      end
       (Keg::TOP_LEVEL_DIRECTORIES + %w[opt]).each do |dir|
         FileUtils.mkdir_p HOMEBREW_PREFIX/dir
       end
