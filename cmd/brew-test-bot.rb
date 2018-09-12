@@ -1107,7 +1107,6 @@ module Homebrew
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
         next if tap == "homebrew/test-bot"
-        next if tap == "homebrew/cask"
         next if tap == @tap.to_s
         test "brew", "untap", tap
       end
@@ -1161,6 +1160,11 @@ module Homebrew
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
+
+      # Cleanup NodeJS headers on Azure Pipeline
+      if OS.linux? && ENV["SYSTEM_PIPELINESTARTTIME"]
+        test "sudo", "rm", "-rf", "/usr/local/include/node"
+      end
 
       cleanup_shared
     end
@@ -1544,7 +1548,7 @@ module Homebrew
     ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
-    ENV["PATH"] =
+    ENV["HOMEBREW_PATH"] = ENV["PATH"] =
       "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
     travis = !ENV["TRAVIS"].nil?
