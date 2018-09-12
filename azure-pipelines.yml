@@ -1,0 +1,30 @@
+jobs:
+- job: macOS
+  pool:
+    vmImage: xcode9-macos10.13
+  steps:
+    - bash: |
+        git -C "/usr/local/Homebrew" fetch origin
+        git -C "/usr/local/Homebrew" checkout -B master origin/master
+        ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
+        brew test-bot
+      displayName: brew test-bot
+      env:
+        HOMEBREW_GITHUB_API_TOKEN: $(github.publicApiToken)
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFiles: brew-test-bot.xml
+
+- job: Linux
+  pool:
+    vmImage: ubuntu-16.04
+  steps:
+    - bash: |
+        sudo rm -rf /usr/local/include/node
+        git clone https://github.com/Homebrew/brew "$HOME/Homebrew"
+        ln -s "$PWD" "$HOME/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
+        export PATH="$HOME/Homebrew/bin:$PATH"
+        brew test-bot
+      displayName: brew test-bot
+      env:
+        HOMEBREW_GITHUB_API_TOKEN: $(github.publicApiToken)
