@@ -4,8 +4,8 @@ jobs:
     vmImage: xcode9-macos10.13
   steps:
     - bash: |
-        git -C "/usr/local/Homebrew" fetch origin
-        git -C "/usr/local/Homebrew" checkout -B master origin/master
+        rm -rf /usr/local/Homebrew/Library/Taps/homebrew/homebrew-cask*
+        brew update-reset
         ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
         brew test-bot
       displayName: brew test-bot
@@ -20,11 +20,10 @@ jobs:
     vmImage: ubuntu-16.04
   steps:
     - bash: |
-        sudo rm -rf /usr/local/include/node
         git clone https://github.com/Homebrew/brew "$HOME/Homebrew"
+        mkdir -p "$HOME/Homebrew/Library/Taps/homebrew"
         ln -s "$PWD" "$HOME/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
-        export PATH="$HOME/Homebrew/bin:$PATH"
-        brew test-bot
+        "$HOME/Homebrew/bin/brew" test-bot
       displayName: brew test-bot
       env:
         HOMEBREW_GITHUB_API_TOKEN: $(github.publicApiToken)
