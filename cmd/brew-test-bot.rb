@@ -1384,7 +1384,7 @@ module Homebrew
 
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
-      hash.deep_merge(JSON.parse(IO.read(json_file)))
+      deep_merge_hashes hash, JSON.parse(IO.read(json_file))
     end
 
     if ARGV.include?("--dry-run")
