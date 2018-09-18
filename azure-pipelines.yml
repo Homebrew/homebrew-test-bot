@@ -6,7 +6,7 @@ jobs:
     - bash: |
         rm -rf /usr/local/Homebrew/Library/Taps/homebrew/homebrew-cask*
         brew update-reset
-        ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
+        ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/linuxbrew/homebrew-test-bot"
         brew test-bot --coverage
       displayName: Run brew test-bot
       env:
@@ -24,8 +24,8 @@ jobs:
   steps:
     - bash: |
         git clone https://github.com/Homebrew/brew "$HOME/Homebrew"
-        mkdir -p "$HOME/Homebrew/Library/Taps/homebrew"
-        ln -s "$PWD" "$HOME/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
+        mkdir -p "$HOME/Homebrew/Library/Taps/linuxbrew"
+        ln -s "$PWD" "$HOME/Homebrew/Library/Taps/linuxbrew/homebrew-test-bot"
         "$HOME/Homebrew/bin/brew" test-bot
       displayName: brew test-bot
       env:
