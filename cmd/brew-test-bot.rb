@@ -239,6 +239,8 @@ module Homebrew
         @travis_timer_id = rand(2**32).to_s(16)
         puts "travis_fold:start:#{@travis_fold_id}"
         puts "travis_time:start:#{@travis_timer_id}"
+      else
+        puts
       end
       puts Formatter.headline(command_trimmed, color: :blue)
     end
@@ -419,7 +421,7 @@ module Homebrew
         @url = ENV["ghprbPullLink"] || ENV["CHANGE_URL"]
         @hash = nil
         test "git", "-C", @repository, "checkout", "origin/master"
-      # Use Jenkins Git plugin variables
+      # Use Jenkins Git plugin variables.
       elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
         git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
         %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
@@ -428,8 +430,12 @@ module Homebrew
           @hash = nil
         end
       # Use Circle CI pull-request variables for pull request jobs.
-      elsif ENV["CI_PULL_REQUEST"] && !ENV["CI_PULL_REQUEST"].empty?
+      elsif !ENV["CI_PULL_REQUEST"].to_s.empty?
         @url = ENV["CI_PULL_REQUEST"]
+        @hash = nil
+      # Use Azure Pipeline variables for pull request jobs.
+      elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
+        @url = "#{ENV["BUILD_REPOSITORY_URI"]}/pull/#{ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]}"
         @hash = nil
       end
 
@@ -440,7 +446,7 @@ module Homebrew
       # Use Travis CI Git variables for master or branch jobs.
       elsif ENV["TRAVIS_COMMIT_RANGE"]
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
-      # Use Jenkins Pipeline plugin variables for branch jobs
+      # Use Jenkins Pipeline plugin variables for branch jobs.
       elsif ENV["JENKINS_HOME"] && !ENV["CHANGE_URL"] && ENV["CHANGE_TARGET"]
         diff_start_sha1 =
           Utils.popen_read("git", "-C", @repository, "rev-parse",
@@ -450,6 +456,13 @@ module Homebrew
       elsif ENV["CIRCLE_SHA1"]
         diff_start_sha1 = "origin/master"
         diff_end_sha1 = ENV["CIRCLE_SHA1"]
+      # Use Azure Pipeline variables for master or branch jobs.
+      elsif ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"] && ENV["BUILD_SOURCEVERSION"]
+        diff_start_sha1 =
+          Utils.popen_read("git", "-C", @repository, "rev-parse",
+                                  "--short",
+                                  ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]).strip
+        diff_end_sha1 = current_sha1
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         diff_end_sha1 = diff_start_sha1 = current_sha1
@@ -1034,11 +1047,6 @@ module Homebrew
                            formula_name
     end
 
-    def coverage_args
-      return [] unless ARGV.include?("--coverage")
-      ["--coverage"]
-    end
-
     def homebrew
       @category = __method__
       return if @skip_homebrew
@@ -1066,8 +1074,13 @@ module Homebrew
           test "brew", "tests", "--generic", "--online"
         end
 
-        test "brew", "tests", "--online", *coverage_args
-
+        if ARGV.include?("--coverage")
+          test "brew", "tests", "--online", "--coverage"
+          FileUtils.cp_r "#{HOMEBREW_REPOSITORY}/Library/Homebrew/test/coverage",
+                         Dir.pwd
+        else
+          test "brew", "tests", "--online"
+        end
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
@@ -1125,7 +1138,6 @@ module Homebrew
       Tap.names.each do |tap|
         next if tap == "homebrew/core"
         next if tap == "homebrew/test-bot"
-        next if tap == "homebrew/cask"
         next if tap == "linuxbrew/extra"
         next if tap == "linuxbrew/test-bot"
         next if tap == "linuxbrew/xorg"
@@ -1155,6 +1167,8 @@ module Homebrew
         reset_if_needed(git_repo)
         prune_if_needed(git_repo)
       end
+
+      test "brew", "prune"
     end
 
     def clear_stash_if_needed(repository)
@@ -1182,6 +1196,11 @@ module Homebrew
       # FIXME: I have no idea if this change is safe for Circle CI or not,
       # so temporarily make it Mac-only until we can safely experiment.
       Pathname.glob("*.bottle*.*").each(&:unlink) if OS.mac?
+
+      # Cleanup NodeJS headers on Azure Pipeline
+      if OS.linux? && ENV["SYSTEM_PIPELINESTARTTIME"]
+        test "sudo", "rm", "-rf", "/usr/local/include/node"
+      end
 
       cleanup_shared
     end
@@ -1365,7 +1384,7 @@ module Homebrew
 
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
-      deep_merge_hashes hash, JSON.parse(IO.read(json_file))
+      hash.deep_merge(JSON.parse(IO.read(json_file)))
     end
 
     if ARGV.include?("--dry-run")
@@ -1567,7 +1586,7 @@ module Homebrew
     ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
-    ENV["PATH"] =
+    ENV["HOMEBREW_PATH"] = ENV["PATH"] =
       "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
     travis = !ENV["TRAVIS"].nil?
@@ -1587,6 +1606,13 @@ module Homebrew
     ARGV << "--ci-auto" if jenkins_pipeline_branch || jenkins_pipeline_pr
     ARGV << "--no-pull" if jenkins_pipeline_branch
 
+    azure_pipelines = !ENV["SYSTEM_PIPELINESTARTTIME"].nil?
+    if azure_pipelines
+      # These cannot be queried at the macOS level on Azure.
+      ENV["HOMEBREW_LANGUAGES"] = "en-GB"
+      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
+    end
+
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
     if OS.mac? && MacOS.version == :high_sierra && (ENV["CODECOV_TOKEN"] || travis)
@@ -1602,9 +1628,10 @@ module Homebrew
     jenkins_pr ||= jenkins_pipeline_pr
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
     jenkins_branch ||= jenkins_pipeline_branch
+    azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
 
     if ARGV.include?("--ci-auto")
-      if travis_pr || circle_pr || jenkins_pr
+      if travis_pr || jenkins_pr || azure_pipelines_pr || circle_pr
         ARGV << "--ci-pr"
       elsif travis || circle || jenkins_branch
         ARGV << "--ci-master"
@@ -1618,8 +1645,8 @@ module Homebrew
        ARGV.include?("--ci-testing")
       ARGV << "--cleanup"
       ARGV << "--test-default-formula"
-      ARGV << "--local" << "--junit" if ENV["JENKINS_HOME"]
-      ARGV << "--junit" if ENV["CIRCLECI"]
+      ARGV << "--local" if jenkins
+      ARGV << "--junit" if jenkins || azure_pipelines || circle
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
