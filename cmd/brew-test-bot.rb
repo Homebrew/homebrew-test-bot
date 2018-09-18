@@ -1017,11 +1017,6 @@ module Homebrew
                            formula_name
     end
 
-    def coverage_args
-      return [] unless ARGV.include?("--coverage")
-      ["--coverage"]
-    end
-
     def homebrew
       @category = __method__
       return if @skip_homebrew
@@ -1049,7 +1044,13 @@ module Homebrew
           test "brew", "tests", "--generic", "--online"
         end
 
-        test "brew", "tests", "--online", *coverage_args
+        if ARGV.include?("--coverage")
+          test "brew", "tests", "--online", "--coverage"
+          FileUtils.cp_r "#{HOMEBREW_REPOSITORY}/Library/Homebrew/test/coverage",
+                         Dir.pwd
+        else
+          test "brew", "tests", "--online"
+        end
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
