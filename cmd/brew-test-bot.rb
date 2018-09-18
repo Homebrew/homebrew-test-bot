@@ -1163,7 +1163,7 @@ module Homebrew
       Pathname.glob("*.bottle*.*").each(&:unlink)
 
       # Cleanup NodeJS headers on Azure Pipeline
-      if OS.linux? && ENV["SYSTEM_PIPELINESTARTTIME"]
+      if OS.linux? && ENV["TF_BUILD"]
         test "sudo", "rm", "-rf", "/usr/local/include/node"
       end
 
@@ -1568,7 +1568,7 @@ module Homebrew
     ARGV << "--ci-auto" if jenkins_pipeline_branch || jenkins_pipeline_pr
     ARGV << "--no-pull" if jenkins_pipeline_branch
 
-    azure_pipelines = !ENV["SYSTEM_PIPELINESTARTTIME"].nil?
+    azure_pipelines = !ENV["TF_BUILD"].nil?
     if azure_pipelines
       # These cannot be queried at the macOS level on Azure.
       ENV["HOMEBREW_LANGUAGES"] = "en-GB"
