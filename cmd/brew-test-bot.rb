@@ -230,7 +230,7 @@ module Homebrew
     end
 
     def puts_command
-      if ENV["TRAVIS"]
+      if ENV["HOMEBREW_TRAVIS_CI"]
         travis_fold_name = @command.first(2).join(".")
         travis_fold_name = "git.#{@command[3]}" if travis_fold_name == "git.-C"
         @travis_fold_id = "#{travis_fold_name}.#{Step.travis_increment}"
@@ -244,7 +244,7 @@ module Homebrew
     end
 
     def puts_result
-      if ENV["TRAVIS"]
+      if ENV["HOMEBREW_TRAVIS_CI"]
         travis_start_time = @start_time.to_i * 1_000_000_000
         travis_end_time = @end_time.to_i * 1_000_000_000
         travis_duration = travis_end_time - travis_start_time
@@ -523,7 +523,7 @@ module Homebrew
       if @tap.to_s != "homebrew/core"
         core_path = CoreTap.instance.path
         if core_path.exist?
-          if ENV["TRAVIS"]
+          if ENV["HOMEBREW_TRAVIS_CI"]
             test "git", "-C", core_path.to_s, "fetch", "--depth=1", "origin"
             test "git", "-C", core_path.to_s, "reset", "--hard", "origin/master"
           end
@@ -1186,7 +1186,7 @@ module Homebrew
       return if @skip_cleanup_after
       return if ENV["CIRCLE_CI"]
 
-      if ENV["TRAVIS"]
+      if ENV["HOMEBREW_TRAVIS_CI"]
         if OS.mac?
           # For Travis CI build caching.
           test "brew", "install", "md5deep", "libyaml", "gmp", "openssl@1.1"
@@ -1201,13 +1201,13 @@ module Homebrew
 
       if ARGV.include?("--cleanup")
         clear_stash_if_needed(@repository)
-        reset_if_needed(@repository) unless ENV["TRAVIS"]
+        reset_if_needed(@repository) unless ENV["HOMEBREW_TRAVIS_CI"]
 
         test "brew", "cleanup", "--prune=7"
 
         pkill_if_needed!
 
-        cleanup_shared unless ENV["TRAVIS"]
+        cleanup_shared unless ENV["HOMEBREW_TRAVIS_CI"]
 
         if ARGV.include? "--local"
           FileUtils.rm_rf ENV["HOMEBREW_HOME"]
@@ -1555,6 +1555,8 @@ module Homebrew
     travis = !ENV["TRAVIS"].nil?
     if travis
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
+      ENV["HOMEBREW_TRAVIS_CI"] = "1"
+      ENV["HOMEBREW_TRAVIS_SUDO"] = ENV["TRAVIS_SUDO"]
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
     end
@@ -1570,14 +1572,20 @@ module Homebrew
 
     azure_pipelines = !ENV["TF_BUILD"].nil?
     if azure_pipelines
-      # These cannot be queried at the macOS level on Azure.
-      ENV["HOMEBREW_LANGUAGES"] = "en-GB"
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
+      ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
+      ENV["CI"] = "1"
+      # These cannot be queried at the macOS level on Azure Pipelines.
+      ENV["HOMEBREW_LANGUAGES"] = "en-GB"
     end
+
+    ENV["HOMEBREW_CODECOV_TOKEN"] = ENV["CODECOV_TOKEN"]
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
     # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? && MacOS.version == :high_sierra && (ENV["CODECOV_TOKEN"] || travis)
+    if OS.mac? &&
+       MacOS.version == :high_sierra &&
+       (ENV["HOMEBREW_CODECOV_TOKEN"] || travis)
       ARGV << "--coverage"
     end
 
