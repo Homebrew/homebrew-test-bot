@@ -141,7 +141,8 @@ module Homebrew
     git_url =
       ENV["UPSTREAM_GIT_URL"] ||
       ENV["GIT_URL"] ||
-      ENV["CIRCLE_REPOSITORY_URL"]
+      ENV["CIRCLE_REPOSITORY_URL"] ||
+      ENV["BUILD_REPOSITORY_URI"]
     return unless git_url
 
     url_path = git_url.sub(%r{^https?://github\.com/}, "")
@@ -1047,6 +1048,8 @@ module Homebrew
     def clean_if_needed(repository)
       clean_args = [
         "-dx",
+        "--exclude=*.bottle*.*",
+        "--exclude=coverage",
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor",
         "--exclude=#{@brewbot_root.basename}",
