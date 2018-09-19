@@ -1025,9 +1025,6 @@ module Homebrew
       test_no_formulae = @formulae.empty? || @test_default_formula
 
       if test_brew && test_no_formulae
-        # verify that manpages are up-to-date
-        test "brew", "man", "--fail-if-changed"
-
         # test update from origin/master to current commit.
         test "brew", "update-test"
         # test update from origin/master to current tag.
@@ -1036,8 +1033,6 @@ module Homebrew
         test "brew", "update-test", "--commit=HEAD"
 
         test "brew", "readall", "--aliases"
-
-        test "brew", "style"
 
         if OS.linux?
           test "brew", "tests", "--no-compat", "--online"
@@ -1051,6 +1046,10 @@ module Homebrew
         else
           test "brew", "tests", "--online"
         end
+
+        # these commands use gems installed by `brew tests`
+        test "brew", "man", "--fail-if-changed"
+        test "brew", "style"
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
