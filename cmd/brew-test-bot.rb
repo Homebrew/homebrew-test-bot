@@ -597,7 +597,7 @@ module Homebrew
         ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
       end
       (Keg::TOP_LEVEL_DIRECTORIES + %w[
-        opt lib/pkgconfig var/homebrew/linked
+        Cellar opt lib/pkgconfig var/homebrew/linked
       ]).each do |dir|
         FileUtils.mkdir_p HOMEBREW_PREFIX/dir
       end
