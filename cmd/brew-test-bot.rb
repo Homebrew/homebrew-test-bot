@@ -1099,6 +1099,7 @@ module Homebrew
 
       prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
       prefix_paths_to_keep << "bin/brew"
+      prefix_paths_to_keep << "lib/pkgconfig"
       prefix_paths_to_keep.map! { |path| "#{HOMEBREW_PREFIX}/#{path}" }
       Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
         next if path.start_with?(HOMEBREW_REPOSITORY.to_s)
