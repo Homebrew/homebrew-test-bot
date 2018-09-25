@@ -596,7 +596,9 @@ module Homebrew
         test "brew", "install", "git"
         ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
       end
-      (Keg::TOP_LEVEL_DIRECTORIES + %w[opt]).each do |dir|
+      (Keg::TOP_LEVEL_DIRECTORIES + %w[
+        opt lib/pkgconfig var/homebrew/linked
+      ]).each do |dir|
         FileUtils.mkdir_p HOMEBREW_PREFIX/dir
       end
       test "brew", "doctor"
@@ -1100,6 +1102,8 @@ module Homebrew
       prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
       prefix_paths_to_keep << "bin/brew"
       prefix_paths_to_keep << "lib/pkgconfig"
+      prefix_paths_to_keep << "var/homebrew"
+      prefix_paths_to_keep << "var/homebrew/linked"
       prefix_paths_to_keep.map! { |path| "#{HOMEBREW_PREFIX}/#{path}" }
       Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
         next if path.start_with?(HOMEBREW_REPOSITORY.to_s)
