@@ -1103,6 +1103,10 @@ module Homebrew
       Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
         next if path.start_with?(HOMEBREW_REPOSITORY.to_s)
         next if prefix_paths_to_keep.include?(path)
+        # don't try to delete osxfuse files
+        next if path.match?(
+          "(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$",
+        )
         FileUtils.rm_rf path
       end
 
