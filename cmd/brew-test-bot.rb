@@ -596,11 +596,6 @@ module Homebrew
         test "brew", "install", "git"
         ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
       end
-      (Keg::TOP_LEVEL_DIRECTORIES + %w[
-        Cellar opt lib/pkgconfig var/homebrew/linked
-      ]).each do |dir|
-        FileUtils.mkdir_p HOMEBREW_PREFIX/dir
-      end
       test "brew", "doctor"
       test "brew", "--env"
       test "brew", "config"
@@ -1048,6 +1043,8 @@ module Homebrew
     end
 
     def clean_if_needed(repository)
+      return if repository == HOMEBREW_PREFIX
+
       clean_args = [
         "-dx",
         "--exclude=*.bottle*.*",
@@ -1099,17 +1096,18 @@ module Homebrew
         test "brew", "untap", tap
       end
 
-      prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
-      prefix_paths_to_keep << "bin/brew"
-      prefix_paths_to_keep << "lib/pkgconfig"
-      prefix_paths_to_keep << "var/homebrew"
-      prefix_paths_to_keep << "var/homebrew/linked"
-      prefix_paths_to_keep.map! { |path| "#{HOMEBREW_PREFIX}/#{path}" }
-      Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
-        next if path.start_with?(HOMEBREW_REPOSITORY.to_s)
-        next if prefix_paths_to_keep.include?(path)
+      Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
+      Pathname.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
+        next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
+        next if path == HOMEBREW_PREFIX/"bin/brew"
+        next if path == HOMEBREW_PREFIX/"var"
+        next if path == HOMEBREW_PREFIX/"var/homebrew"
+        path_string = path.to_s
+        next if path_string.start_with?(HOMEBREW_REPOSITORY.to_s)
+        next if path_string.start_with?(@brewbot_root.to_s)
+        next if path_string.start_with?(Dir.pwd.to_s)
         # don't try to delete osxfuse files
-        next if path.match?(
+        next if path_string.match?(
           "(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$",
         )
         FileUtils.rm_rf path
@@ -1618,10 +1616,8 @@ module Homebrew
     puts "ARGV: #{ARGV.join(" ")}"
 
     return unless ARGV.include?("--local")
-    ENV["HOMEBREW_CACHE"] = "#{ENV["HOME"]}/Library/Caches/Homebrew"
-    mkdir_p ENV["HOMEBREW_CACHE"]
     ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
-    mkdir_p ENV["HOME"]
+    mkdir_p ENV["HOMEBREW_HOME"]
     ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
   end
 
