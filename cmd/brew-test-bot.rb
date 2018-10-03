@@ -1024,6 +1024,13 @@ module Homebrew
         # these commands use gems installed by `brew tests`
         test "brew", "man", "--fail-if-changed"
         test "brew", "style"
+
+        test "brew", "install", "shellcheck"
+        shell_files  = Dir.glob("#{HOMEBREW_LIBRARY}/Homebrew/*.sh")
+        shell_files += Dir.glob("#{HOMEBREW_LIBRARY}/Homebrew/cmd/*.sh")
+        shell_files += Dir.glob("#{HOMEBREW_LIBRARY}/Homebrew/utils/*.sh")
+        shell_files += Dir.glob("#{HOMEBREW_REPOSITORY}/completions/*/*")
+        test "shellcheck", *shell_files
       elsif @tap
         test "brew", "readall", "--aliases", @tap.name
       end
