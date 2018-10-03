@@ -114,11 +114,6 @@ module Homebrew
 
   HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
-  WELL_STYLED_TAPS = [
-    "homebrew/core",
-    "homebrew/test-bot",
-  ].freeze
-
   def resolve_test_tap
     if (tap = ARGV.value("tap"))
       return Tap.fetch(tap)
@@ -935,9 +930,7 @@ module Homebrew
 
       # Only check for style violations if not already shown by
       # `brew audit --new-formula`
-      if !new_formula && @tap && WELL_STYLED_TAPS.include?(@tap.name)
-        test "brew", "style", formula_name
-      end
+      test "brew", "style", formula_name unless new_formula
 
       test_args = ["--verbose"]
       test_args << "--keep-tmp" if ARGV.keep_tmp?
