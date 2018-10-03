@@ -1101,7 +1101,7 @@ module Homebrew
       prune_if_needed(@repository)
 
       Tap.names.each do |tap_name|
-        next if tap_name == @tap.name
+        next if tap_name == @tap&.name
         if @test_brew && REQUIRED_TEST_BREW_TAPS.include?(tap_name)
           next
         elsif REQUIRED_TAPS.include?(tap_name)
