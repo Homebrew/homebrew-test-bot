@@ -114,6 +114,17 @@ module Homebrew
 
   HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
+  REQUIRED_TAPS = %w[
+    homebrew/core
+    homebrew/test-bot
+  ].freeze
+
+  REQUIRED_TEST_BREW_TAPS = REQUIRED_TAPS + %w[
+    homebrew/cask
+    homebrew/bundle
+    homebrew/services
+  ].freeze
+
   def resolve_test_tap
     if (tap = ARGV.value("tap"))
       return Tap.fetch(tap)
@@ -560,6 +571,8 @@ module Homebrew
       end
 
       @formulae += @added_formulae + @modified_formulae
+      @test_brew = (!@tap || @test_bot_tap) &&
+                   (@formulae.empty? || @test_default_formula)
     end
 
     def skip(formula_name)
@@ -995,16 +1008,21 @@ module Homebrew
       @category = __method__
       return if @skip_homebrew
 
-      test_brew = !@tap || @test_bot_tap
-      test_no_formulae = @formulae.empty? || @test_default_formula
-
-      if test_brew && test_no_formulae
+      if @test_brew
         # test update from origin/master to current commit.
         test "brew", "update-test"
         # test update from origin/master to current tag.
         test "brew", "update-test", "--to-tag"
         # test no-op update from current commit (to current commit, a no-op).
         test "brew", "update-test", "--commit=HEAD"
+
+        installed_taps = Tap.select(&:installed?).map(&:name)
+        (REQUIRED_TEST_BREW_TAPS - installed_taps).each do |tap|
+          test "brew", "tap", tap
+        end
+
+        test "brew", "tap", "homebrew/cask"
+        test "brew", "tap", "homebrew/bundle"
 
         test "brew", "readall", "--aliases"
 
@@ -1082,11 +1100,14 @@ module Homebrew
       clean_if_needed(@repository)
       prune_if_needed(@repository)
 
-      Tap.names.each do |tap|
-        next if tap == "homebrew/core"
-        next if tap == "homebrew/test-bot"
-        next if tap == @tap.to_s
-        test "brew", "untap", tap
+      Tap.names.each do |tap_name|
+        next if tap_name == @tap.name
+        if @test_brew && REQUIRED_TEST_BREW_TAPS.include?(tap_name)
+          next
+        elsif REQUIRED_TAPS.include?(tap_name)
+          next
+        end
+        test "brew", "untap", tap_name
       end
 
       Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
