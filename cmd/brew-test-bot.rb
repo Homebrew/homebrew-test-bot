@@ -1447,7 +1447,7 @@ module Homebrew
          ENV["CHANGE_ID"] ||
          ENV["CIRCLE_PR_NUMBER"]
     if pr
-      pull_pr = "#{tap.remote.chomp(".git")}/pull/#{pr}"
+      pull_pr = "#{tap.default_remote}/pull/#{pr}"
       safe_system "brew", "pull", "--clean", *("--tap=#{tap}" if tap), pull_pr
     end
 
