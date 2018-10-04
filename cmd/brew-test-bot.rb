@@ -118,7 +118,6 @@ module Homebrew
 
   REQUIRED_TAPS = %w[
     homebrew/core
-    homebrew/test-bot
     linuxbrew/test-bot
     linuxbrew/xorg
   ].freeze
