@@ -1413,7 +1413,7 @@ module Homebrew
          ENV["CHANGE_ID"] ||
          ENV["CIRCLE_PR_NUMBER"]
     if pr
-      pull_pr = "https://github.com/#{tap.user}/homebrew-#{tap.repo}/pull/#{pr}"
+      pull_pr = "#{tap.default_remote}/pull/#{pr}"
       safe_system "brew", "pull", "--clean", pull_pr
     end
 
