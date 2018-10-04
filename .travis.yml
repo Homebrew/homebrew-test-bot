@@ -26,7 +26,7 @@ before_install:
     else
       LINUX="1";
       HOMEBREW_REPOSITORY="$HOME/Homebrew";
-      export PATH="$HOMEBREW_REPOSITORY/bin:$PATH";
+      export PATH="$HOMEBREW_REPOSITORY/bin:/usr/bin:/bin";
     fi
   # umask 022 fixes Linux `brew tests` failures;
   - if [ "$LINUX" ]; then

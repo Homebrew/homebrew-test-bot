@@ -116,9 +116,17 @@ module Homebrew
 
   HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
-  WELL_STYLED_TAPS = [
-    "homebrew/core",
-    "homebrew/test-bot",
+  REQUIRED_TAPS = %w[
+    homebrew/core
+    homebrew/test-bot
+    linuxbrew/test-bot
+    linuxbrew/xorg
+  ].freeze
+
+  REQUIRED_TEST_BREW_TAPS = REQUIRED_TAPS + %w[
+    homebrew/cask
+    homebrew/bundle
+    homebrew/services
   ].freeze
 
   def resolve_test_tap
@@ -590,6 +598,8 @@ module Homebrew
       end
 
       @formulae += @added_formulae + @modified_formulae
+      @test_brew = (!@tap || @test_bot_tap) &&
+                   (@formulae.empty? || @test_default_formula)
     end
 
     def skip(formula_name)
@@ -620,9 +630,6 @@ module Homebrew
       if OS.mac? && MacOS.version < :sierra
         test "brew", "install", "git"
         ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
-      end
-      (Keg::TOP_LEVEL_DIRECTORIES + %w[opt]).each do |dir|
-        FileUtils.mkdir_p HOMEBREW_PREFIX/dir
       end
       test "brew", "doctor"
       test "brew", "--env"
@@ -967,9 +974,7 @@ module Homebrew
 
       # Only check for style violations if not already shown by
       # `brew audit --new-formula`
-      if !new_formula && @tap && WELL_STYLED_TAPS.include?(@tap.name)
-        test "brew", "style", formula_name
-      end
+      test "brew", "style", formula_name unless new_formula
 
       test_args = ["--verbose"]
       test_args << "--keep-tmp" if ARGV.keep_tmp?
@@ -1036,16 +1041,21 @@ module Homebrew
       @category = __method__
       return if @skip_homebrew
 
-      test_brew = !@tap || @test_bot_tap
-      test_no_formulae = @formulae.empty? || @test_default_formula
-
-      if test_brew && test_no_formulae
+      if @test_brew
         # test update from origin/master to current commit.
         test "brew", "update-test" unless OS.linux? # This test currently fails on Linux.
         # test update from origin/master to current tag.
         test "brew", "update-test", "--to-tag"
         # test no-op update from current commit (to current commit, a no-op).
         test "brew", "update-test", "--commit=HEAD"
+
+        installed_taps = Tap.select(&:installed?).map(&:name)
+        (REQUIRED_TEST_BREW_TAPS - installed_taps).each do |tap|
+          test "brew", "tap", tap
+        end
+
+        test "brew", "tap", "homebrew/cask"
+        test "brew", "tap", "homebrew/bundle"
 
         test "brew", "readall", "--aliases"
 
@@ -1077,6 +1087,8 @@ module Homebrew
     end
 
     def clean_if_needed(repository)
+      return if repository == HOMEBREW_PREFIX
+
       clean_args = [
         "-dx",
         "--exclude=*.bottle*.*",
@@ -1121,22 +1133,30 @@ module Homebrew
       clean_if_needed(@repository)
       prune_if_needed(@repository)
 
-      Tap.names.each do |tap|
-        next if tap == "homebrew/core"
-        next if tap == "homebrew/test-bot"
-        next if tap == "linuxbrew/extra"
-        next if tap == "linuxbrew/test-bot"
-        next if tap == "linuxbrew/xorg"
-        next if tap == @tap.to_s
-        test "brew", "untap", tap
+      Tap.names.each do |tap_name|
+        next if tap_name == @tap&.name
+        if @test_brew && REQUIRED_TEST_BREW_TAPS.include?(tap_name)
+          next
+        elsif REQUIRED_TAPS.include?(tap_name)
+          next
+        end
+        test "brew", "untap", tap_name
       end
 
-      prefix_paths_to_keep = Keg::TOP_LEVEL_DIRECTORIES.dup
-      prefix_paths_to_keep << "bin/brew"
-      prefix_paths_to_keep.map! { |path| "#{HOMEBREW_PREFIX}/#{path}" }
-      Dir.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
-        next if path.start_with?(HOMEBREW_REPOSITORY.to_s)
-        next if prefix_paths_to_keep.include?(path)
+      Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
+      Pathname.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
+        next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
+        next if path == HOMEBREW_PREFIX/"bin/brew"
+        next if path == HOMEBREW_PREFIX/"var"
+        next if path == HOMEBREW_PREFIX/"var/homebrew"
+        path_string = path.to_s
+        next if path_string.start_with?(HOMEBREW_REPOSITORY.to_s)
+        next if path_string.start_with?(@brewbot_root.to_s)
+        next if path_string.start_with?(Dir.pwd.to_s)
+        # don't try to delete osxfuse files
+        next if path_string.match?(
+          "(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$",
+        )
         FileUtils.rm_rf path
       end
 
@@ -1650,10 +1670,8 @@ module Homebrew
     puts "ARGV: #{ARGV.join(" ")}"
 
     return unless ARGV.include?("--local")
-    ENV["HOMEBREW_CACHE"] = "#{ENV["HOME"]}/Library/Caches/Homebrew"
-    mkdir_p ENV["HOMEBREW_CACHE"]
     ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
-    mkdir_p ENV["HOME"]
+    mkdir_p ENV["HOMEBREW_HOME"]
     ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
   end
 
