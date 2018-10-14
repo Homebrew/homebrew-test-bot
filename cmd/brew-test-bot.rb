@@ -165,7 +165,7 @@ module Homebrew
   # Wraps command invocations. Instantiated by Test#test.
   # Handles logging and pretty-printing.
   class Step
-    attr_reader :command, :name, :status, :output
+    attr_reader :command, :name, :status, :output, :start_time, :end_time
 
     # Instantiates a Step object.
     # @param test [Test] The parent Test object
@@ -203,11 +203,11 @@ module Homebrew
     def command_short
       (@command - %W[
         brew
-        git
         -C
         #{HOMEBREW_PREFIX}
         #{HOMEBREW_REPOSITORY}
         #{@repository}
+        #{Dir.pwd}
         --force
         --retry
         --verbose
@@ -215,6 +215,10 @@ module Homebrew
         --build-from-source
         --json
       ].freeze).join(" ")
+               .gsub("#{HOMEBREW_PREFIX}", "")
+               .gsub("#{HOMEBREW_REPOSITORY}", "")
+               .gsub("#{@repository}", "")
+               .gsub(Dir.pwd, "")
     end
 
     def passed?
@@ -246,7 +250,7 @@ module Homebrew
 
     def puts_result
       if ENV["HOMEBREW_TRAVIS_CI"]
-        travis_start_time = @start_time.to_i * 1_000_000_000
+        travis_start_time = start_time.to_i * 1_000_000_000
         travis_end_time = @end_time.to_i * 1_000_000_000
         travis_duration = travis_end_time - travis_start_time
         puts Formatter.headline(Formatter.success("PASSED")) if passed?
@@ -268,7 +272,7 @@ module Homebrew
     # Precondition: Step#run has been called.
     # @return [Float] execution time in seconds
     def time
-      @end_time - @start_time
+      end_time - start_time
     end
 
     def run
@@ -1702,13 +1706,16 @@ module Homebrew
       tests.each do |test|
         testsuite = testsuites.add_element "testsuite"
         testsuite.add_attribute "name", "brew-test-bot.#{Utils::Bottles.tag}"
-        testsuite.add_attribute "tests", test.steps.count
+        testsuite.add_attribute "tests", test.steps.select(&:passed?).count
+        testsuite.add_attribute "failures", test.steps.select(&:failed?).count
+        testsuite.add_attribute "timestamp", test.steps.first.start_time.iso8601
 
         test.steps.each do |step|
           testcase = testsuite.add_element "testcase"
           testcase.add_attribute "name", step.command_short
           testcase.add_attribute "status", step.status
           testcase.add_attribute "time", step.time
+          testcase.add_attribute "timestamp", step.start_time.iso8601
 
           next unless step.output?
           output = sanitize_output_for_xml(step.output)
