@@ -5,8 +5,7 @@ jobs:
   steps:
     - bash: |
         sudo xcode-select --switch /Applications/Xcode_10.app/Contents/Developer
-        rm -rf /usr/local/Homebrew/Library/Taps/homebrew/homebrew-cask*
-        brew update-reset
+        brew update-reset /usr/local/Homebrew
         ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
         brew test-bot --coverage
       displayName: Run brew test-bot
