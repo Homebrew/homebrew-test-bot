@@ -72,8 +72,6 @@
 #:    If `--git-email=<git-email>` is passed, set the Git
 #:    author/committer email to the given email.
 #:
-#:    If `--or-later` is passed, append _or_later to the bottle tag.
-#:
 #:    If `--ci-master` is passed, use the Homebrew master branch CI
 #:    options. Implies `--cleanup`: use with care!
 #:
@@ -557,17 +555,6 @@ module Homebrew
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
         @deleted_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
-        unless @modified_formulae.empty?
-          or_later_diff = Utils.popen_read(
-            "git", "-C", @repository, "diff",
-            "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$",
-            "--unified=0", diff_start_sha1, diff_end_sha1
-          ).strip.empty?
-
-          # Test rather than build bottles if we're testing a `*_or_later`
-          # bottle change.
-          ARGV << "--no-bottle" unless or_later_diff
-        end
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
         # Build the default test formula.
         @test_default_formula = true
