@@ -1316,7 +1316,9 @@ module Homebrew
     # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
     bintray_org = ARGV.value("bintray-org") || "homebrew"
     if bintray_org == "homebrew" && !OS.mac?
+      # TODO: remove when HOMEBREW_FORCE_HOMEBREW_ON_LINUX is setup
       ENV["HOMEBREW_FORCE_HOMEBREW_ORG"] = "1"
+      ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"] = "1"
     end
 
     # Don't pass keys/cookies to subprocesses
