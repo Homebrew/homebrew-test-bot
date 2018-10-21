@@ -520,9 +520,7 @@ module Homebrew
             test "git", "-C", core_path.to_s, "reset", "--hard", "origin/master"
           end
         else
-          test "git", "clone", "--depth=1",
-               "https://github.com/Homebrew/homebrew-core",
-               core_path.to_s
+          test "git", "clone", "--depth=1", CoreTap.instance.default_remote, core_path.to_s
         end
 
         core_revision = Utils.popen_read(
