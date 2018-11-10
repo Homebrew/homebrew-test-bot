@@ -415,8 +415,8 @@ module Homebrew
           @hash = nil
         end
       # Use Circle CI pull-request variables for pull request jobs.
-      elsif !ENV["CI_PULL_REQUEST"].to_s.empty?
-        @url = ENV["CI_PULL_REQUEST"]
+      elsif !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
+        @url = ENV["CIRCLE_PULL_REQUEST"]
         @hash = nil
       # Use Azure Pipeline variables for pull request jobs.
       elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
@@ -444,6 +444,12 @@ module Homebrew
                                   "--short",
                                   ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]).strip
         diff_end_sha1 = current_sha1
+      # Use CircleCI Git variables.
+      elsif ENV["CIRCLE_SHA1"]
+        diff_start_sha1 =
+          Utils.popen_read("git", "-C", @repository, "rev-parse",
+                                  "--short", "origin/master").strip
+        diff_end_sha1 = ENV["CIRCLE_SHA1"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         diff_end_sha1 = diff_start_sha1 = current_sha1
@@ -1181,7 +1187,7 @@ module Homebrew
     def cleanup_after
       @category = __method__
       return if @skip_cleanup_after
-      return if ENV["CIRCLE_CI"]
+      return if ENV["CIRCLECI"]
 
       if ENV["HOMEBREW_TRAVIS_CI"] || ENV["HOMEBREW_AZURE_PIPELINES"]
         if OS.mac? && ENV["HOMEBREW_TRAVIS_CI"]
@@ -1548,12 +1554,16 @@ module Homebrew
                              "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
     travis = !ENV["TRAVIS"].nil?
+    circle = !ENV["CIRCLECI"].nil?
+    if travis || circle
+      ARGV << "--ci-auto" << "--no-pull"
+    end
     if travis
-      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
-      ENV["HOMEBREW_TRAVIS_CI"] = "1"
-      ENV["HOMEBREW_TRAVIS_SUDO"] = ENV["TRAVIS_SUDO"]
+      ARGV << "--verbose"
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
+      ENV["HOMEBREW_TRAVIS_CI"] = "1"
+      ENV["HOMEBREW_TRAVIS_SUDO"] = ENV["TRAVIS_SUDO"]
     end
 
     jenkins = !ENV["JENKINS_HOME"].nil?
@@ -1592,11 +1602,12 @@ module Homebrew
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
     jenkins_branch ||= jenkins_pipeline_branch
     azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
+    circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
 
     if ARGV.include?("--ci-auto")
-      if travis_pr || jenkins_pr || azure_pipelines_pr
+      if travis_pr || jenkins_pr || azure_pipelines_pr || circle_pr
         ARGV << "--ci-pr"
-      elsif travis || jenkins_branch
+      elsif travis || jenkins_branch || circle
         ARGV << "--ci-master"
       else
         ARGV << "--ci-testing"
@@ -1609,7 +1620,7 @@ module Homebrew
       ARGV << "--cleanup"
       ARGV << "--test-default-formula"
       ARGV << "--local" if jenkins
-      ARGV << "--junit" if jenkins || azure_pipelines
+      ARGV << "--junit" if jenkins || azure_pipelines || circle
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
