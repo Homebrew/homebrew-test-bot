@@ -72,8 +72,6 @@
 #:    If `--git-email=<git-email>` is passed, set the Git
 #:    author/committer email to the given email.
 #:
-#:    If `--or-later` is passed, append _or_later to the bottle tag.
-#:
 #:    If `--ci-master` is passed, use the Homebrew master branch CI
 #:    options. Implies `--cleanup`: use with care!
 #:
@@ -169,7 +167,7 @@ module Homebrew
   # Wraps command invocations. Instantiated by Test#test.
   # Handles logging and pretty-printing.
   class Step
-    attr_reader :command, :name, :status, :output
+    attr_reader :command, :name, :status, :output, :start_time, :end_time
 
     # Instantiates a Step object.
     # @param test [Test] The parent Test object
@@ -207,11 +205,11 @@ module Homebrew
     def command_short
       (@command - %W[
         brew
-        git
         -C
         #{HOMEBREW_PREFIX}
         #{HOMEBREW_REPOSITORY}
         #{@repository}
+        #{Dir.pwd}
         --force
         --retry
         --verbose
@@ -219,6 +217,10 @@ module Homebrew
         --build-from-source
         --json
       ].freeze).join(" ")
+               .gsub("#{HOMEBREW_PREFIX}", "")
+               .gsub("#{HOMEBREW_REPOSITORY}", "")
+               .gsub("#{@repository}", "")
+               .gsub(Dir.pwd, "")
     end
 
     def passed?
@@ -250,7 +252,7 @@ module Homebrew
 
     def puts_result
       if ENV["HOMEBREW_TRAVIS_CI"]
-        travis_start_time = @start_time.to_i * 1_000_000_000
+        travis_start_time = start_time.to_i * 1_000_000_000
         travis_end_time = @end_time.to_i * 1_000_000_000
         travis_duration = travis_end_time - travis_start_time
         puts Formatter.headline(Formatter.success("PASSED")) if passed?
@@ -272,7 +274,7 @@ module Homebrew
     # Precondition: Step#run has been called.
     # @return [Float] execution time in seconds
     def time
-      @end_time - @start_time
+      end_time - start_time
     end
 
     def run
@@ -579,17 +581,6 @@ module Homebrew
         end
         @deleted_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
-        unless @modified_formulae.empty?
-          or_later_diff = Utils.popen_read(
-            "git", "-C", @repository, "diff",
-            "-G    sha256 ['\"][a-f0-9]*['\"] => :\\w+_or_later$",
-            "--unified=0", diff_start_sha1, diff_end_sha1
-          ).strip.empty?
-
-          # Test rather than build bottles if we're testing a `*_or_later`
-          # bottle change.
-          ARGV << "--no-bottle" unless or_later_diff
-        end
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
         # Build the default test formula.
         @test_default_formula = true
@@ -1741,13 +1732,16 @@ module Homebrew
       tests.each do |test|
         testsuite = testsuites.add_element "testsuite"
         testsuite.add_attribute "name", "brew-test-bot.#{Utils::Bottles.tag}"
-        testsuite.add_attribute "tests", test.steps.count
+        testsuite.add_attribute "tests", test.steps.select(&:passed?).count
+        testsuite.add_attribute "failures", test.steps.select(&:failed?).count
+        testsuite.add_attribute "timestamp", test.steps.first.start_time.iso8601
 
         test.steps.each do |step|
           testcase = testsuite.add_element "testcase"
           testcase.add_attribute "name", step.command_short
           testcase.add_attribute "status", step.status
           testcase.add_attribute "time", step.time
+          testcase.add_attribute "timestamp", step.start_time.iso8601
 
           next unless step.output?
           output = sanitize_output_for_xml(step.output)
