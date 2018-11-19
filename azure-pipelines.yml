@@ -25,7 +25,7 @@ jobs:
         codeCoverageTool: Cobertura
         summaryFileLocation: $(Build.SourcesDirectory)/coverage/coverage.xml
         reportDirectory: $(Build.SourcesDirectory)/coverage
-        failIfCoverageEmpty: true
+        failIfCoverageEmpty: false
 
 - job: Linux
   pool:
