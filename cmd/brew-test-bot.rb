@@ -535,7 +535,7 @@ module Homebrew
       if @tap.to_s != "homebrew/core"
         core_path = CoreTap.instance.path
         if core_path.exist?
-          if ENV["HOMEBREW_TRAVIS_CI"]
+          if ARGV.include?("--cleanup")
             test "git", "-C", core_path.to_s, "fetch", "--depth=1", "origin"
             test "git", "-C", core_path.to_s, "reset", "--hard", "origin/master"
           end
@@ -1217,13 +1217,14 @@ module Homebrew
       return if @skip_cleanup_after
       return if ENV["CIRCLECI"]
 
-      if ENV["HOMEBREW_TRAVIS_CI"]
-        if OS.mac?
+      if ENV["HOMEBREW_TRAVIS_CI"] || ENV["HOMEBREW_AZURE_PIPELINES"]
+        if OS.mac? && ENV["HOMEBREW_TRAVIS_CI"]
           # For Travis CI build caching.
           test "brew", "install", "md5deep", "libyaml", "gmp", "openssl@1.1"
         end
 
-        return if @tap && @tap.to_s != "homebrew/test-bot"
+        # don't need to do post-build cleanup unless testing test-bot itself.
+        return if @tap.to_s != "homebrew/test-bot"
       end
 
       unless @start_branch.to_s.empty?
@@ -1232,13 +1233,13 @@ module Homebrew
 
       if ARGV.include?("--cleanup")
         clear_stash_if_needed(@repository)
-        reset_if_needed(@repository) unless ENV["HOMEBREW_TRAVIS_CI"]
+        reset_if_needed(@repository)
 
         test "brew", "cleanup", "--prune=7"
 
         pkill_if_needed!
 
-        cleanup_shared unless ENV["HOMEBREW_TRAVIS_CI"]
+        cleanup_shared
 
         if ARGV.include? "--local"
           FileUtils.rm_rf ENV["HOMEBREW_HOME"]
@@ -1350,7 +1351,7 @@ module Homebrew
     # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
     bintray_org = ARGV.value("bintray-org") || "homebrew"
     if bintray_org == "homebrew" && !OS.mac?
-      ENV["HOMEBREW_FORCE_HOMEBREW_ORG"] = "1"
+      ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"] = "1"
     end
 
     # Don't pass keys/cookies to subprocesses
