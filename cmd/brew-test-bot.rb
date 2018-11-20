@@ -55,7 +55,7 @@
 #:
 #:    If `--no-pull` is passed, don't use `brew pull` when possible.
 #:
-#:    If `--coverage` is passed, generate and uplaod a coverage report.
+#:    If `--coverage` is passed, generate and upload a coverage report.
 #:
 #:    If `--test-default-formula` is passed, use a default testing formula
 #:    when not building a tap and no other formulae are specified.
@@ -112,7 +112,7 @@ module Homebrew
   BYTES_IN_1_MEGABYTE = 1024*1024
   MAX_STEP_OUTPUT_SIZE = BYTES_IN_1_MEGABYTE - (200*1024) # margin of safety
 
-  HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
+  HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}.freeze
 
   REQUIRED_TAPS = %w[
     homebrew/core
@@ -217,10 +217,10 @@ module Homebrew
         --build-from-source
         --json
       ].freeze).join(" ")
-               .gsub("#{HOMEBREW_PREFIX}", "")
-               .gsub("#{HOMEBREW_REPOSITORY}", "")
-               .gsub("#{@repository}", "")
-               .gsub(Dir.pwd, "")
+        .gsub(HOMEBREW_PREFIX.to_s, "")
+        .gsub(HOMEBREW_REPOSITORY.to_s, "")
+        .gsub(@repository.to_s, "")
+        .gsub(Dir.pwd, "")
     end
 
     def passed?
@@ -296,10 +296,10 @@ module Homebrew
 
       verbose = ARGV.verbose?
 
-      result = system_command executable, args: args,
+      result = system_command executable, args:         args,
                                           print_stdout: verbose,
                                           print_stderr: verbose,
-                                          env: @env
+                                          env:          @env
 
       @end_time = Time.now
       @status = result.success? ? :passed : :failed
@@ -391,7 +391,7 @@ module Homebrew
         "git", "-C", @repository,
                "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
                start_revision, end_revision, "--", path
-      ).lines.map do |line|
+             ).lines.map do |line|
         file = Pathname.new line.chomp
         next unless @tap.formula_file?(file)
         @tap.formula_file_to_name(file)
@@ -424,8 +424,8 @@ module Homebrew
           @hash = nil
         end
       # Use Circle CI pull-request variables for pull request jobs.
-      elsif !ENV["CI_PULL_REQUEST"].to_s.empty?
-        @url = ENV["CI_PULL_REQUEST"]
+      elsif !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
+        @url = ENV["CIRCLE_PULL_REQUEST"]
         @hash = nil
       # Use Azure Pipeline variables for pull request jobs.
       elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
@@ -457,6 +457,12 @@ module Homebrew
                                   "--short",
                                   ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]).strip
         diff_end_sha1 = current_sha1
+      # Use CircleCI Git variables.
+      elsif ENV["CIRCLE_SHA1"]
+        diff_start_sha1 =
+          Utils.popen_read("git", "-C", @repository, "rev-parse",
+                                  "--short", "origin/master").strip
+        diff_end_sha1 = ENV["CIRCLE_SHA1"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         diff_end_sha1 = diff_start_sha1 = current_sha1
@@ -526,11 +532,11 @@ module Homebrew
       brew_version = Utils.popen_read(
         "git", "-C", HOMEBREW_REPOSITORY.to_s,
                "describe", "--tags", "--abbrev", "--dirty"
-      ).strip
+             ).strip
       brew_commit_subject = Utils.popen_read(
         "git", "-C", HOMEBREW_REPOSITORY.to_s,
                "log", "-1", "--format=%s"
-      ).strip
+             ).strip
       puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
       if @tap.to_s != "homebrew/core"
         core_path = CoreTap.instance.path
@@ -548,19 +554,19 @@ module Homebrew
         core_revision = Utils.popen_read(
           "git", "-C", core_path.to_s,
                  "log", "-1", "--format=%h (%s)"
-        ).strip
+               ).strip
         puts "Homebrew/homebrew-core #{core_revision}"
       end
       if @tap
         tap_origin_master_revision = Utils.popen_read(
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)", "origin/master"
-        ).strip
+               ).strip
         puts "#{@tap} origin/master #{tap_origin_master_revision}"
         tap_revision = Utils.popen_read(
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)"
-        ).strip
+               ).strip
         puts "#{@tap} HEAD #{tap_revision}"
       end
 
@@ -1387,19 +1393,19 @@ module Homebrew
           "formula" => {
             "pkg_version" => "1.0.0",
           },
-          "bottle" => {
+          "bottle"  => {
             "rebuild" => 0,
-            "tags" => {
+            "tags"    => {
               Utils::Bottles.tag => {
                 "filename" =>
-                  "testbottest-1.0.0.#{Utils::Bottles.tag}.bottle.tar.gz",
-                "sha256" =>
-                  "20cdde424f5fe6d4fdb6a24cff41d2f7aefcd1ef2f98d46f6c074c36a1eef81e",
+                              "testbottest-1.0.0.#{Utils::Bottles.tag}.bottle.tar.gz",
+                "sha256"   =>
+                              "20cdde424f5fe6d4fdb6a24cff41d2f7aefcd1ef2f98d46f6c074c36a1eef81e",
               },
             },
           },
           "bintray" => {
-            "package" => "testbottest",
+            "package"    => "testbottest",
             "repository" => "bottles",
           },
         },
@@ -1487,7 +1493,7 @@ module Homebrew
 
       rebuild = bottle_hash["bottle"]["rebuild"]
 
-      bottle_hash["bottle"]["tags"].each do |tag, tag_hash|
+      bottle_hash["bottle"]["tags"].each do |tag, _tag_hash|
         filename = Bottle::Filename.new(formula_name, version, tag, rebuild)
         bintray_url =
           "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename.bintray}"
@@ -1581,16 +1587,19 @@ module Homebrew
     ENV["HOMEBREW_NO_EMOJI"] = "1"
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["HOMEBREW_PATH"] = ENV["PATH"] =
-      "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
+                             "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
     travis = !ENV["TRAVIS"].nil?
     circle = !ENV["CIRCLECI"].nil?
     if travis || circle
-      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
-      ENV["HOMEBREW_TRAVIS_CI"] = "1"
-      ENV["HOMEBREW_TRAVIS_SUDO"] = ENV["TRAVIS_SUDO"]
+      ARGV << "--ci-auto" << "--no-pull"
+    end
+    if travis
+      ARGV << "--verbose"
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
+      ENV["HOMEBREW_TRAVIS_CI"] = "1"
+      ENV["HOMEBREW_TRAVIS_SUDO"] = ENV["TRAVIS_SUDO"]
     end
 
     jenkins = !ENV["JENKINS_HOME"].nil?
@@ -1631,11 +1640,12 @@ module Homebrew
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
     jenkins_branch ||= jenkins_pipeline_branch
     azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
+    circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
 
     if ARGV.include?("--ci-auto")
       if travis_pr || jenkins_pr || azure_pipelines_pr || circle_pr
         ARGV << "--ci-pr"
-      elsif travis || circle || jenkins_branch
+      elsif travis || jenkins_branch || circle
         ARGV << "--ci-master"
       else
         ARGV << "--ci-testing"
@@ -1656,7 +1666,7 @@ module Homebrew
     test_bot_revision = Utils.popen_read(
       "git", "-C", Tap.fetch("homebrew/test-bot").path.to_s,
              "log", "-1", "--format=%h (%s)"
-    ).strip
+           ).strip
     puts "Homebrew/homebrew-test-bot #{test_bot_revision}"
     puts "ARGV: #{ARGV.join(" ")}"
 
@@ -1694,9 +1704,9 @@ module Homebrew
     skip_cleanup_before = false
     if ARGV.named.empty?
       # With no arguments just build the most recent commit.
-      current_test = Test.new("HEAD", tap: tap,
-                                      skip_setup: skip_setup,
-                                      skip_homebrew: skip_homebrew,
+      current_test = Test.new("HEAD", tap:                 tap,
+                                      skip_setup:          skip_setup,
+                                      skip_homebrew:       skip_homebrew,
                                       skip_cleanup_before: skip_cleanup_before)
       any_errors = !current_test.run
       tests << current_test
@@ -1706,11 +1716,11 @@ module Homebrew
         test_error = false
         begin
           current_test =
-            Test.new(argument, tap: tap,
-                               skip_setup: skip_setup,
-                               skip_homebrew: skip_homebrew,
+            Test.new(argument, tap:                 tap,
+                               skip_setup:          skip_setup,
+                               skip_homebrew:       skip_homebrew,
                                skip_cleanup_before: skip_cleanup_before,
-                               skip_cleanup_after: skip_cleanup_after)
+                               skip_cleanup_after:  skip_cleanup_after)
           skip_setup = true
           skip_homebrew = true
           skip_cleanup_before = true
