@@ -1558,6 +1558,7 @@ module Homebrew
     if travis || circle
       ARGV << "--ci-auto" << "--no-pull"
     end
+    ENV["HOMEBREW_CIRCLECI"] = "1" if circle
     if travis
       ARGV << "--verbose"
       ENV["HOMEBREW_COLOR"] = "1"
