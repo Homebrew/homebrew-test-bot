@@ -32,14 +32,16 @@ jobs:
     vmImage: ubuntu-16.04
   steps:
     - bash: |
-        git clone https://github.com/Homebrew/brew "$HOME/Homebrew"
-        mkdir -p "$HOME/Homebrew/Library/Taps/homebrew"
-        ln -s "$PWD" "$HOME/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
-        "$HOME/Homebrew/bin/brew" test-bot
+        HOMEBREW_REPOSITORY=/home/linuxbrew/.linuxbrew
+        sudo mkdir -p /home/linuxbrew
+        sudo git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
+        sudo mkdir -p "$HOMEBREW_REPOSITORY/Library/Taps/homebrew"
+        sudo ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
+        sudo chown -R "$USER" "$HOMEBREW_REPOSITORY"
+        "$HOMEBREW_REPOSITORY/bin/brew" test-bot
       displayName: brew test-bot
       env:
         HOMEBREW_GITHUB_API_TOKEN: $(github.publicApiToken)
-        HOMEBREW_FORCE_HOMEBREW_ON_LINUX: 1
 
     - task: PublishTestResults@2
       displayName: Publish test-bot test results
