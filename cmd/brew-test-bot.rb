@@ -1308,6 +1308,23 @@ module Homebrew
     end
   end
 
+  def copy_bottles_from_jenkins
+    jenkins = ENV["JENKINS_HOME"]
+    job = ENV["UPSTREAM_JOB_NAME"]
+    id = ENV["UPSTREAM_BUILD_ID"]
+    if (!job || !id) && !ARGV.include?("--dry-run")
+      raise "Missing Jenkins variables!"
+    end
+
+    jenkins_dir  = "#{jenkins}/jobs/#{job}/configurations/axis-version/*/"
+    jenkins_dir += "builds/#{id}/archive/*.bottle*.*"
+    bottles = Dir[jenkins_dir]
+
+    raise "No bottles found in #{jenkins_dir}!" if bottles.empty? && !ARGV.include?("--dry-run")
+
+    FileUtils.cp bottles, Dir.pwd, verbose: true
+  end
+
   def test_ci_upload(tap)
     # Don't trust formulae we're uploading
     ENV["HOMEBREW_DISABLE_LOAD_FORMULA"] = "1"
@@ -1331,22 +1348,9 @@ module Homebrew
 
     ARGV << "--verbose"
 
-    bottles = Dir["*.bottle*.*"]
-    if bottles.empty?
-      jenkins = ENV["JENKINS_HOME"]
-      job = ENV["UPSTREAM_JOB_NAME"]
-      id = ENV["UPSTREAM_BUILD_ID"]
-      if (!job || !id) && !ARGV.include?("--dry-run")
-        raise "Missing Jenkins variables!"
-      end
+    copy_bottles_from_jenkins if !ENV["JENKINS_HOME"].nil?
 
-      jenkins_dir  = "#{jenkins}/jobs/#{job}/configurations/axis-version/*/"
-      jenkins_dir += "builds/#{id}/archive/*.bottle*.*"
-      bottles = Dir[jenkins_dir]
-      raise "No bottles found!" if bottles.empty? && !ARGV.include?("--dry-run")
-
-      FileUtils.cp bottles, Dir.pwd, verbose: true
-    end
+    raise "No bottles found in #{Dir.pwd}!" if Dir["*.bottle*.*"].empty? && !ARGV.include?("--dry-run")
 
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
