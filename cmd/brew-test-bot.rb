@@ -1582,20 +1582,11 @@ module Homebrew
     azure_pipelines = !ENV["TF_BUILD"].nil?
     if azure_pipelines
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
-      ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
       ENV["CI"] = "1"
+      ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
+      ENV["HOMEBREW_COLOR"] = "1"
       # These cannot be queried at the macOS level on Azure Pipelines.
       ENV["HOMEBREW_LANGUAGES"] = "en-GB"
-    end
-
-    ENV["HOMEBREW_CODECOV_TOKEN"] = ENV["CODECOV_TOKEN"]
-
-    # Only report coverage if build runs on macOS and this is indeed Homebrew,
-    # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? &&
-       MacOS.version == :high_sierra &&
-       (ENV["HOMEBREW_CODECOV_TOKEN"] || travis)
-      ARGV << "--coverage"
     end
 
     travis_pr = ENV["TRAVIS_PULL_REQUEST"] &&
@@ -1607,6 +1598,20 @@ module Homebrew
     jenkins_branch ||= jenkins_pipeline_branch
     azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
     circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
+
+    # Only report coverage if build runs on macOS and this is indeed Homebrew,
+    # as we don't want this to be averaged with inferior Linux test coverage.
+    if OS.mac? && ENV["HOMEBREW_COVERALLS_REPO_TOKEN"]
+      ARGV << "--coverage"
+
+      if azure_pipelines
+        ENV["HOMEBREW_CI_NAME"] = "azure-pipelines"
+        ENV["HOMEBREW_CI_BUILD_NUMBER"] = ENV["BUILD_BUILDID"]
+        ENV["HOMEBREW_CI_BUILD_URL"] = "#{ENV["SYSTEM_TEAMFOUNDATIONSERVERURI"]}#{ENV["SYSTEM_TEAMPROJECT"]}/_build/results?buildId=#{ENV["BUILD_BUILDID"]}"
+        ENV["HOMEBREW_CI_BRANCH"] = ENV["BUILD_SOURCEBRANCH"]
+        ENV["HOMEBREW_CI_PULL_REQUEST"] = ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
+      end
+    end
 
     if ARGV.include?("--ci-auto")
       if travis_pr || jenkins_pr || azure_pipelines_pr || circle_pr
