@@ -86,11 +86,6 @@
 #:
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
-#:
-#
-#:    Influential environment variables include:
-#:    `TRAVIS_REPO_SLUG`: same as `--tap`
-#:    `GIT_URL`: if set to URL of a tap remote, same as `--tap`
 
 require "formula"
 require "formula_installer"
@@ -232,32 +227,11 @@ module Homebrew
     end
 
     def puts_command
-      if ENV["HOMEBREW_TRAVIS_CI"]
-        travis_fold_name = @command.first(2).join(".")
-        travis_fold_name = "git.#{@command[3]}" if travis_fold_name == "git.-C"
-        @travis_fold_id = "#{travis_fold_name}.#{Step.travis_increment}"
-        @travis_timer_id = rand(2**32).to_s(16)
-        puts "travis_fold:start:#{@travis_fold_id}"
-        puts "travis_time:start:#{@travis_timer_id}"
-      else
-        puts
-      end
+      puts
       puts Formatter.headline(command_trimmed, color: :blue)
     end
 
     def puts_result
-      if ENV["HOMEBREW_TRAVIS_CI"]
-        travis_start_time = start_time.to_i * 1_000_000_000
-        travis_end_time = @end_time.to_i * 1_000_000_000
-        travis_duration = travis_end_time - travis_start_time
-        puts Formatter.headline(Formatter.success("PASSED")) if passed?
-        travis_time = "travis_time:end:#{@travis_timer_id}"
-        travis_time += ",start=#{travis_start_time}"
-        travis_time += ",finish=#{travis_end_time}"
-        travis_time += ",duration=#{travis_duration}"
-        puts travis_time
-        puts "travis_fold:end:#{@travis_fold_id}"
-      end
       puts Formatter.headline(Formatter.error("FAILED")) if failed?
     end
 
@@ -1188,12 +1162,7 @@ module Homebrew
       return if @skip_cleanup_after
       return if ENV["CIRCLECI"]
 
-      if ENV["HOMEBREW_TRAVIS_CI"] || ENV["HOMEBREW_AZURE_PIPELINES"]
-        if OS.mac? && ENV["HOMEBREW_TRAVIS_CI"]
-          # For Travis CI build caching.
-          test "brew", "install", "md5deep", "libyaml", "gmp", "openssl@1.1"
-        end
-
+      if ENV["HOMEBREW_AZURE_PIPELINES"]
         # don't need to do post-build cleanup unless testing test-bot itself.
         return if @tap.to_s != "homebrew/test-bot"
       end
