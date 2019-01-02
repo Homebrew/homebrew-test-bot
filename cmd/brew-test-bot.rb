@@ -1110,8 +1110,6 @@ module Homebrew
         reset_if_needed(git_repo)
         prune_if_needed(git_repo)
       end
-
-      test "brew", "prune"
     end
 
     def clear_stash_if_needed(repository)
