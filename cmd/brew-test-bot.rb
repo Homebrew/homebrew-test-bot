@@ -86,13 +86,6 @@
 #:
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
-#:
-#:    If `--overwrite` is passed, overwrite existing published artifacts on Bintray
-#:
-#
-#:    Influential environment variables include:
-#:    `TRAVIS_REPO_SLUG`: same as `--tap`
-#:    `GIT_URL`: if set to URL of a tap remote, same as `--tap`
 
 require "formula"
 require "formula_installer"
@@ -114,8 +107,7 @@ module Homebrew
 
   HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}.freeze
 
-  REQUIRED_TAPS = %w[
-    homebrew/core
+  REQUIRED_TAPS = [CoreTap.instance.name] + %w[
     linuxbrew/test-bot
     linuxbrew/xorg
   ].freeze
@@ -237,32 +229,11 @@ module Homebrew
     end
 
     def puts_command
-      if ENV["HOMEBREW_TRAVIS_CI"]
-        travis_fold_name = @command.first(2).join(".")
-        travis_fold_name = "git.#{@command[3]}" if travis_fold_name == "git.-C"
-        @travis_fold_id = "#{travis_fold_name}.#{Step.travis_increment}"
-        @travis_timer_id = rand(2**32).to_s(16)
-        puts "travis_fold:start:#{@travis_fold_id}"
-        puts "travis_time:start:#{@travis_timer_id}"
-      else
-        puts
-      end
+      puts
       puts Formatter.headline(command_trimmed, color: :blue)
     end
 
     def puts_result
-      if ENV["HOMEBREW_TRAVIS_CI"]
-        travis_start_time = start_time.to_i * 1_000_000_000
-        travis_end_time = @end_time.to_i * 1_000_000_000
-        travis_duration = travis_end_time - travis_start_time
-        puts Formatter.headline(Formatter.success("PASSED")) if passed?
-        travis_time = "travis_time:end:#{@travis_timer_id}"
-        travis_time += ",start=#{travis_start_time}"
-        travis_time += ",finish=#{travis_end_time}"
-        travis_time += ",duration=#{travis_duration}"
-        puts travis_time
-        puts "travis_fold:end:#{@travis_fold_id}"
-      end
       puts Formatter.headline(Formatter.error("FAILED")) if failed?
     end
 
@@ -538,7 +509,7 @@ module Homebrew
                "log", "-1", "--format=%s"
              ).strip
       puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
-      if @tap.to_s != "homebrew/core"
+      if @tap.to_s != CoreTap.instance.name
         core_path = CoreTap.instance.path
         if core_path.exist?
           if ARGV.include?("--cleanup")
@@ -547,7 +518,7 @@ module Homebrew
           end
         else
           test "git", "clone", "--depth=1",
-               "https://github.com/Homebrew/homebrew-core",
+               CoreTap.instance.default_remote,
                core_path.to_s
         end
 
@@ -555,7 +526,7 @@ module Homebrew
           "git", "-C", core_path.to_s,
                  "log", "-1", "--format=%h (%s)"
                ).strip
-        puts "Homebrew/homebrew-core #{core_revision}"
+        puts "#{CoreTap.instance.full_name} #{core_revision}"
       end
       if @tap
         tap_origin_master_revision = Utils.popen_read(
@@ -1169,8 +1140,6 @@ module Homebrew
         reset_if_needed(git_repo)
         prune_if_needed(git_repo)
       end
-
-      test "brew", "prune"
     end
 
     def clear_stash_if_needed(repository)
@@ -1223,12 +1192,7 @@ module Homebrew
       return if @skip_cleanup_after
       return if ENV["CIRCLECI"]
 
-      if ENV["HOMEBREW_TRAVIS_CI"] || ENV["HOMEBREW_AZURE_PIPELINES"]
-        if OS.mac? && ENV["HOMEBREW_TRAVIS_CI"]
-          # For Travis CI build caching.
-          test "brew", "install", "md5deep", "libyaml", "gmp", "openssl@1.1"
-        end
-
+      if ENV["HOMEBREW_AZURE_PIPELINES"]
         # don't need to do post-build cleanup unless testing test-bot itself.
         return if @tap.to_s != "homebrew/test-bot"
       end
@@ -1342,6 +1306,23 @@ module Homebrew
     end
   end
 
+  def copy_bottles_from_jenkins
+    jenkins = ENV["JENKINS_HOME"]
+    job = ENV["UPSTREAM_JOB_NAME"]
+    id = ENV["UPSTREAM_BUILD_ID"]
+    if (!job || !id) && !ARGV.include?("--dry-run")
+      raise "Missing Jenkins variables!"
+    end
+
+    jenkins_dir  = "#{jenkins}/jobs/#{job}/configurations/axis-version/*/"
+    jenkins_dir += "builds/#{id}/archive/*.bottle*.*"
+    bottles = Dir[jenkins_dir]
+
+    raise "No bottles found in #{jenkins_dir}!" if bottles.empty? && !ARGV.include?("--dry-run")
+
+    FileUtils.cp bottles, Dir.pwd, verbose: true
+  end
+
   def test_ci_upload(tap)
     # Don't trust formulae we're uploading
     ENV["HOMEBREW_DISABLE_LOAD_FORMULA"] = "1"
@@ -1365,22 +1346,9 @@ module Homebrew
 
     ARGV << "--verbose"
 
-    bottles = Dir["*.bottle*.*"]
-    if bottles.empty?
-      jenkins = ENV["JENKINS_HOME"]
-      job = ENV["UPSTREAM_JOB_NAME"]
-      id = ENV["UPSTREAM_BUILD_ID"]
-      if (!job || !id) && !ARGV.include?("--dry-run")
-        raise "Missing Jenkins variables!"
-      end
+    copy_bottles_from_jenkins if !ENV["JENKINS_HOME"].nil?
 
-      jenkins_dir  = "#{jenkins}/jobs/#{job}/configurations/axis-version/*/"
-      jenkins_dir += "builds/#{id}/archive/*.bottle*.*"
-      bottles = Dir[jenkins_dir]
-      raise "No bottles found!" if bottles.empty? && !ARGV.include?("--dry-run")
-
-      FileUtils.cp bottles, Dir.pwd, verbose: true
-    end
+    raise "No bottles found in #{Dir.pwd}!" if Dir["*.bottle*.*"].empty? && !ARGV.include?("--dry-run")
 
     json_files = Dir.glob("*.bottle.json")
     bottles_hash = json_files.reduce({}) do |hash, json_file|
@@ -1414,7 +1382,7 @@ module Homebrew
 
     first_formula_name = bottles_hash.keys.first
     tap_name = first_formula_name.rpartition("/").first.chuzzle
-    tap_name ||= "homebrew/core"
+    tap_name ||= CoreTap.instance.name
     tap ||= Tap.fetch(tap_name)
 
     ENV["GIT_WORK_TREE"] = tap.path
@@ -1594,6 +1562,7 @@ module Homebrew
     if travis || circle
       ARGV << "--ci-auto" << "--no-pull"
     end
+    ENV["HOMEBREW_CIRCLECI"] = "1" if circle
     if travis
       ARGV << "--verbose"
       ENV["HOMEBREW_COLOR"] = "1"
@@ -1614,20 +1583,11 @@ module Homebrew
     azure_pipelines = !ENV["TF_BUILD"].nil?
     if azure_pipelines
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
-      ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
       ENV["CI"] = "1"
+      ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
+      ENV["HOMEBREW_COLOR"] = "1"
       # These cannot be queried at the macOS level on Azure Pipelines.
       ENV["HOMEBREW_LANGUAGES"] = "en-GB"
-    end
-
-    ENV["HOMEBREW_CODECOV_TOKEN"] = ENV["CODECOV_TOKEN"]
-
-    # Only report coverage if build runs on macOS and this is indeed Homebrew,
-    # as we don't want this to be averaged with inferior Linux test coverage.
-    if OS.mac? &&
-       MacOS.version == :high_sierra &&
-       (ENV["HOMEBREW_CODECOV_TOKEN"] || travis)
-      ARGV << "--coverage"
     end
 
     travis_pr = ENV["TRAVIS_PULL_REQUEST"] &&
@@ -1641,6 +1601,20 @@ module Homebrew
     jenkins_branch ||= jenkins_pipeline_branch
     azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
     circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
+
+    # Only report coverage if build runs on macOS and this is indeed Homebrew,
+    # as we don't want this to be averaged with inferior Linux test coverage.
+    if OS.mac? && ENV["HOMEBREW_COVERALLS_REPO_TOKEN"]
+      ARGV << "--coverage"
+
+      if azure_pipelines
+        ENV["HOMEBREW_CI_NAME"] = "azure-pipelines"
+        ENV["HOMEBREW_CI_BUILD_NUMBER"] = ENV["BUILD_BUILDID"]
+        ENV["HOMEBREW_CI_BUILD_URL"] = "#{ENV["SYSTEM_TEAMFOUNDATIONSERVERURI"]}#{ENV["SYSTEM_TEAMPROJECT"]}/_build/results?buildId=#{ENV["BUILD_BUILDID"]}"
+        ENV["HOMEBREW_CI_BRANCH"] = ENV["BUILD_SOURCEBRANCH"]
+        ENV["HOMEBREW_CI_PULL_REQUEST"] = ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
+      end
+    end
 
     if ARGV.include?("--ci-auto")
       if travis_pr || jenkins_pr || azure_pipelines_pr || circle_pr
