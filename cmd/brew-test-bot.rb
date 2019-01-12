@@ -636,7 +636,7 @@ module Homebrew
         unlink_formula = Formulary.factory(name)
         next unless unlink_formula.installed?
         next unless unlink_formula.linked_keg.exist?
-        test "brew", "unlink", "--force", name
+        test "brew", "unlink", name
       end
 
       installed = Utils.popen_read("brew", "list").split("\n")
