@@ -7,10 +7,7 @@ class Testbottest < Formula
 
   depends_on :java => ["1.0+", :optional]
 
-  fails_with :gcc_4_2 do
-    build 1
-    cause "testing"
-  end
+  fails_with :gcc => "6"
 
   def install
     odie "whoops, shouldn't be using java!" if build.with?(:java)
