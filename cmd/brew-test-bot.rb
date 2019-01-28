@@ -1173,7 +1173,7 @@ module Homebrew
         clear_stash_if_needed(@repository)
         reset_if_needed(@repository)
 
-        test "brew", "cleanup", "--prune=7"
+        test "brew", "cleanup", "--prune=3"
 
         pkill_if_needed!
 
