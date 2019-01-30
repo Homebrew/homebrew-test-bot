@@ -763,6 +763,7 @@ module Homebrew
 
       download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
 
+      HOMEBREW_CACHE.mkpath
       FileUtils.ln bottle_filename, download_strategy.cached_location, force: true
       FileUtils.ln_s download_strategy.cached_location.relative_path_from(download_strategy.symlink_location),
                      download_strategy.symlink_location,
@@ -1712,11 +1713,13 @@ module Homebrew
       end
     end
   ensure
-    if ARGV.include? "--clean-cache"
-      HOMEBREW_CACHE.children.each(&:rmtree)
-    else
-      Dir.glob("*.bottle*.tar.gz") do |bottle_file|
-        FileUtils.rm_f HOMEBREW_CACHE/bottle_file
+    if HOMEBREW_CACHE.exist?
+      if ARGV.include? "--clean-cache"
+        HOMEBREW_CACHE.children.each(&:rmtree)
+      else
+        Dir.glob("*.bottle*.tar.gz") do |bottle_file|
+          FileUtils.rm_f HOMEBREW_CACHE/bottle_file
+        end
       end
     end
 
