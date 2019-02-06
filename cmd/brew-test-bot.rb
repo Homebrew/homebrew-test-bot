@@ -203,8 +203,6 @@ module Homebrew
         --force
         --retry
         --verbose
-        --build-bottle
-        --build-from-source
         --json
       ].freeze).join(" ")
         .gsub(HOMEBREW_PREFIX.to_s, "")
