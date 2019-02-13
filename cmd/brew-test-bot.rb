@@ -365,6 +365,10 @@ module Homebrew
       end.compact
     end
 
+    def merge_commit?(commit)
+      Utils.popen_read("git", "-C", @repository, "rev-list", "--parents", "-n1", commit).count(" ") > 1
+    end
+
     def download
       @category = __method__
       @start_branch = Utils.popen_read(
@@ -528,8 +532,14 @@ module Homebrew
         formula_path = @tap.formula_dir.to_s
         @added_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
-        @modified_formulae +=
-          diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
+        if merge_commit? diff_end_sha1
+          # Test formulae whose bottles were updated.
+          summaries = Utils.popen_read("git", "-C", @repository, "log", "--pretty=%s", "#{diff_start_sha1}..#{diff_end_sha1}").lines
+          @modified_formulae = summaries.map { |s| s[/^([^:]+): update .* bottle\.$/, 1] }.compact.uniq
+        else
+          @modified_formulae +=
+            diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
+        end
         @deleted_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
       elsif @formulae.empty? && ARGV.include?("--test-default-formula")
