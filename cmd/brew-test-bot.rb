@@ -919,6 +919,7 @@ module Homebrew
 
       if install_passed
         bottle_reinstall_formula(formula, new_formula)
+        test "brew", "linkage", "--test", formula_name
 
         if formula.test_defined?
           test "brew", "install", "--only-dependencies", "--include-test",
