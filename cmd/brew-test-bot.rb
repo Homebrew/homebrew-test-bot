@@ -107,9 +107,19 @@ module Homebrew
 
   HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}.freeze
 
-  REQUIRED_TAPS = [CoreTap.instance.name] + %w[
+  REQUIRED_HOMEBREW_TAPS = [CoreTap.instance.name] + %w[
     homebrew/test-bot
   ].freeze
+
+  REQUIRED_LINUXBREW_TAPS = REQUIRED_HOMEBREW_TAPS + %w[
+    linuxbrew/xorg
+  ].freeze
+
+  REQUIRED_TAPS = if OS.mac? || ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"]
+    REQUIRED_HOMEBREW_TAPS
+  else
+    REQUIRED_LINUXBREW_TAPS
+  end
 
   REQUIRED_TEST_BREW_TAPS = REQUIRED_TAPS + %w[
     homebrew/cask
