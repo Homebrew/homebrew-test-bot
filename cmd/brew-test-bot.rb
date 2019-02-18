@@ -1020,7 +1020,7 @@ module Homebrew
 
         test "brew", "readall", "--aliases"
 
-        if OS.linux?
+        if OS.mac?
           test "brew", "tests", "--no-compat", "--online"
           test "brew", "tests", "--generic", "--online"
         end
