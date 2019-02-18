@@ -271,7 +271,7 @@ module Homebrew
 
       executable, *args = @command
 
-      verbose = ARGV.verbose?
+      verbose = Homebrew.args.verbose?
 
       result = system_command executable, args:         args,
                                           print_stdout: verbose,
@@ -350,11 +350,11 @@ module Homebrew
       test "brew", "tap", e.tap.name
       retry unless steps.last.failed?
       onoe e
-      puts e.backtrace if ARGV.debug?
+      puts e.backtrace if Homebrew.args.debug?
     rescue FormulaUnavailableError, TapFormulaAmbiguityError,
            TapFormulaWithOldnameAmbiguityError => e
       onoe e
-      puts e.backtrace if ARGV.debug?
+      puts e.backtrace if Homebrew.args.debug?
     end
 
     def current_sha1
@@ -888,7 +888,7 @@ module Homebrew
 
       # shared_*_args are applied to both the main and --devel spec
       shared_install_args = ["--verbose"]
-      shared_install_args << "--keep-tmp" if ARGV.keep_tmp?
+      shared_install_args << "--keep-tmp" if Homebrew.args.keep_tmp?
       if !ARGV.include?("--fast") &&
          !ARGV.include?("--no-bottle") &&
          !formula.bottle_disabled?
@@ -935,7 +935,7 @@ module Homebrew
       test "brew", "style", formula_name unless new_formula
 
       test_args = ["--verbose"]
-      test_args << "--keep-tmp" if ARGV.keep_tmp?
+      test_args << "--keep-tmp" if Homebrew.args.keep_tmp?
 
       if install_passed
         bottle_reinstall_formula(formula, new_formula)
