@@ -153,7 +153,7 @@ module Homebrew
       ENV["BUILD_REPOSITORY_URI"]
     return unless git_url
 
-    url_path = git_url.sub(%r{^https?://github\.com/}, "")
+    url_path = git_url.sub(%r{^https?://.*github\.com/}, "")
                       .chomp("/")
                       .sub(/\.git$/, "")
     begin
