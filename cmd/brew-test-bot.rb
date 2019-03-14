@@ -1543,6 +1543,10 @@ module Homebrew
       odie "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
     end
 
+    # This can be removed once @rpath rewriting is enabled by default.
+    # See https://github.com/Homebrew/brew/pull/5413
+    ENV["HOMEBREW_RELOCATE_METAVARS"] = "1"
+
     ENV["HOMEBREW_DEVELOPER"] = "1"
     ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
     ENV["HOMEBREW_NO_EMOJI"] = "1"
