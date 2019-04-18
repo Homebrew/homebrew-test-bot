@@ -36,16 +36,20 @@ jobs:
   pool:
     vmImage: ubuntu-16.04
   steps:
+    - bash: git clone https://github.com/Homebrew/brew
+      displayName: Clone Homebrew/brew
+
     - bash: |
         set -e
-        HOMEBREW_REPOSITORY=/home/linuxbrew/.linuxbrew
-        sudo mkdir -p /home/linuxbrew
-        sudo git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
-        sudo mkdir -p "$HOMEBREW_REPOSITORY/Library/Taps/homebrew"
-        sudo ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
-        sudo chown -R "$USER" "$HOMEBREW_REPOSITORY"
-        "$HOMEBREW_REPOSITORY/bin/brew" test-bot
-      displayName: brew test-bot
+        cd brew
+        docker-compose -f Dockerfile.yml build sut
+      displayName: Build Docker image
+
+    - bash: |
+        set -e
+        cd brew
+        docker-compose -f Dockerfile.yml run --rm -v $(Build.ArtifactStagingDirectory):/tmp/test-bot sut
+      displayName: Run brew test-bot
       env:
         HOMEBREW_GITHUB_API_TOKEN: $(github.publicApiToken)
 
@@ -54,4 +58,4 @@ jobs:
       condition: succeededOrFailed()
       inputs:
         testRunner: JUnit
-        testResultsFiles: brew-test-bot.xml
+        testResultsFiles: brew/brew-test-bot.xml
