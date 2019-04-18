@@ -697,7 +697,7 @@ module Homebrew
       @unchanged_build_dependencies = build_dependencies - @formulae
 
       dependents =
-        Utils.popen_read("brew", "uses", "--recursive", formula_name)
+        Utils.popen_read("brew", "uses", "--include-test", "--recursive", formula_name)
              .split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
