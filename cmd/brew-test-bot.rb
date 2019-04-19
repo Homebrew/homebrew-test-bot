@@ -1549,7 +1549,6 @@ module Homebrew
     ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
     ENV["HOMEBREW_PATH"] = ENV["PATH"] =
                              "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
-    ENV["HOMEBREW_FROZEN_STRING_LITERAL"] = "--enable-frozen-string-literal"
 
     travis = !ENV["TRAVIS"].nil?
     circle = !ENV["CIRCLECI"].nil?
