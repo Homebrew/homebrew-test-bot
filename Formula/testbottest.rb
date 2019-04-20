@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Testbottest < Formula
   desc "Minimal C program and Makefile used for testing Homebrew"
   homepage "https://github.com/Homebrew/brew"
