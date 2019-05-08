@@ -89,6 +89,11 @@
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
 
+TEST_BOT_ROOT = File.expand_path "#{File.dirname(__FILE__)}/.."
+TEST_BOT_LIB = Pathname.new(TEST_BOT_ROOT)/"lib"
+
+$LOAD_PATH.unshift(TEST_BOT_LIB)
+
 require "test-bot"
 
 module Homebrew
