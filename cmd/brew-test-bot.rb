@@ -413,7 +413,6 @@ module Homebrew
       elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
         @url = "#{ENV["BUILD_REPOSITORY_URI"]}/pull/#{ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]}"
         @hash = nil
-        system("git", "-C", @repository, "checkout", ENV["SYSTEM_PULLREQUEST_SOURCEBRANCH"])
       end
 
       # Use Jenkins Git plugin variables for master branch jobs.
@@ -434,7 +433,7 @@ module Homebrew
         diff_start_sha1 =
           Utils.popen_read("git", "-C", @repository, "rev-parse",
                                   "--short",
-                                  "origin/#{ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]}").strip
+                                  ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]).strip
         diff_end_sha1 = current_sha1
       # Use CircleCI Git variables.
       elsif ENV["CIRCLE_SHA1"]
