@@ -993,7 +993,7 @@ module Homebrew
           end
 
           cleanup_bottle_etc_var(formula)
-          test "brew", "uninstall", "--devel", "--force", formula_name
+          test "brew", "uninstall", "--force", formula_name
         end
       end
 
