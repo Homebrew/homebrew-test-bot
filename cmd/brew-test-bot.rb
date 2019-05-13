@@ -533,12 +533,17 @@ module Homebrew
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)", "origin/master"
         ).strip
-        puts "#{@tap} origin/master #{tap_origin_master_revision}"
         tap_revision = Utils.popen_read(
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)"
         ).strip
-        puts "#{@tap} HEAD #{tap_revision}"
+        puts <<~EOS
+          Testing tap #{@tap} with:
+            - origin/master   - #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
+            - HEAD            - #{tap_revision.blank? ? "(undefined)" : tap_revision}
+            - diff_start_sha1 - #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
+            - diff_end_sha1   - #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
+        EOS
       end
 
       return if diff_start_sha1 == diff_end_sha1
