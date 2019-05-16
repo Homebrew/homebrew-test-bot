@@ -538,11 +538,11 @@ module Homebrew
                  "log", "-1", "--format=%h (%s)"
         ).strip
         puts <<~EOS
-          Testing tap #{@tap} with:
-            - origin/master   - #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
-            - HEAD            - #{tap_revision.blank? ? "(undefined)" : tap_revision}
-            - diff_start_sha1 - #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
-            - diff_end_sha1   - #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
+          \nTesting tap #{@tap} with:
+            origin/master   #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
+            HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
+            diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
+            diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
         EOS
       end
 
