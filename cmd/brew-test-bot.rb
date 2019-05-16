@@ -411,8 +411,11 @@ module Homebrew
         @hash = nil
       # Use Azure Pipeline variables for pull request jobs.
       elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
-        @url = "#{ENV["BUILD_REPOSITORY_URI"]}/pull/#{ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]}"
+        pr = ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
+        @url = "#{ENV["BUILD_REPOSITORY_URI"]}/pull/#{pr}"
         @hash = nil
+        system "git", "-C", @repository, "fetch", "origin", "+pull/#{pr}/head:remotes/origin/pull/#{pr}"
+        system "git", "-C", @repository, "checkout", "origin/pull/#{pr}"
       end
 
       # Use Jenkins Git plugin variables for master branch jobs.
