@@ -537,15 +537,16 @@ module Homebrew
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)"
         ).strip
-        puts <<~EOS
-
-          Testing tap #{@tap} with:
-            origin/master   #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
-            HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
-            diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
-            diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
-        EOS
       end
+
+      puts <<~EOS
+
+        Testing#{" tap #{@tap}" if @tap.present?} with:
+          origin/master   #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
+          HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
+          diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
+          diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
+      EOS
 
       return if diff_start_sha1 == diff_end_sha1
       return if @url && steps.last && !steps.last.passed?
