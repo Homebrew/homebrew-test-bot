@@ -578,8 +578,9 @@ module Homebrew
       puts <<~EOS
 
         Bottles to be built for:
-          added formulae    #{@added_formulae.empty? ? "(empty)" : @added_formulae}
-          modified formulae #{@modified_formulae.empty? ? "(empty)" : @modified_formulae}
+          added formulae    #{@added_formulae.blank? ? "(empty)" : @added_formulae}
+          modified formulae #{@modified_formulae.blank? ? "(empty)" : @modified_formulae}
+          deleted formulae  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae}
       EOS
     end
 
