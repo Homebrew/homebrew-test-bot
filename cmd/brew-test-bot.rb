@@ -577,7 +577,7 @@ module Homebrew
 
       puts <<~EOS
 
-        Bottles to be built for:
+        Formula changes to be tested:
           added formulae    #{@added_formulae.blank? ? "(empty)" : @added_formulae}
           modified formulae #{@modified_formulae.blank? ? "(empty)" : @modified_formulae}
           deleted formulae  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae}
