@@ -574,6 +574,13 @@ module Homebrew
       @formulae += @added_formulae + @modified_formulae
       @test_brew = (!@tap || @test_bot_tap) &&
                    (@formulae.empty? || @test_default_formula)
+
+      puts <<~EOS
+
+        Bottles to be built for:
+          added formulae    #{@added_formulae.empty? ? "(empty)" : @added_formulae}
+          modified formulae #{@modified_formulae.empty? ? "(empty)" : @modified_formulae}
+      EOS
     end
 
     def skip(formula_name)
