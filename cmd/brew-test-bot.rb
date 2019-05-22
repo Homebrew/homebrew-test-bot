@@ -574,6 +574,14 @@ module Homebrew
       @formulae += @added_formulae + @modified_formulae
       @test_brew = (!@tap || @test_bot_tap) &&
                    (@formulae.empty? || @test_default_formula)
+
+      puts <<~EOS
+
+        Formula changes to be tested:
+          added formulae    #{@added_formulae.blank? ? "(empty)" : @added_formulae.join(' ')}
+          modified formulae #{@modified_formulae.blank? ? "(empty)" : @modified_formulae.join(' ')}
+          deleted formulae  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae.join(' ')}
+      EOS
     end
 
     def skip(formula_name)
