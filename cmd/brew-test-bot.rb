@@ -513,8 +513,6 @@ module Homebrew
         core_path = CoreTap.instance.path
         if core_path.exist?
           if ARGV.include?("--cleanup")
-            quiet_system "git", "-C", core_path.to_s, "am", "--abort"
-            quiet_system "git", "-C", core_path.to_s, "rebase", "--abort"
             test "git", "-C", core_path.to_s, "fetch", "--depth=1", "origin"
             test "git", "-C", core_path.to_s, "reset", "--hard", "origin/master"
           end
