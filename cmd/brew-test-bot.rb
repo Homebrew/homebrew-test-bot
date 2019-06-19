@@ -1012,10 +1012,6 @@ module Homebrew
         end
       end
 
-      unless @all_formulae_dependencies.include?(formula_name)
-        test "brew", "uninstall", "--force", formula_name
-      end
-
       return if @unchanged_dependencies.empty?
 
       test "brew", "uninstall", "--force", *@unchanged_dependencies
@@ -1269,7 +1265,6 @@ module Homebrew
 
     def formulae
       changed_formulae_dependents = {}
-      @all_formulae_dependencies = []
 
       @formulae.each do |formula|
         begin
@@ -1289,8 +1284,6 @@ module Homebrew
           safe_system "brew", "tap", e.tap.name
           retry
         end
-
-        @all_formulae_dependencies += formula_dependencies
 
         unchanged_dependencies = formula_dependencies - @formulae
         changed_dependencies = formula_dependencies - unchanged_dependencies
