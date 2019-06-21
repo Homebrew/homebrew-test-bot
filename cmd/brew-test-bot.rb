@@ -1060,6 +1060,11 @@ module Homebrew
           test "brew", "tests", "--online"
         end
 
+        # check the gems installed by `brew tests` don't have anything
+        # uncommitted
+        test "git", "-C", HOMEBREW_REPOSITORY, "diff", "--stat", "--exit-code",
+                    "Library/Homebrew/vendor/bundle/ruby"
+
         # these commands use gems installed by `brew tests`
         test "brew", "man", "--fail-if-changed"
         test "brew", "style"
