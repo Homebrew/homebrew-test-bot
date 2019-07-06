@@ -88,6 +88,9 @@
 #:
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
+#:
+#:    If `--skip-recursive-dependents` is passed, only test the direct
+#:    dependents.
 
 require "formula"
 require "formula_installer"
@@ -721,8 +724,10 @@ module Homebrew
       build_dependencies = dependencies - runtime_or_test_dependencies
       @unchanged_build_dependencies = build_dependencies - @formulae
 
+      uses_args = []
+      uses_args << "--recursive" unless ARGV.include?("--skip-recursive-dependents")
       dependents =
-        Utils.popen_read("brew", "uses", "--include-test", "--recursive", formula_name)
+        Utils.popen_read("brew", "uses", "--include-test", *uses_args, formula_name)
              .split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
