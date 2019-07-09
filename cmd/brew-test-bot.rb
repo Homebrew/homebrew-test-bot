@@ -870,8 +870,6 @@ module Homebrew
     def formula(formula_name)
       @category = "#{__method__}.#{formula_name}"
 
-      test "brew", "uses", "--recursive", formula_name
-
       formula = Formulary.factory(formula_name)
 
       deps = []
