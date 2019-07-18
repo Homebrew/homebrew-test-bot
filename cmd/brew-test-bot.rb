@@ -1544,7 +1544,8 @@ module Homebrew
             else
               curl "--user", "#{bintray_user}:#{bintray_key}",
                    "--header", "Content-Type: application/json",
-                   "--data", package_blob, bintray_packages_url
+                   "--data", package_blob, bintray_packages_url,
+                   secrets: [bintray_key]
               puts
             end
           end
@@ -1562,7 +1563,8 @@ module Homebrew
           EOS
         else
           curl "--user", "#{bintray_user}:#{bintray_key}",
-               "--upload-file", filename, content_url
+               "--upload-file", filename, content_url,
+               secrets: [bintray_key]
           puts
         end
       end
