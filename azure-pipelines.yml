@@ -39,11 +39,11 @@ jobs:
     - bash: |
         set -ex
         if [[ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]]; then
-          git fetch origin "master:master" "pull/$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER/head:pr"
+          git fetch origin "master:master" "pull/$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER/merge:pr"
           git checkout pr
         fi
         set -u
-      displayName: Checkout source code from git
+      displayName: Check out pull request merge commit
 
     - bash: |
         docker-compose -f Dockerfile.yml build sut

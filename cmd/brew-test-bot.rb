@@ -150,12 +150,14 @@ module Homebrew
     end
 
     # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
-    # Circle CI's CIRCLE_REPOSITORY_URL.
+    # Circle CI's CIRCLE_REPOSITORY_URL or Azure Pipelines BUILD_REPOSITORY_URI
+    # or GitHub Actions GITHUB_REPOSITORY
     git_url =
       ENV["UPSTREAM_GIT_URL"] ||
       ENV["GIT_URL"] ||
       ENV["CIRCLE_REPOSITORY_URL"] ||
-      ENV["BUILD_REPOSITORY_URI"]
+      ENV["BUILD_REPOSITORY_URI"] ||
+      ENV["GITHUB_REPOSITORY"]
     return unless git_url
 
     url_path = git_url.sub(%r{^https?://.*github\.com/}, "")
@@ -416,6 +418,11 @@ module Homebrew
       elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
         @url = "#{ENV["BUILD_REPOSITORY_URI"]}/pull/#{ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]}"
         @hash = nil
+      # Use GitHub Actions variables for pull request jobs.
+      elsif ENV["GITHUB_REF"] && ENV["GITHUB_REPOSITORY"] &&
+            %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
+        @url = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
+        @hash = nil
       end
 
       # Use Jenkins Git plugin variables for master branch jobs.
@@ -432,12 +439,19 @@ module Homebrew
                                   "--short", ENV["CHANGE_TARGET"]).strip
         diff_end_sha1 = current_sha1
       # Use Azure Pipeline variables for master or branch jobs.
-      elsif ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"] && ENV["BUILD_SOURCEVERSION"]
+      elsif ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]
         diff_start_sha1 =
           Utils.popen_read("git", "-C", @repository, "rev-parse",
                                   "--short",
-                                  ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]).strip
+                                  "origin/#{ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]}").strip
         diff_end_sha1 = current_sha1
+      # Use GitHub Actions variables for master or branch jobs.
+      elsif ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
+        diff_start_sha1 =
+          Utils.popen_read("git", "-C", @repository, "rev-parse",
+                                  "--short",
+                                  "origin/#{ENV["GITHUB_BASE_REF"]}").strip
+        diff_end_sha1 = ENV["GITHUB_SHA"]
       # Use CircleCI Git variables.
       elsif ENV["CIRCLE_SHA1"]
         diff_start_sha1 =
@@ -449,9 +463,13 @@ module Homebrew
         diff_end_sha1 = diff_start_sha1 = current_sha1
       end
 
-      diff_start_sha1 =
-        Utils.popen_read("git", "-C", @repository, "merge-base",
-                                diff_start_sha1, diff_end_sha1).strip
+      if diff_start_sha1 && diff_end_sha1
+        diff_start_sha1 =
+          Utils.popen_read("git", "-C", @repository, "merge-base",
+                                  diff_start_sha1, diff_end_sha1).strip
+      end
+      diff_start_sha1 ||= current_sha1
+      diff_end_sha1 ||= current_sha1
 
       # Handle no arguments being passed on the command-line
       # e.g. `brew test-bot`
@@ -1202,7 +1220,7 @@ module Homebrew
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
 
-      # Cleanup NodeJS headers on Azure Pipeline
+      # Cleanup NodeJS headers on Azure Pipelines
       if OS.linux? && ENV["TF_BUILD"]
         test "sudo", "rm", "-rf", "/usr/local/include/node"
       end
@@ -1224,9 +1242,9 @@ module Homebrew
     def cleanup_after
       @category = __method__
       return if @skip_cleanup_after
-      return if ENV["CIRCLECI"]
+      return if ENV["CIRCLECI"] || ENV["TRAVIS"]
 
-      if ENV["HOMEBREW_AZURE_PIPELINES"]
+      if ENV["HOMEBREW_AZURE_PIPELINES"] || ENV["HOMEBREW_GITHUB_ACTIONS"]
         # don't need to do post-build cleanup unless testing test-bot itself.
         return if @tap.to_s != "homebrew/test-bot"
       end
@@ -1625,6 +1643,14 @@ module Homebrew
       ENV["HOMEBREW_LANGUAGES"] = "en-GB"
     end
 
+    github_actions = !ENV["GITHUB_ACTIONS"].nil?
+    if github_actions
+      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
+      ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
+      # These cannot be queried at the macOS level on GitHub Actions.
+      ENV["HOMEBREW_LANGUAGES"] = "en-GB"
+    end
+
     travis_pr = ENV["TRAVIS_PULL_REQUEST"] &&
                 ENV["TRAVIS_PULL_REQUEST"] != "false"
     jenkins_pr = !ENV["ghprbPullLink"].nil?
@@ -1633,6 +1659,7 @@ module Homebrew
     jenkins_branch = !ENV["GIT_COMMIT"].nil?
     jenkins_branch ||= jenkins_pipeline_branch
     azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
+    github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
     circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
 
     # Only report coverage if build runs on macOS and this is indeed Homebrew,
@@ -1647,10 +1674,20 @@ module Homebrew
         ENV["HOMEBREW_CI_BRANCH"] = ENV["BUILD_SOURCEBRANCH"]
         ENV["HOMEBREW_CI_PULL_REQUEST"] = ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
       end
+
+      if github_actions
+        ENV["HOMEBREW_CI_NAME"] = "github-actions"
+        ENV["HOMEBREW_CI_BUILD_NUMBER"] = ENV["GITHUB_REF"]
+        ENV["HOMEBREW_CI_BRANCH"] = ENV["HEAD_GITHUB_REF"]
+        %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
+        ENV["HOMEBREW_CI_PULL_REQUEST"] = pr
+        ENV["HOMEBREW_CI_BUILD_URL"] = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
+      end
     end
 
     if ARGV.include?("--ci-auto")
-      if travis_pr || jenkins_pr || azure_pipelines_pr || circle_pr
+      if travis_pr || jenkins_pr || azure_pipelines_pr ||
+         github_actions_pr || circle_pr
         ARGV << "--ci-pr"
       elsif travis || jenkins_branch || circle
         ARGV << "--ci-master"
@@ -1665,7 +1702,7 @@ module Homebrew
       ARGV << "--cleanup"
       ARGV << "--test-default-formula"
       ARGV << "--local" if jenkins
-      ARGV << "--junit" if jenkins || azure_pipelines || circle
+      ARGV << "--junit" if jenkins || azure_pipelines
     end
 
     ARGV << "--fast" if ARGV.include?("--ci-master")
