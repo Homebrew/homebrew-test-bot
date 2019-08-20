@@ -15,7 +15,6 @@ jobs:
       displayName: Run brew test-bot
       env:
         HOMEBREW_GITHUB_API_TOKEN: $(github.publicApiToken)
-        HOMEBREW_COVERALLS_REPO_TOKEN: $(coveralls.homebrewTestBotApiToken)
 
     - task: PublishTestResults@2
       displayName: Publish test-bot test results
@@ -23,14 +22,6 @@ jobs:
       inputs:
         testRunner: JUnit
         testResultsFiles: brew-test-bot.xml
-
-    - task: PublishCodeCoverageResults@1
-      displayName: Publish brew tests code coverage
-      inputs:
-        codeCoverageTool: Cobertura
-        summaryFileLocation: $(Build.SourcesDirectory)/coverage/coverage.xml
-        reportDirectory: $(Build.SourcesDirectory)/coverage
-        failIfCoverageEmpty: true
 
 - job: Linux
   pool:
