@@ -31,7 +31,7 @@ jobs:
           brew test-bot
         fi
       env:
-        HOMEBREW_COVERALLS_REPO_TOKEN: ${{ secrets.HOMEBREW_COVERALLS_REPO_TOKEN }}
+        HOMEBREW_COVERALLS_REPO_TOKEN: 4MH7hVLVNactKNsGpg7bYyTUHdnGKRP5n
         HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Run brew test-bot --dry-run tests
