@@ -1646,6 +1646,7 @@ module Homebrew
     github_actions = !ENV["GITHUB_ACTIONS"].nil?
     if github_actions
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
+      ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
       # These cannot be queried at the macOS level on GitHub Actions.
       ENV["HOMEBREW_LANGUAGES"] = "en-GB"
