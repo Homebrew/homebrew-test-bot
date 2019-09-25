@@ -596,6 +596,13 @@ module Homebrew
       @test_brew = (!@tap || @test_bot_tap) &&
                    (@formulae.empty? || @test_default_formula)
 
+      unless @test_brew
+        installed_taps = Tap.select(&:installed?).map(&:name)
+        (REQUIRED_TAPS - installed_taps).each do |tap|
+          test "brew", "tap", tap
+        end
+      end
+
       puts <<~EOS
 
         Formula changes to be tested:
