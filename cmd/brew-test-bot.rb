@@ -611,9 +611,9 @@ module Homebrew
       puts <<~EOS
 
         Formula changes to be tested:
-          added formulae    #{@added_formulae.blank? ? "(empty)" : @added_formulae.join(' ')}
-          modified formulae #{@modified_formulae.blank? ? "(empty)" : @modified_formulae.join(' ')}
-          deleted formulae  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae.join(' ')}
+          added formulae    #{@added_formulae.blank? ? "(empty)" : @added_formulae.join(" ")}
+          modified formulae #{@modified_formulae.blank? ? "(empty)" : @modified_formulae.join(" ")}
+          deleted formulae  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae.join(" ")}
       EOS
     end
 
