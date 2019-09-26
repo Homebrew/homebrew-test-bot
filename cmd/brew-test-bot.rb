@@ -558,6 +558,10 @@ module Homebrew
           "git", "-C", @tap.path.to_s,
                  "log", "-1", "--format=%h (%s)"
         ).strip
+        if diff_start_sha1.start_with?(diff_end_sha1) || diff_start_sha1.blank?
+          diff_start_sha1 = tap_origin_master_revision.split(" ").first
+          diff_end_sha1 = tap_revision.split(" ").first
+        end
       end
 
       puts <<~EOS
