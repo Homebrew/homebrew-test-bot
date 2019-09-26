@@ -460,16 +460,21 @@ module Homebrew
         diff_end_sha1 = ENV["CIRCLE_SHA1"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
+        onoe <<~EOS
+          No known CI provider detected! If you are using GitHub Actions, Jenkins,
+          Azure Pipelines, Travis CI or Circle CI then we cannot find the expected
+          environment variables! Check you have e.g. exported them to a Docker container.
+        EOS
         diff_end_sha1 = diff_start_sha1 = current_sha1
       end
 
-      if diff_start_sha1 && diff_end_sha1
+      if diff_start_sha1.present? && diff_end_sha1.present?
         diff_start_sha1 =
           Utils.popen_read("git", "-C", @repository, "merge-base",
                                   diff_start_sha1, diff_end_sha1).strip
       end
-      diff_start_sha1 ||= current_sha1
-      diff_end_sha1 ||= current_sha1
+      diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
+      diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
       # Handle no arguments being passed on the command-line
       # e.g. `brew test-bot`
