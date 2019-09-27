@@ -1525,13 +1525,14 @@ module Homebrew
       bintray_repo = bottle_hash["bintray"]["repository"]
       bintray_packages_url =
         "https://api.bintray.com/packages/#{bintray_org}/#{bintray_repo}"
+      bintray_bottle_url = "https://dl.bintray.com/#{bintray_org}"
 
       rebuild = bottle_hash["bottle"]["rebuild"]
 
       bottle_hash["bottle"]["tags"].each do |tag, _tag_hash|
         filename = Bottle::Filename.new(formula_name, version, tag, rebuild)
         bintray_url =
-          "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename.bintray}"
+          "#{bintray_bottle_url}/#{bintray_repo}/#{filename.bintray}"
         filename_already_published = if ARGV.include?("--dry-run")
           puts "curl -I --output /dev/null #{bintray_url}"
           false
@@ -1561,6 +1562,8 @@ module Homebrew
           unless package_exists
             package_blob = <<~EOS
               {"name": "#{bintray_package}",
+               "vcs_url": "#{bintray_bottle_url}",
+               "licenses": ["MIT", "GPL-2.0", "GPL-3.0", "BSD"],
                "public_download_numbers": true,
                "public_stats": true}
             EOS
