@@ -762,10 +762,15 @@ module Homebrew
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
 
-      @bottled_dependents = dependents.select(&:bottled?)
-      @testable_dependents = dependents.select do |d|
-        d.bottled? && d.test_defined?
+      if ARGV.include?("--keep-old")
+        @testable_dependents = @bottled_dependents = []
+        return
       end
+
+      @bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
+        dependents.select(&:bottled?)
+      end
+      @testable_dependents = @bottled_dependents.select(&:test_defined?)
     end
 
     def unlink_conflicts(formula)
