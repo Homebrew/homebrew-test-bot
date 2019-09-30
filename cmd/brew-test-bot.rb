@@ -996,11 +996,16 @@ module Homebrew
         install_passed = steps.last.passed?
       end
 
-      test "brew", "audit", *audit_args
+      broken_xcode_rubygems = MacOS.version == :mojave &&
+        MacOS.active_developer_dir == "/Applications/Xcode.app/Contents/Developer"
 
-      # Only check for style violations if not already shown by
-      # `brew audit --new-formula`
-      test "brew", "style", formula_name unless new_formula
+      unless broken_xcode_rubygems
+        test "brew", "audit", *audit_args
+
+        # Only check for style violations if not already shown by
+        # `brew audit --new-formula`
+        test "brew", "style", formula_name unless new_formula
+      end
 
       test_args = ["--verbose"]
       test_args << "--keep-tmp" if ARGV.keep_tmp?
