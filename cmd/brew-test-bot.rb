@@ -41,8 +41,6 @@
 #:    If `--tap=<tap>` is passed, use the `git` repository of the given
 #:    tap.
 #:
-#:    If `--dry-run` is passed, just print commands, don't run them.
-#:
 #:    If `--fail-fast` is passed, immediately exit on a failing step.
 #:
 #:    If `--verbose` (or `-v`) is passed, print test step output in real time. Has
