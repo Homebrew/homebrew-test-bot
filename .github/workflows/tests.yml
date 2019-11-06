@@ -17,6 +17,8 @@ jobs:
       run: |
         brew update-reset /usr/local/Homebrew
         ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
+        # Remove RubyGems that interfere with our installation.
+        rm -rf /usr/local/lib/ruby
       if: matrix.os == 'macOS-latest'
 
     - name: Build Docker image
