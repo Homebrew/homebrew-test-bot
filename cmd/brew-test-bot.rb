@@ -1658,7 +1658,7 @@ module Homebrew
     if azure_pipelines
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
       ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
-      ENV["HOMEBREW_NO_COLOR"] = "1"
+      ENV["HOMEBREW_COLOR"] = "1"
       # These cannot be queried at the macOS level on Azure Pipelines.
       ENV["HOMEBREW_LANGUAGES"] = "en-GB"
     end
