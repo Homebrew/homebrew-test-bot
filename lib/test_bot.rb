@@ -422,7 +422,7 @@ module Homebrew
       return unless ARGV.include?("--local")
 
       ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
-      mkdir_p ENV["HOMEBREW_HOME"]
+      FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
       ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
     end
 
