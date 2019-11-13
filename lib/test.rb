@@ -804,7 +804,7 @@ module Homebrew
 
         test "brew", "readall", "--aliases"
 
-        if OS.mac?
+        if OS.mac? && ENV["HOMEBREW_GITHUB_ACTIONS"]
           test "brew", "tests", "--no-compat", "--online"
           test "brew", "tests", "--generic", "--online"
         end
@@ -813,7 +813,7 @@ module Homebrew
           test "brew", "tests", "--online", "--coverage"
           FileUtils.cp_r "#{HOMEBREW_REPOSITORY}/Library/Homebrew/test/coverage",
                          Dir.pwd
-        else
+        elsif ENV["HOMEBREW_GITHUB_ACTIONS"]
           test "brew", "tests", "--online"
         end
 
