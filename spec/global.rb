@@ -1,0 +1,4 @@
+HOMEBREW_REPOSITORY = Pathname.new("/usr/local/Homebrew")
+HOMEBREW_PULL_OR_COMMIT_URL_REGEX = /.+/
+HOMEBREW_LIBRARY = HOMEBREW_REPOSITORY/"Library"
+HOMEBREW_PREFIX = Pathname.new("/usr/local")

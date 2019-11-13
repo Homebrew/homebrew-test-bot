@@ -21,6 +21,20 @@ jobs:
         rm -rf /usr/local/lib/ruby
       if: matrix.os == 'macOS-latest'
 
+    - name: Set up Ruby
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: '>=2.3'
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Install RubyGems
+      run: |
+        gem install bundler -v "~>1"
+        bundle install --jobs 4 --retry 3
+
+    - name: Run RSpec tests
+      run: bundle exec rspec
+
     - name: Build Docker image
       run: docker-compose -f Dockerfile.yml build sut
       if: matrix.os == 'ubuntu-latest'
