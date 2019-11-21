@@ -15,11 +15,19 @@ jobs:
 
     - name: Set up Homebrew
       run: |
-        brew update-reset /usr/local/Homebrew
-        ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
-        # Remove RubyGems that interfere with our installation.
-        rm -rf /usr/local/lib/ruby
-      if: matrix.os == 'macOS-latest'
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          umask 022
+          HOMEBREW_REPOSITORY=/home/linuxbrew/.linuxbrew
+          sudo mkdir -p /home/linuxbrew
+          sudo git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
+          sudo mkdir -p "$HOMEBREW_REPOSITORY/Library/Taps/homebrew"
+          sudo ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
+          sudo chown -R "$USER" /home/linuxbrew
+          sudo chmod -R og-w /home/linuxbrew
+        else
+          brew update-reset /usr/local/Homebrew
+          ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
+        fi
 
     - name: Set up Ruby
       uses: actions/setup-ruby@v1
@@ -27,12 +35,12 @@ jobs:
         ruby-version: '>=2.3'
       if: matrix.os == 'ubuntu-latest'
 
-    - name: Install RubyGems
+    - name: Install Homebrew/homebrew-test-bot RubyGems
       run: |
         gem install bundler -v "~>1"
         bundle install --jobs 4 --retry 3
 
-    - name: Run RSpec tests
+    - name: Run Homebrew/homebrew-test-bot RSpec tests
       run: bundle exec rspec
 
     - name: Build Docker image
@@ -46,9 +54,6 @@ jobs:
         else
           brew test-bot
         fi
-      env:
-        HOMEBREW_COVERALLS_REPO_TOKEN: 4MH7hVLVNactKNsGpg7bYyTUHdnGKRP5n
-        HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Run brew test-bot --dry-run tests
       run: |

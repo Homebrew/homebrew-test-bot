@@ -343,8 +343,6 @@ module Homebrew
         ARGV << "--verbose" << "--ci-auto" << "--no-pull"
         ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
         ENV["HOMEBREW_COLOR"] = "1"
-        # These cannot be queried at the macOS level on Azure Pipelines.
-        ENV["HOMEBREW_LANGUAGES"] = "en-GB"
       end
 
       github_actions = !ENV["GITHUB_ACTIONS"].nil?
@@ -352,8 +350,6 @@ module Homebrew
         ARGV << "--verbose" << "--ci-auto" << "--no-pull"
         ENV["HOMEBREW_COLOR"] = "1"
         ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
-        # These cannot be queried at the macOS level on GitHub Actions.
-        ENV["HOMEBREW_LANGUAGES"] = "en-GB"
       end
 
       travis_pr = ENV["TRAVIS_PULL_REQUEST"] &&
@@ -450,13 +446,11 @@ module Homebrew
       tests = []
       any_errors = false
       skip_setup = ARGV.include?("--skip-setup")
-      skip_homebrew = ARGV.include?("--skip-homebrew")
       skip_cleanup_before = false
       if ARGV.named.empty?
         # With no arguments just build the most recent commit.
         current_test = Test.new("HEAD", tap:                 tap,
                                         skip_setup:          skip_setup,
-                                        skip_homebrew:       skip_homebrew,
                                         skip_cleanup_before: skip_cleanup_before)
         any_errors = !current_test.run
         tests << current_test
@@ -467,12 +461,10 @@ module Homebrew
           begin
             current_test =
               Test.new(argument, tap:                 tap,
-                                skip_setup:          skip_setup,
-                                skip_homebrew:       skip_homebrew,
-                                skip_cleanup_before: skip_cleanup_before,
-                                skip_cleanup_after:  skip_cleanup_after)
+                                 skip_setup:          skip_setup,
+                                 skip_cleanup_before: skip_cleanup_before,
+                                 skip_cleanup_after:  skip_cleanup_after)
             skip_setup = true
-            skip_homebrew = true
             skip_cleanup_before = true
           rescue ArgumentError => e
             test_error = true

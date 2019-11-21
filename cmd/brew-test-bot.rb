@@ -18,9 +18,6 @@
 #:    If `--skip-setup` is passed, don't check the local system is setup
 #:    correctly.
 #:
-#:    If `--skip-homebrew` is passed, don't check Homebrew's files and
-#:    tests are all valid.
-#:
 #:    If `--junit` is passed, generate a JUnit XML test results file.
 #:
 #:    If `--no-bottle` is passed, run `brew install` without
