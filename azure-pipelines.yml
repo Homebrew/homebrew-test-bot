@@ -15,15 +15,11 @@ steps:
       sudo mkdir -p "$HOMEBREW_REPOSITORY/Library/Taps/homebrew"
       sudo ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
       sudo chown -R "$USER" /home/linuxbrew
-      export PATH="/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin"
-      brew ruby -e 'Homebrew.install_bundler_gems!'
-      sudo chmod -R og-w /home/linuxbrew /home/vsts
+      sudo chmod -R og-w /home/linuxbrew
     displayName: Setup Homebrew
 
   - bash: |
       export PATH="/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin"
-      umask 022
-      echo $PATH
       brew test-bot
     displayName: Run brew test-bot
     env:

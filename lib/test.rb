@@ -19,15 +19,9 @@ module Homebrew
       REQUIRED_LINUXBREW_TAPS
     end
 
-    REQUIRED_TEST_BREW_TAPS = REQUIRED_TAPS + %w[
-      homebrew/cask
-      homebrew/bundle
-      homebrew/services
-    ].freeze
-
     attr_reader :log_root, :category, :name, :steps
 
-    def initialize(argument, tap: nil, skip_setup: false, skip_homebrew: false, skip_cleanup_before: false, skip_cleanup_after: false)
+    def initialize(argument, tap: nil, skip_setup: false, skip_cleanup_before: false, skip_cleanup_after: false)
       @hash = nil
       @url = nil
       @formulae = []
@@ -40,10 +34,9 @@ module Homebrew
         @test_bot_tap = @tap.to_s == "homebrew/test-bot"
         @tap.path
       else
-        HOMEBREW_REPOSITORY
+        CoreTap.instance.path
       end
       @skip_setup = skip_setup
-      @skip_homebrew = skip_homebrew
       @skip_cleanup_before = skip_cleanup_before
       @skip_cleanup_after = skip_cleanup_after
 
@@ -312,14 +305,10 @@ module Homebrew
       end
 
       @formulae += @added_formulae + @modified_formulae
-      @test_brew = (!@tap || @test_bot_tap) &&
-                   (@formulae.empty? || @test_default_formula)
 
-      unless @test_brew
-        installed_taps = Tap.select(&:installed?).map(&:name)
-        (REQUIRED_TAPS - installed_taps).each do |tap|
-          test "brew", "tap", tap
-        end
+      installed_taps = Tap.select(&:installed?).map(&:name)
+      (REQUIRED_TAPS - installed_taps).each do |tap|
+        test "brew", "tap", tap
       end
 
       puts <<~EOS
@@ -782,51 +771,14 @@ module Homebrew
                            formula_name
     end
 
-    def homebrew
+    def readall
       @category = __method__
       return if @skip_homebrew
 
-      if @test_brew
-        # test update from origin/master to current commit.
-        test "brew", "update-test"
-        # test update from origin/master to current tag.
-        test "brew", "update-test", "--to-tag"
-        # test no-op update from current commit (to current commit, a no-op).
-        test "brew", "update-test", "--commit=HEAD"
-
-        installed_taps = Tap.select(&:installed?).map(&:name)
-        (REQUIRED_TEST_BREW_TAPS - installed_taps).each do |tap|
-          test "brew", "tap", tap
-        end
-
-        test "brew", "tap", "homebrew/cask"
-        test "brew", "tap", "homebrew/bundle"
-
-        test "brew", "readall", "--aliases"
-
-        if OS.mac? && ENV["HOMEBREW_GITHUB_ACTIONS"]
-          test "brew", "tests", "--no-compat", "--online"
-          test "brew", "tests", "--generic", "--online"
-        end
-
-        if ARGV.include?("--coverage")
-          test "brew", "tests", "--online", "--coverage"
-          FileUtils.cp_r "#{HOMEBREW_REPOSITORY}/Library/Homebrew/test/coverage",
-                         Dir.pwd
-        elsif ENV["HOMEBREW_GITHUB_ACTIONS"]
-          test "brew", "tests", "--online"
-        end
-
-        # check the gems installed by `brew tests` don't have anything
-        # uncommitted
-        test "git", "-C", HOMEBREW_REPOSITORY, "diff", "--stat", "--exit-code",
-                    "Library/Homebrew/vendor/bundle/ruby"
-
-        # these commands use gems installed by `brew tests`
-        test "brew", "man", "--fail-if-changed"
-        test "brew", "style"
-      elsif @tap
+      if @tap
         test "brew", "readall", "--aliases", @tap.name
+      else
+        test "brew", "readall", "--aliases"
       end
     end
 
@@ -888,11 +840,7 @@ module Homebrew
 
       Tap.names.each do |tap_name|
         next if tap_name == @tap&.name
-        if @test_brew && REQUIRED_TEST_BREW_TAPS.include?(tap_name)
-          next
-        elsif REQUIRED_TAPS.include?(tap_name)
-          next
-        end
+        next if REQUIRED_TAPS.include?(tap_name)
 
         test "brew", "untap", tap_name
       end
@@ -1083,7 +1031,7 @@ module Homebrew
       begin
         download
         setup
-        homebrew
+        readall
         formulae.each do |f|
           formula(f)
         end
