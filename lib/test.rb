@@ -794,7 +794,6 @@ module Homebrew
       clean_args = [
         "-dx",
         "--exclude=*.bottle*.*",
-        "--exclude=coverage",
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor",
         "--exclude=#{@brewbot_root.basename}",
