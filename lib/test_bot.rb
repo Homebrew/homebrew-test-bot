@@ -363,29 +363,6 @@ module Homebrew
       github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
       circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
 
-      # Only report coverage if build runs on macOS and this is indeed Homebrew,
-      # as we don't want this to be averaged with inferior Linux test coverage.
-      if OS.mac? && ENV["HOMEBREW_COVERALLS_REPO_TOKEN"]
-        ARGV << "--coverage"
-
-        if azure_pipelines
-          ENV["HOMEBREW_CI_NAME"] = "azure-pipelines"
-          ENV["HOMEBREW_CI_BUILD_NUMBER"] = ENV["BUILD_BUILDID"]
-          ENV["HOMEBREW_CI_BUILD_URL"] = "#{ENV["SYSTEM_TEAMFOUNDATIONSERVERURI"]}#{ENV["SYSTEM_TEAMPROJECT"]}/_build/results?buildId=#{ENV["BUILD_BUILDID"]}"
-          ENV["HOMEBREW_CI_BRANCH"] = ENV["BUILD_SOURCEBRANCH"]
-          ENV["HOMEBREW_CI_PULL_REQUEST"] = ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
-        end
-
-        if github_actions
-          ENV["HOMEBREW_CI_NAME"] = "github-actions"
-          ENV["HOMEBREW_CI_BUILD_NUMBER"] = ENV["GITHUB_REF"]
-          ENV["HOMEBREW_CI_BRANCH"] = ENV["HEAD_GITHUB_REF"]
-          %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
-          ENV["HOMEBREW_CI_PULL_REQUEST"] = pr
-          ENV["HOMEBREW_CI_BUILD_URL"] = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
-        end
-      end
-
       if ARGV.include?("--ci-auto")
         if travis_pr || jenkins_pr || azure_pipelines_pr ||
           github_actions_pr || circle_pr

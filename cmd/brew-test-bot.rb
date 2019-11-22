@@ -52,8 +52,6 @@
 #:
 #:    If `--no-pull` is passed, don't use `brew pull` when possible.
 #:
-#:    If `--coverage` is passed, generate and upload a coverage report.
-#:
 #:    If `--test-default-formula` is passed, use a default testing formula
 #:    when not building a tap and no other formulae are specified.
 #:
