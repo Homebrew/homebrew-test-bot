@@ -150,28 +150,27 @@ module Homebrew
       ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
                                   "homebrew-test-bot@lists.sfconservancy.org"
 
-      if ARGV.include?("--dry-run")
-        puts <<~EOS
-          git am --abort
-          git rebase --abort
-          git checkout -f master
-          git reset --hard origin/master
-          brew update
-        EOS
-      else
-        quiet_system "git", "am", "--abort"
-        quiet_system "git", "rebase", "--abort"
-        safe_system "git", "checkout", "-f", "master"
-        safe_system "git", "reset", "--hard", "origin/master"
-        safe_system "brew", "update"
-      end
-
       # These variables are for Jenkins, Jenkins pipeline and
       # Circle CI respectively.
       pr = ENV["UPSTREAM_PULL_REQUEST"] ||
           ENV["CHANGE_ID"] ||
           ENV["CIRCLE_PR_NUMBER"]
       if pr
+        if ARGV.include?("--dry-run")
+          puts <<~EOS
+            git am --abort
+            git rebase --abort
+            git checkout -f master
+            git reset --hard origin/master
+            brew update
+          EOS
+        else
+          quiet_system "git", "am", "--abort"
+          quiet_system "git", "rebase", "--abort"
+          safe_system "git", "checkout", "-f", "master"
+          safe_system "git", "reset", "--hard", "origin/master"
+          safe_system "brew", "update"
+        end
         pull_pr = "#{tap.default_remote}/pull/#{pr}"
         safe_system "brew", "pull", "--clean", pull_pr
       end
