@@ -570,6 +570,8 @@ module Homebrew
     end
 
     def install_bottled_dependent(dependent)
+      cleanup_during
+
       unless dependent.installed?
         test "brew", "fetch", "--retry", dependent.name
 
@@ -606,6 +608,8 @@ module Homebrew
     end
 
     def formula(formula_name)
+      cleanup_during
+
       @category = "#{__method__}.#{formula_name}"
 
       formula = Formulary.factory(formula_name)
@@ -953,6 +957,23 @@ module Homebrew
       end
 
       FileUtils.rm_rf @brewbot_root unless ARGV.include? "--keep-logs"
+    end
+
+    def cleanup_during
+      @category = __method__
+      return unless ARGV.include? "--cleanup"
+      return unless HOMEBREW_CACHE.exist?
+
+      used_percentage = Utils.popen_read("df", HOMEBREW_CACHE.to_s)
+                             .lines[1] # HOMEBREW_CACHE
+                             .split[4] # used %
+                             .to_i
+      return if used_percentage < 95
+
+      test "brew", "cleanup", "--prune=0"
+
+      # remove any leftovers manually
+      HOMEBREW_CACHE.children.each(&:rmtree)
     end
 
     def test(*args, **options)
