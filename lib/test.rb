@@ -367,33 +367,30 @@ module Homebrew
 
     def install_gcc_if_needed(formula, deps)
       installed_gcc = false
-      begin
-        deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
-        if formula.devel &&
-           formula.stable? &&
-           !ARGV.include?("--HEAD") &&
-           !ARGV.include?("--fast")
-          CompilerSelector.select_for(formula)
-          CompilerSelector.select_for(formula.devel)
-        elsif ARGV.include?("--HEAD")
-          CompilerSelector.select_for(formula.head)
-        elsif formula.stable
-          CompilerSelector.select_for(formula)
-        elsif formula.devel
-          CompilerSelector.select_for(formula.devel)
-        end
-      rescue CompilerSelectionError => e
-        unless installed_gcc
-          test "brew", "install", "gcc",
-               env: { "HOMEBREW_DEVELOPER" => nil }
-          installed_gcc = true
-          DevelopmentTools.clear_version_cache
-          retry
-        end
-        skip formula.name
-        puts e.message
-        return
+      deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
+      if formula.devel &&
+         formula.stable? &&
+         !ARGV.include?("--HEAD") &&
+         !ARGV.include?("--fast")
+        CompilerSelector.select_for(formula)
+        CompilerSelector.select_for(formula.devel)
+      elsif ARGV.include?("--HEAD")
+        CompilerSelector.select_for(formula.head)
+      elsif formula.stable
+        CompilerSelector.select_for(formula)
+      elsif formula.devel
+        CompilerSelector.select_for(formula.devel)
       end
+    rescue CompilerSelectionError => e
+      unless installed_gcc
+        test "brew", "install", "gcc",
+              env: { "HOMEBREW_DEVELOPER" => nil }
+        installed_gcc = true
+        DevelopmentTools.clear_version_cache
+        retry
+      end
+      skip formula.name
+      puts e.message
     end
 
     def install_mercurial_if_needed(deps, reqs)
@@ -704,7 +701,7 @@ module Homebrew
       end
 
       broken_xcode_rubygems = MacOS.version == :mojave &&
-        MacOS.active_developer_dir == "/Applications/Xcode.app/Contents/Developer"
+                              MacOS.active_developer_dir == "/Applications/Xcode.app/Contents/Developer"
 
       unless broken_xcode_rubygems
         test "brew", "audit", *audit_args

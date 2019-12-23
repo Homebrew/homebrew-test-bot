@@ -58,7 +58,7 @@ module Homebrew
                         .chomp("/")
                         .sub(/\.git$/, "")
       begin
-        return Tap.fetch(url_path) if url_path =~ HOMEBREW_TAP_REGEX
+        return Tap.fetch(url_path) if url_path.match?(HOMEBREW_TAP_REGEX)
       rescue
         # Don't care if tap fetch fails
         nil
@@ -153,8 +153,8 @@ module Homebrew
       # These variables are for Jenkins, Jenkins pipeline and
       # Circle CI respectively.
       pr = ENV["UPSTREAM_PULL_REQUEST"] ||
-          ENV["CHANGE_ID"] ||
-          ENV["CIRCLE_PR_NUMBER"]
+           ENV["CHANGE_ID"] ||
+           ENV["CIRCLE_PR_NUMBER"]
       if pr
         if ARGV.include?("--dry-run")
           puts <<~EOS
@@ -176,8 +176,8 @@ module Homebrew
       end
 
       if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] ||
-        ENV["BOT_PARAMS"].to_s.include?("--keep-old") ||
-        ARGV.include?("--keep-old")
+         ENV["BOT_PARAMS"].to_s.include?("--keep-old") ||
+         ARGV.include?("--keep-old")
         system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
       elsif !ARGV.include?("--dry-run")
         system "brew", "bottle", "--merge", "--write", *json_files
@@ -313,7 +313,7 @@ module Homebrew
       ENV["HOMEBREW_NO_EMOJI"] = "1"
       ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
-                              "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
+        "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
       travis = !ENV["TRAVIS"].nil?
       circle = !ENV["CIRCLECI"].nil?
@@ -364,7 +364,7 @@ module Homebrew
 
       if ARGV.include?("--ci-auto")
         if travis_pr || jenkins_pr || azure_pipelines_pr ||
-          github_actions_pr || circle_pr
+           github_actions_pr || circle_pr
           ARGV << "--ci-pr"
         elsif travis || jenkins_branch || circle
           ARGV << "--ci-master"
@@ -374,8 +374,8 @@ module Homebrew
       end
 
       if ARGV.include?("--ci-master") ||
-        ARGV.include?("--ci-pr") ||
-        ARGV.include?("--ci-testing")
+         ARGV.include?("--ci-pr") ||
+         ARGV.include?("--ci-testing")
         ARGV << "--cleanup"
         ARGV << "--test-default-formula"
         ARGV << "--local" if jenkins
@@ -461,8 +461,8 @@ module Homebrew
         tests.each do |test|
           testsuite = testsuites.add_element "testsuite"
           testsuite.add_attribute "name", "brew-test-bot.#{Utils::Bottles.tag}"
-          testsuite.add_attribute "tests", test.steps.select(&:passed?).count
-          testsuite.add_attribute "failures", test.steps.select(&:failed?).count
+          testsuite.add_attribute "tests", test.steps.count(&:passed?)
+          testsuite.add_attribute "failures", test.steps.count(&:failed?)
           testsuite.add_attribute "timestamp", test.steps.first.start_time.iso8601
 
           test.steps.each do |step|
