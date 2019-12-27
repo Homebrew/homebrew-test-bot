@@ -571,7 +571,6 @@ module Homebrew
 
       unless dependent.installed?
         test "brew", "fetch", "--retry", dependent.name
-
         return if steps.last.failed?
 
         unlink_conflicts dependent
@@ -592,11 +591,13 @@ module Homebrew
       test "brew", "install", "--only-dependencies", dependent.name
       test "brew", "linkage", "--test", dependent.name
 
-      return unless @testable_dependents.include? dependent
+      if @testable_dependents.include? dependent
+        test "brew", "install", "--only-dependencies", "--include-test",
+                                dependent.name
+        test "brew", "test", "--verbose", dependent.name
+      end
 
-      test "brew", "install", "--only-dependencies", "--include-test",
-                              dependent.name
-      test "brew", "test", "--verbose", dependent.name
+      test "brew", "uninstall", "--force", dependent.name
     end
 
     def fetch_formula(fetch_args, audit_args, spec_args = [])
