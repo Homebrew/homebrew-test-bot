@@ -857,10 +857,14 @@ module Homebrew
         next if path_string.start_with?(HOMEBREW_REPOSITORY.to_s)
         next if path_string.start_with?(@brewbot_root.to_s)
         next if path_string.start_with?(Dir.pwd.to_s)
-        # don't try to delete osxfuse files
-        next if path_string.match?(
-          "(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$",
-        )
+
+        # allow deleting non-existent osxfuse symlinks.
+        if !path.symlink? || path.resolved_path_exists?
+          # don't try to delete other osxfuse files
+          next if path_string.match?(
+            "(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$",
+          )
+        end
 
         FileUtils.rm_rf path
       end
