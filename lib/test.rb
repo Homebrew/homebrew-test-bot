@@ -103,20 +103,11 @@ module Homebrew
         "git", "-C", @repository, "symbolic-ref", "HEAD"
       ).gsub("refs/heads/", "").strip
 
-      # Use Jenkins GitHub Pull Request Builder or Jenkins Pipeline plugin
-      # variables for pull request jobs.
-      if ENV["JENKINS_HOME"] && (ENV["ghprbPullLink"] || ENV["CHANGE_URL"])
-        @url = ENV["ghprbPullLink"] || ENV["CHANGE_URL"]
+      # Use Jenkins GitHub Pull Request Builder variables for pull request jobs.
+      if ENV["ghprbPullLink"]
+        @url = ENV["ghprbPullLink"]
         @hash = nil
         test "git", "-C", @repository, "checkout", "origin/master"
-      # Use Jenkins Git plugin variables.
-      elsif ENV["JENKINS_HOME"] && ENV["GIT_URL"] && ENV["GIT_BRANCH"]
-        git_url = ENV["GIT_URL"].chomp("/").chomp(".git")
-        %r{origin/pr/(\d+)/(merge|head)} =~ ENV["GIT_BRANCH"]
-        if pr = Regexp.last_match(1)
-          @url = "#{git_url}/pull/#{pr}"
-          @hash = nil
-        end
       # Use Circle CI pull-request variables for pull request jobs.
       elsif !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
         @url = ENV["CIRCLE_PULL_REQUEST"]
@@ -132,19 +123,9 @@ module Homebrew
         @hash = nil
       end
 
-      # Use Jenkins Git plugin variables for master branch jobs.
-      if ENV["GIT_PREVIOUS_COMMIT"] && ENV["GIT_COMMIT"]
-        diff_start_sha1 = ENV["GIT_PREVIOUS_COMMIT"]
-        diff_end_sha1 = ENV["GIT_COMMIT"]
       # Use Travis CI Git variables for master or branch jobs.
-      elsif ENV["TRAVIS_COMMIT_RANGE"]
+      if ENV["TRAVIS_COMMIT_RANGE"]
         diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
-      # Use Jenkins Pipeline plugin variables for branch jobs.
-      elsif ENV["JENKINS_HOME"] && !ENV["CHANGE_URL"] && ENV["CHANGE_TARGET"]
-        diff_start_sha1 =
-          Utils.popen_read("git", "-C", @repository, "rev-parse",
-                                  "--short", ENV["CHANGE_TARGET"]).strip
-        diff_end_sha1 = current_sha1
       # Use Azure Pipeline variables for master or branch jobs.
       elsif ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]
         diff_start_sha1 =
@@ -167,11 +148,14 @@ module Homebrew
         diff_end_sha1 = ENV["CIRCLE_SHA1"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
-        onoe <<~EOS
-          No known CI provider detected! If you are using GitHub Actions, Jenkins,
-          Azure Pipelines, Travis CI or Circle CI then we cannot find the expected
-          environment variables! Check you have e.g. exported them to a Docker container.
-        EOS
+        unless ENV["ghprbPullLink"]
+          onoe <<~EOS
+            No known CI provider detected! If you are using GitHub Actions, Jenkins
+            ghprb-plugin, Azure Pipelines, Travis CI or Circle CI then we cannot find the
+            expected environment variables! Check you have e.g. exported them to a Docker
+            container.
+          EOS
+        end
         diff_end_sha1 = diff_start_sha1 = current_sha1
       end
 
@@ -183,8 +167,8 @@ module Homebrew
       diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
       diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
-      # Handle no arguments being passed on the command-line
-      # e.g. `brew test-bot`
+      # Handle no arguments being passed on the command-line e.g.
+      #   brew test-bot`
       if @hash == "HEAD"
         diff_commit_count = Utils.popen_read(
           "git", "-C", @repository, "rev-list", "--count",
@@ -196,13 +180,14 @@ module Homebrew
         else
           "#{diff_start_sha1}-#{diff_end_sha1}"
         end
-      # Handle formulae arguments being passed on the command-line
-      # e.g. `brew test-bot wget fish`
+      # Handle formulae arguments being passed on the command-line or as Jenkins
+      # Testing job parameters e.g.
+      #   brew test-bot wget fish
       elsif !@formulae.empty?
         @name = "#{@formulae.first}-#{diff_end_sha1}"
         diff_start_sha1 = diff_end_sha1
       # Handle a hash being passed on the command-line
-      # e.g. `brew test-bot 1a2b3c`
+      #   brew test-bot 1a2b3c
       elsif @hash
         test "git", "-C", @repository, "checkout", @hash
         diff_start_sha1 = "#{@hash}^"
@@ -210,7 +195,7 @@ module Homebrew
         @name = @hash
       # Handle a URL being passed on the command-line or through Jenkins
       # environment variables e.g.
-      # `brew test-bot https://github.com/Homebrew/homebrew-core/pull/678`
+      #   brew test-bot https://github.com/Homebrew/homebrew-core/pull/678
       elsif @url
         unless ARGV.include?("--no-pull")
           diff_start_sha1 = current_sha1

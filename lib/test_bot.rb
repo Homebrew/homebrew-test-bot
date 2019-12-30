@@ -320,7 +320,9 @@ module Homebrew
       if travis || circle
         ARGV << "--ci-auto" << "--no-pull"
       end
+
       ENV["HOMEBREW_CIRCLECI"] = "1" if circle
+
       if travis
         ARGV << "--verbose"
         ENV["HOMEBREW_COLOR"] = "1"
@@ -330,12 +332,6 @@ module Homebrew
       end
 
       jenkins = !ENV["JENKINS_HOME"].nil?
-      jenkins_pipeline_pr = jenkins && !ENV["CHANGE_URL"].nil?
-      jenkins_pipeline_branch = jenkins &&
-                                !jenkins_pipeline_pr &&
-                                !ENV["BRANCH_NAME"].nil?
-      ARGV << "--ci-auto" if jenkins_pipeline_branch || jenkins_pipeline_pr
-      ARGV << "--no-pull" if jenkins_pipeline_branch
 
       azure_pipelines = !ENV["TF_BUILD"].nil?
       if azure_pipelines
@@ -355,9 +351,6 @@ module Homebrew
                   ENV["TRAVIS_PULL_REQUEST"] != "false"
       jenkins_pr = !ENV["ghprbPullLink"].nil?
       jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
-      jenkins_pr ||= jenkins_pipeline_pr
-      jenkins_branch = !ENV["GIT_COMMIT"].nil?
-      jenkins_branch ||= jenkins_pipeline_branch
       azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
       github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
       circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
@@ -366,7 +359,7 @@ module Homebrew
         if travis_pr || jenkins_pr || azure_pipelines_pr ||
            github_actions_pr || circle_pr
           ARGV << "--ci-pr"
-        elsif travis || jenkins_branch || circle
+        elsif travis || circle
           ARGV << "--ci-master"
         else
           ARGV << "--ci-testing"

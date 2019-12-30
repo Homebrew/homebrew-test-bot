@@ -24,10 +24,3 @@ steps:
     displayName: Run brew test-bot
     env:
       HOMEBREW_GITHUB_API_TOKEN: $(github.publicApiToken)
-
-  - task: PublishTestResults@2
-    displayName: Publish test-bot test results
-    condition: succeededOrFailed()
-    inputs:
-      testRunner: JUnit
-      testResultsFiles: brew/brew-test-bot.xml
