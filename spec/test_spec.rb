@@ -10,7 +10,7 @@ describe Homebrew::Test do
   let(:argument) { "HEAD" }
   let(:test) { described_class.new(argument) }
 
-  context "#setup" do
+  describe "#setup" do
     it "is successful" do
       expect(test.setup.passed?).to be(true)
     end
