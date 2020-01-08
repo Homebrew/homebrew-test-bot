@@ -40,14 +40,16 @@ module Homebrew
       @skip_cleanup_before = skip_cleanup_before
       @skip_cleanup_after = skip_cleanup_after
 
-      if quiet_system("git", "-C", @repository, "rev-parse",
-                             "--verify", "-q", argument)
-        @hash = argument
+      if argument == "HEAD"
+        @hash = "HEAD"
+      elsif canonical_formula_name = safe_formula_canonical_name(argument)
+        @formulae = [canonical_formula_name]
       elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
         @url, _, _, pr = *url_match
         @pr_url = @url if pr
-      elsif canonical_formula_name = safe_formula_canonical_name(argument)
-        @formulae = [canonical_formula_name]
+      elsif quiet_system("git", "-C", @repository, "rev-parse",
+                             "--verify", "-q", argument)
+        @hash = argument
       else
         raise ArgumentError,
           "#{argument} is not a pull request URL, commit URL or formula name."
