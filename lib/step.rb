@@ -37,7 +37,6 @@ module Homebrew
               .join(" ")
               .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
               .gsub("#{HOMEBREW_PREFIX}/", "")
-              .gsub("/home/travis/", "")
     end
 
     def command_short
@@ -65,11 +64,6 @@ module Homebrew
 
     def failed?
       @status == :failed
-    end
-
-    def self.travis_increment
-      @travis_step ||= 0
-      @travis_step += 1
     end
 
     def puts_command
