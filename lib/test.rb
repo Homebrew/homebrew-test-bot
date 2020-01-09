@@ -30,7 +30,7 @@ module Homebrew
       @deleted_formulae = []
       @steps = []
       @tap = tap
-      @repository = if @tapCI
+      @repository = if @tap
         @test_bot_tap = @tap.to_s == "homebrew/test-bot"
         @tap.path
       else
