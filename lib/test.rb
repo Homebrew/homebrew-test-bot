@@ -30,7 +30,7 @@ module Homebrew
       @deleted_formulae = []
       @steps = []
       @tap = tap
-      @repository = if @tap
+      @repository = if @tapCI
         @test_bot_tap = @tap.to_s == "homebrew/test-bot"
         @tap.path
       else
@@ -110,10 +110,6 @@ module Homebrew
         @url = ENV["ghprbPullLink"]
         @hash = nil
         test "git", "-C", @repository, "checkout", "origin/master"
-      # Use Circle CI pull-request variables for pull request jobs.
-      elsif !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
-        @url = ENV["CIRCLE_PULL_REQUEST"]
-        @hash = nil
       # Use Azure Pipeline variables for pull request jobs.
       elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
         @url = "#{ENV["BUILD_REPOSITORY_URI"]}/pull/#{ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]}"
@@ -125,11 +121,8 @@ module Homebrew
         @hash = nil
       end
 
-      # Use Travis CI Git variables for master or branch jobs.
-      if ENV["TRAVIS_COMMIT_RANGE"]
-        diff_start_sha1, diff_end_sha1 = ENV["TRAVIS_COMMIT_RANGE"].split "..."
       # Use Azure Pipeline variables for master or branch jobs.
-      elsif ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]
+      if ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]
         diff_start_sha1 =
           Utils.popen_read("git", "-C", @repository, "rev-parse",
                                   "--short",
@@ -142,20 +135,13 @@ module Homebrew
                                   "--short",
                                   "origin/#{ENV["GITHUB_BASE_REF"]}").strip
         diff_end_sha1 = ENV["GITHUB_SHA"]
-      # Use CircleCI Git variables.
-      elsif ENV["CIRCLE_SHA1"]
-        diff_start_sha1 =
-          Utils.popen_read("git", "-C", @repository, "rev-parse",
-                                  "--short", "origin/master").strip
-        diff_end_sha1 = ENV["CIRCLE_SHA1"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
         unless ENV["ghprbPullLink"]
           onoe <<~EOS
             No known CI provider detected! If you are using GitHub Actions, Jenkins
-            ghprb-plugin, Azure Pipelines, Travis CI or Circle CI then we cannot find the
-            expected environment variables! Check you have e.g. exported them to a Docker
-            container.
+            ghprb-plugin, or Azure Pipelines then we cannot find the expected  environment
+            variables! Check you have e.g. exported them to a Docker container.
           EOS
         end
         diff_end_sha1 = diff_start_sha1 = current_sha1
@@ -918,7 +904,6 @@ module Homebrew
     def cleanup_after
       @category = __method__
       return if @skip_cleanup_after
-      return if ENV["CIRCLECI"] || ENV["TRAVIS"]
 
       if ENV["HOMEBREW_AZURE_PIPELINES"] || ENV["HOMEBREW_GITHUB_ACTIONS"]
         # don't need to do post-build cleanup unless testing test-bot itself.

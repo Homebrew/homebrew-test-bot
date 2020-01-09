@@ -31,7 +31,7 @@ module Homebrew
         return Tap.fetch(tap)
       end
 
-      if (tap = ENV["TRAVIS_REPO_SLUG"]) && (tap =~ HOMEBREW_TAP_REGEX)
+      if HOMEBREW_TAP_REGEX.match?(tap)
         return Tap.fetch(tap)
       end
 
@@ -44,12 +44,10 @@ module Homebrew
       end
 
       # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
-      # Circle CI's CIRCLE_REPOSITORY_URL or Azure Pipelines BUILD_REPOSITORY_URI
-      # or GitHub Actions GITHUB_REPOSITORY
+      # Azure Pipelines BUILD_REPOSITORY_URI or GitHub Actions GITHUB_REPOSITORY
       git_url =
         ENV["UPSTREAM_GIT_URL"] ||
         ENV["GIT_URL"] ||
-        ENV["CIRCLE_REPOSITORY_URL"] ||
         ENV["BUILD_REPOSITORY_URI"] ||
         ENV["GITHUB_REPOSITORY"]
       return unless git_url
@@ -150,12 +148,8 @@ module Homebrew
       ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
                                   "homebrew-test-bot@lists.sfconservancy.org"
 
-      # These variables are for Jenkins, Jenkins pipeline and
-      # Circle CI respectively.
-      pr = ENV["UPSTREAM_PULL_REQUEST"] ||
-           ENV["CHANGE_ID"] ||
-           ENV["CIRCLE_PR_NUMBER"]
-      if pr
+      # This variable is for Jenkins.
+      if pr = ENV["UPSTREAM_PULL_REQUEST"]
         if ARGV.include?("--dry-run")
           puts <<~EOS
             git am --abort
@@ -185,8 +179,8 @@ module Homebrew
         puts "brew bottle --merge --write $JSON_FILES"
       end
 
-      # These variables are for Jenkins and Circle CI respectively.
-      upstream_number = ENV["UPSTREAM_BUILD_NUMBER"] || ENV["CIRCLE_BUILD_NUM"]
+      # This variable is for Jenkins.
+      upstream_number = ENV["UPSTREAM_BUILD_NUMBER"]
       git_name = ENV["HOMEBREW_GIT_NAME"]
       remote = "git@github.com:#{git_name}/homebrew-#{tap.repo}.git"
       git_tag = if pr
@@ -315,22 +309,6 @@ module Homebrew
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
-      travis = !ENV["TRAVIS"].nil?
-      circle = !ENV["CIRCLECI"].nil?
-      if travis || circle
-        ARGV << "--ci-auto" << "--no-pull"
-      end
-
-      ENV["HOMEBREW_CIRCLECI"] = "1" if circle
-
-      if travis
-        ARGV << "--verbose"
-        ENV["HOMEBREW_COLOR"] = "1"
-        ENV["HOMEBREW_VERBOSE_USING_DOTS"] = "1"
-        ENV["HOMEBREW_TRAVIS_CI"] = "1"
-        ENV["HOMEBREW_TRAVIS_SUDO"] = ENV["TRAVIS_SUDO"]
-      end
-
       jenkins = !ENV["JENKINS_HOME"].nil?
 
       azure_pipelines = !ENV["TF_BUILD"].nil?
@@ -347,20 +325,14 @@ module Homebrew
         ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
       end
 
-      travis_pr = ENV["TRAVIS_PULL_REQUEST"] &&
-                  ENV["TRAVIS_PULL_REQUEST"] != "false"
       jenkins_pr = !ENV["ghprbPullLink"].nil?
       jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
       azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
       github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
-      circle_pr = !ENV["CIRCLE_PULL_REQUEST"].to_s.empty?
 
       if ARGV.include?("--ci-auto")
-        if travis_pr || jenkins_pr || azure_pipelines_pr ||
-           github_actions_pr || circle_pr
+        if jenkins_pr || azure_pipelines_pr || github_actions_pr
           ARGV << "--ci-pr"
-        elsif travis || circle
-          ARGV << "--ci-master"
         else
           ARGV << "--ci-testing"
         end
