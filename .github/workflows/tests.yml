@@ -29,6 +29,10 @@ jobs:
           ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
         fi
 
+    - name: Run brew style
+      run: brew style homebrew/test-bot
+      if: matrix.os == 'macOS-latest'
+
     - name: Set up Ruby
       uses: actions/setup-ruby@v1
       with:

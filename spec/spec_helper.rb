@@ -11,8 +11,6 @@ STUB_PATH ||= PROJECT_ROOT/"spec/stub"
 $LOAD_PATH.unshift(STUB_PATH)
 
 Dir.glob("#{PROJECT_ROOT}/lib/**/*.rb").each do |file|
-  next if file.include?("/extend/os/")
-
   require file
 end
 

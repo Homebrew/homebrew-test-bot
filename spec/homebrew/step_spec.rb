@@ -12,10 +12,12 @@ describe Homebrew::Step do
   let(:repository) { OpenStruct.new({}) }
   let(:step) { described_class.new(test, command, repository: repository) }
 
-  context "#run" do
+  describe "#run" do
     it "runs the command" do
-      expect(step).to receive(:system_command).with("brew", args: ["config"], env: {}, print_stderr: false, print_stdout: false).and_return( OpenStruct.new( success?: true, merged_output: ""))
-      expect(step.run).to be(nil)
+      expect(step).to receive(:system_command)
+        .with("brew", args: ["config"], env: {}, print_stderr: false, print_stdout: false)
+        .and_return(OpenStruct.new(success?: true, merged_output: ""))
+      step.run
     end
   end
 end
