@@ -82,6 +82,8 @@
 #:    If `--ci-upload` is passed, use the Homebrew CI bottle upload
 #:    options.
 #:
+#:    If `--publish` is passed, publish the uploaded bottles.
+#:
 #:    If `--skip-recursive-dependents` is passed, only test the direct
 #:    dependents.
 
