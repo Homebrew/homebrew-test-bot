@@ -433,7 +433,7 @@ module Homebrew
         Utils.popen_read("brew", "uses", "--include-test", *uses_args, formula_name)
              .split("\n")
       dependents -= @formulae
-      dependents = dependents.map { |d| Formulary.factory(d) }
+      dependents = dependents.map { |d| Formulary.factory(d).full_name }
 
       if ARGV.include?("--keep-old")
         @testable_dependents = @bottled_dependents = []
