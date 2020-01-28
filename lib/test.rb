@@ -702,7 +702,7 @@ module Homebrew
         end
 
         @bottled_dependents.each do |dependent|
-          install_bottled_dependent(dependent.full_name)
+          install_bottled_dependent(dependent)
         end
         cleanup_bottle_etc_var(formula)
       end
