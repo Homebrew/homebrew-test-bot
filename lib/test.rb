@@ -433,7 +433,7 @@ module Homebrew
         Utils.popen_read("brew", "uses", "--include-test", *uses_args, formula_name)
              .split("\n")
       dependents -= @formulae
-      dependents = dependents.map { |d| Formulary.factory(d).full_name }
+      dependents = dependents.map { |d| Formulary.factory(d) }
 
       if ARGV.include?("--keep-old")
         @testable_dependents = @bottled_dependents = []
@@ -546,14 +546,14 @@ module Homebrew
       cleanup_during
 
       unless dependent.installed?
-        test "brew", "fetch", "--retry", dependent.name
+        test "brew", "fetch", "--retry", dependent.full_name
         return if steps.last.failed?
 
         unlink_conflicts dependent
         unless ARGV.include?("--fast")
-          test "brew", "install", "--only-dependencies", dependent.name,
+          test "brew", "install", "--only-dependencies", dependent.full_name,
                env: { "HOMEBREW_DEVELOPER" => nil }
-          test "brew", "install", dependent.name,
+          test "brew", "install", dependent.full_name,
                env: { "HOMEBREW_DEVELOPER" => nil }
           return if steps.last.failed?
         end
@@ -562,18 +562,18 @@ module Homebrew
 
       if !dependent.keg_only? && !dependent.linked_keg.exist?
         unlink_conflicts dependent
-        test "brew", "link", dependent.name
+        test "brew", "link", dependent.full_name
       end
-      test "brew", "install", "--only-dependencies", dependent.name
-      test "brew", "linkage", "--test", dependent.name
+      test "brew", "install", "--only-dependencies", dependent.full_name
+      test "brew", "linkage", "--test", dependent.full_name
 
       if @testable_dependents.include? dependent
         test "brew", "install", "--only-dependencies", "--include-test",
-                                dependent.name
-        test "brew", "test", "--verbose", dependent.name
+                                dependent.full_name
+        test "brew", "test", "--verbose", dependent.full_name
       end
 
-      test "brew", "uninstall", "--force", dependent.name
+      test "brew", "uninstall", "--force", dependent.full_name
     end
 
     def fetch_formula(fetch_args, audit_args, spec_args = [])
@@ -702,7 +702,7 @@ module Homebrew
         end
 
         @bottled_dependents.each do |dependent|
-          install_bottled_dependent(dependent)
+          install_bottled_dependent(dependent.full_name)
         end
         cleanup_bottle_etc_var(formula)
       end
