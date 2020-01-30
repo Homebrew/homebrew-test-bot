@@ -144,9 +144,6 @@ module Homebrew
 
       ENV["GIT_WORK_TREE"] = tap.path
       ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
-      ENV["HOMEBREW_GIT_NAME"] = ARGV.value("git-name") || "BrewTestBot"
-      ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
-                                  "homebrew-test-bot@lists.sfconservancy.org"
 
       # This variable is for Jenkins.
       if pr = ENV["UPSTREAM_PULL_REQUEST"]
@@ -382,6 +379,10 @@ module Homebrew
           raise unless quiet_system "git", "-C", tap.path, "fetch", "--unshallow"
         end
       end
+
+      ENV["HOMEBREW_GIT_NAME"] = ARGV.value("git-name") || "BrewTestBot"
+      ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
+                                  "homebrew-test-bot@lists.sfconservancy.org"
 
       return test_ci_upload(tap) if ARGV.include?("--ci-upload")
 
