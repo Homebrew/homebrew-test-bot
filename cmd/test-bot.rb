@@ -7,9 +7,9 @@ module Homebrew
   def test_bot_args
     Homebrew::CLI::Parser.new do
       usage_banner <<~EOS
-        `test-bot` [options]  <url|formula>:
+        `test-bot` [<options>] <URL>|<formula>:
 
-        Tests the full lifecycle of a formula change.
+        Test the full lifecycle of a formula change.
       EOS
 
       switch "--dry-run",
@@ -19,7 +19,7 @@ module Homebrew
       switch "--cleanup",
              description: "clean all state from the Homebrew directory. Use with care!"
       switch "--skip-setup",
-             description: "don't check the local system is setup correctly."
+             description: "don't check if the local system is set up correctly."
       switch "--junit",
              description: "generate a JUnit XML test results file."
       switch "--no-bottle",
@@ -53,7 +53,7 @@ module Homebrew
              description: "use the specified <URL> as the root of the bottle's URL instead of Homebrew's default."
       flag   "--git-name=",
              description: "set the Git author/committer names to the given name."
-      flag   "--git-email",
+      flag   "--git-email=",
              description: "set the Git author/committer email to the given email."
       switch "--ci-pr",
              description: "use the Homebrew pull request CI options. Implies `--cleanup`: use with care!"
