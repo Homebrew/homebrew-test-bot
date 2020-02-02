@@ -90,7 +90,7 @@ module Homebrew
       @start_time = Time.now
 
       puts_command
-      if ARGV.include? "--dry-run"
+      if Homebrew.args.dry_run?
         @end_time = Time.now
         @status = :passed
         puts_result
@@ -103,7 +103,7 @@ module Homebrew
 
       executable, *args = @command
 
-      verbose = ARGV.verbose?
+      verbose = Homebrew.args.verbose?
 
       result = system_command executable, args:         args,
                                           print_stdout: verbose,
@@ -127,10 +127,10 @@ module Homebrew
         end
 
         puts @output if (failed? || @puts_output_on_success) && !verbose
-        File.write(log_file_path, @output) if ARGV.include? "--keep-logs"
+        File.write(log_file_path, @output) if Homebrew.args.keep_logs?
       end
 
-      exit 1 if ARGV.include?("--fail-fast") && failed?
+      exit 1 if Homebrew.args.fail_fast? && failed?
     end
   end
 end

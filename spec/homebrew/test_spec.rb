@@ -4,7 +4,7 @@ require "spec_helper"
 
 describe Homebrew::Test do
   before do
-    allow(ARGV).to receive(:verbose?).and_return(false)
+    allow(Homebrew).to receive(:args).and_return(OpenStruct.new)
   end
 
   let(:argument) { "HEAD" }

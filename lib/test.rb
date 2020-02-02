@@ -68,11 +68,11 @@ module Homebrew
       test "brew", "tap", e.tap.name
       retry unless steps.last.failed?
       onoe e
-      puts e.backtrace if ARGV.debug?
+      puts e.backtrace if Homebrew.args.debug?
     rescue FormulaUnavailableError, TapFormulaAmbiguityError,
            TapFormulaWithOldnameAmbiguityError => e
       onoe e
-      puts e.backtrace if ARGV.debug?
+      puts e.backtrace if Homebrew.args.debug?
     end
 
     def current_sha1
@@ -181,7 +181,7 @@ module Homebrew
       # environment variables e.g.
       #   brew test-bot https://github.com/Homebrew/homebrew-core/pull/678
       elsif @url
-        unless ARGV.include?("--no-pull")
+        unless Homebrew.args.no_pull?
           diff_start_sha1 = current_sha1
           test "brew", "pull", "--clean", @url
           diff_end_sha1 = current_sha1
@@ -214,7 +214,7 @@ module Homebrew
       if @tap.to_s != CoreTap.instance.name
         core_path = CoreTap.instance.path
         if core_path.exist?
-          if ARGV.include?("--cleanup")
+          if Homebrew.args.cleanup?
             test "git", "-C", core_path.to_s, "fetch", "--depth=1", "origin"
             test "git", "-C", core_path.to_s, "reset", "--hard", "origin/master"
           end
@@ -261,7 +261,7 @@ module Homebrew
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
         @deleted_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
-      elsif @formulae.empty? && ARGV.include?("--test-default-formula")
+      elsif @formulae.empty? && Homebrew.args.test_default_formula?
         # Build the default test formula.
         @test_default_formula = true
         @modified_formulae = ["testbottest"]
@@ -291,7 +291,7 @@ module Homebrew
       f = Formulary.factory(formula.full_name, spec)
       fi = FormulaInstaller.new(f)
       stable_spec = spec == :stable
-      fi.build_bottle = stable_spec && !ARGV.include?("--no-bottle")
+      fi.build_bottle = stable_spec && !Homebrew.args.no_bottle?
 
       unsatisfied_requirements, = fi.expand_requirements
       return true if unsatisfied_requirements.empty?
@@ -333,11 +333,11 @@ module Homebrew
       deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
       if formula.devel &&
          formula.stable? &&
-         !ARGV.include?("--HEAD") &&
-         !ARGV.include?("--fast")
+         !Homebrew.args.HEAD? &&
+         !Homebrew.args.fast?
         CompilerSelector.select_for(formula)
         CompilerSelector.select_for(formula.devel)
-      elsif ARGV.include?("--HEAD")
+      elsif Homebrew.args.HEAD?
         CompilerSelector.select_for(formula.head)
       elsif formula.stable
         CompilerSelector.select_for(formula)
@@ -401,7 +401,7 @@ module Homebrew
       unless changed_dependencies.empty?
         test "brew", "fetch", "--retry", "--build-from-source",
                               *changed_dependencies
-        unless ARGV.include?("--fast")
+        unless Homebrew.args.fast?
           # Install changed dependencies as new bottles so we don't have
           # checksum problems.
           test "brew", "install", "--build-from-source", *changed_dependencies
@@ -418,14 +418,14 @@ module Homebrew
       @unchanged_build_dependencies = build_dependencies - @formulae
 
       uses_args = []
-      uses_args << "--recursive" unless ARGV.include?("--skip-recursive-dependents")
+      uses_args << "--recursive" unless Homebrew.args.skip_recursive_dependents?
       dependents =
         Utils.popen_read("brew", "uses", "--include-test", *uses_args, formula_name)
              .split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
 
-      if ARGV.include?("--keep-old")
+      if Homebrew.args.keep_old?
         @testable_dependents = @bottled_dependents = []
         return
       end
@@ -462,7 +462,7 @@ module Homebrew
     end
 
     def cleanup_bottle_etc_var(formula)
-      return unless ARGV.include? "--cleanup"
+      return unless Homebrew.args.cleanup?
 
       bottle_prefix = formula.opt_prefix/".bottle"
       # Nuke etc/var to have them be clean to detect bottle etc/var
@@ -475,20 +475,20 @@ module Homebrew
 
     def bottle_reinstall_formula(formula, new_formula)
       return unless formula.stable?
-      return if ARGV.include?("--fast")
-      return if ARGV.include?("--no-bottle")
+      return if Homebrew.args.fast?
+      return if Homebrew.args.no_bottle?
       return if formula.bottle_disabled?
 
       if MacOS.version >= :catalina
         ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1"
       end
-      root_url = ARGV.value("root-url")
+      root_url = Homebrew.args.root_url
       bottle_args = ["--verbose", "--json", formula.name]
-      bottle_args << "--keep-old" if ARGV.include?("--keep-old") && !new_formula
-      bottle_args << "--skip-relocation" if ARGV.include? "--skip-relocation"
+      bottle_args << "--keep-old" if Homebrew.args.keep_old? && !new_formula
+      bottle_args << "--skip-relocation" if Homebrew.args.skip_relocation?
       bottle_args << "--force-core-tap" if @test_default_formula
       bottle_args << "--root-url=#{root_url}" if root_url
-      bottle_args << "--or-later" if ARGV.include?("--or-later")
+      bottle_args << "--or-later" if Homebrew.args.or_later?
       test "brew", "bottle", *bottle_args
 
       bottle_step = steps.last
@@ -502,7 +502,7 @@ module Homebrew
         bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
       bottle_merge_args =
         ["--merge", "--write", "--no-commit", bottle_json_filename]
-      if ARGV.include?("--keep-old") && !new_formula
+      if Homebrew.args.keep_old? && !new_formula
         bottle_merge_args << "--keep-old"
       end
 
@@ -540,7 +540,7 @@ module Homebrew
         return if steps.last.failed?
 
         unlink_conflicts dependent
-        unless ARGV.include?("--fast")
+        unless Homebrew.args.fast?
           test "brew", "install", "--only-dependencies", dependent.full_name,
                env: { "HOMEBREW_DEVELOPER" => nil }
           test "brew", "install", dependent.full_name,
@@ -582,12 +582,12 @@ module Homebrew
       reqs = []
 
       fetch_args = [formula_name]
-      if !ARGV.include?("--fast") &&
-         !ARGV.include?("--no-bottle") &&
+      if !Homebrew.args.fast? &&
+         !Homebrew.args.no_bottle? &&
          !formula.bottle_disabled?
         fetch_args << "--build-bottle"
       end
-      fetch_args << "--force" if ARGV.include? "--cleanup"
+      fetch_args << "--force" if Homebrew.args.cleanup?
       new_formula = @added_formulae.include?(formula_name)
       audit_args = [formula_name, "--online"]
       if new_formula
@@ -612,7 +612,7 @@ module Homebrew
           return
         end
       end
-      if formula.devel && !ARGV.include?("--HEAD")
+      if formula.devel && !Homebrew.args.HEAD?
         deps |= formula.devel.deps.to_a.reject(&:optional?)
         reqs |= formula.devel.requirements.to_a.reject(&:optional?)
       end
@@ -627,9 +627,9 @@ module Homebrew
 
       # shared_*_args are applied to both the main and --devel spec
       shared_install_args = ["--verbose"]
-      shared_install_args << "--keep-tmp" if ARGV.keep_tmp?
-      if !ARGV.include?("--fast") &&
-         !ARGV.include?("--no-bottle") &&
+      shared_install_args << "--keep-tmp" if Homebrew.args.keep_tmp?
+      if !Homebrew.args.fast? &&
+         !Homebrew.args.no_bottle? &&
          !formula.bottle_disabled?
         shared_install_args << "--build-bottle"
       end
@@ -637,7 +637,7 @@ module Homebrew
       # install_args is just for the main (stable, or devel if in a devel-only
       # tap) spec
       install_args = []
-      install_args << "--HEAD" if ARGV.include? "--HEAD"
+      install_args << "--HEAD" if Homebrew.args.HEAD?
 
       # Pass --devel or --HEAD to install in the event formulae lack stable.
       # Supports devel-only/head-only.
@@ -658,7 +658,7 @@ module Homebrew
 
       # Don't care about e.g. bottle failures for dependencies.
       install_passed = false
-      if !ARGV.include?("--fast") || formula_bottled || formula.bottle_unneeded?
+      if !Homebrew.args.fast? || formula_bottled || formula.bottle_unneeded?
         test "brew", "install", "--only-dependencies", *install_args,
              env: { "HOMEBREW_DEVELOPER" => nil }
         test "brew", "install", *install_args,
@@ -679,7 +679,7 @@ module Homebrew
       end
 
       test_args = ["--verbose"]
-      test_args << "--keep-tmp" if ARGV.keep_tmp?
+      test_args << "--keep-tmp" if Homebrew.args.keep_tmp?
 
       if install_passed
         bottle_reinstall_formula(formula, new_formula)
@@ -699,8 +699,8 @@ module Homebrew
 
       if formula.devel &&
          formula.stable? &&
-         !ARGV.include?("--HEAD") &&
-         !ARGV.include?("--fast") &&
+         !Homebrew.args.HEAD? &&
+         !Homebrew.args.fast? &&
          satisfied_requirements?(formula, :devel)
         test "brew", "uninstall", "--force", formula_name if formula.installed?
 
@@ -788,7 +788,7 @@ module Homebrew
       return if branch == current_branch
 
       checkout_args = [branch]
-      checkout_args << "-f" if ARGV.include? "--cleanup"
+      checkout_args << "-f" if Homebrew.args.cleanup?
       test "git", "-C", repository, "checkout", *checkout_args
     end
 
@@ -862,13 +862,13 @@ module Homebrew
     def cleanup_before
       @category = __method__
       return if @skip_cleanup_before
-      return unless ARGV.include? "--cleanup"
+      return unless Homebrew.args.cleanup?
 
       clear_stash_if_needed(@repository)
       quiet_system "git", "-C", @repository, "am", "--abort"
       quiet_system "git", "-C", @repository, "rebase", "--abort"
 
-      unless ARGV.include?("--no-pull")
+      unless Homebrew.args.no_pull?
         checkout_branch_if_needed(@repository)
         reset_if_needed(@repository)
       end
@@ -907,7 +907,7 @@ module Homebrew
         checkout_branch_if_needed(@repository, @start_branch)
       end
 
-      if ARGV.include?("--cleanup")
+      if Homebrew.args.cleanup?
         clear_stash_if_needed(@repository)
         reset_if_needed(@repository)
 
@@ -917,18 +917,18 @@ module Homebrew
 
         cleanup_shared
 
-        if ARGV.include? "--local"
+        if Homebrew.args.local?
           FileUtils.rm_rf ENV["HOMEBREW_HOME"]
           FileUtils.rm_rf ENV["HOMEBREW_LOGS"]
         end
       end
 
-      FileUtils.rm_rf @brewbot_root unless ARGV.include? "--keep-logs"
+      FileUtils.rm_rf @brewbot_root unless Homebrew.args.keep_logs?
     end
 
     def cleanup_during
       @category = __method__
-      return unless ARGV.include? "--cleanup"
+      return unless Homebrew.args.cleanup?
       return unless HOMEBREW_CACHE.exist?
 
       used_percentage = Utils.popen_read("df", HOMEBREW_CACHE.to_s)

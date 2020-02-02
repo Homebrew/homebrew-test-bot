@@ -27,7 +27,7 @@ module Homebrew
     HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}.freeze
 
     def resolve_test_tap
-      if (tap = ARGV.value("tap"))
+      if (tap = Homebrew.args.tap)
         return Tap.fetch(tap)
       end
 
@@ -67,7 +67,7 @@ module Homebrew
       jenkins = ENV["JENKINS_HOME"]
       job = ENV["UPSTREAM_JOB_NAME"]
       id = ENV["UPSTREAM_BUILD_ID"]
-      if (!job || !id) && !ARGV.include?("--dry-run")
+      if (!job || !id) && !Homebrew.args.dry_run?
         raise "Missing Jenkins variables!"
       end
 
@@ -75,7 +75,7 @@ module Homebrew
       jenkins_dir += "builds/#{id}/archive/*.bottle*.*"
       bottles = Dir[jenkins_dir]
 
-      raise "No bottles found in #{jenkins_dir}!" if bottles.empty? && !ARGV.include?("--dry-run")
+      raise "No bottles found in #{jenkins_dir}!" if bottles.empty? && !Homebrew.args.dry_run?
 
       FileUtils.cp bottles, Dir.pwd, verbose: true
     end
@@ -87,13 +87,13 @@ module Homebrew
       bintray_user = ENV["HOMEBREW_BINTRAY_USER"]
       bintray_key = ENV["HOMEBREW_BINTRAY_KEY"]
       if !bintray_user || !bintray_key
-        unless ARGV.include?("--dry-run")
+        unless Homebrew.args.dry_run?
           raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!"
         end
       end
 
       # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
-      bintray_org = ARGV.value("bintray-org") || "homebrew"
+      bintray_org = Homebrew.args.bintray_org || "homebrew"
       if bintray_org == "homebrew" && !OS.mac?
         ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"] = "1"
       end
@@ -101,18 +101,16 @@ module Homebrew
       # Don't pass keys/cookies to subprocesses
       ENV.clear_sensitive_environment!
 
-      ARGV << "--verbose"
-
       copy_bottles_from_jenkins unless ENV["JENKINS_HOME"].nil?
 
-      raise "No bottles found in #{Dir.pwd}!" if Dir["*.bottle*.*"].empty? && !ARGV.include?("--dry-run")
+      raise "No bottles found in #{Dir.pwd}!" if Dir["*.bottle*.*"].empty? && !Homebrew.args.dry_run?
 
       json_files = Dir.glob("*.bottle.json")
       bottles_hash = json_files.reduce({}) do |hash, json_file|
         hash.deep_merge(JSON.parse(IO.read(json_file)))
       end
 
-      if ARGV.include?("--dry-run")
+      if Homebrew.args.dry_run?
         bottles_hash = {
           "testbottest" => {
             "formula" => {
@@ -147,7 +145,7 @@ module Homebrew
 
       # This variable is for Jenkins.
       if pr = ENV["UPSTREAM_PULL_REQUEST"]
-        if ARGV.include?("--dry-run")
+        if Homebrew.args.dry_run?
           puts <<~EOS
             git am --abort
             git rebase --abort
@@ -168,9 +166,9 @@ module Homebrew
 
       if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] ||
          ENV["BOT_PARAMS"].to_s.include?("--keep-old") ||
-         ARGV.include?("--keep-old")
+         Homebrew.args.keep_old?
         system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
-      elsif !ARGV.include?("--dry-run")
+      elsif !Homebrew.args.dry_run?
         system "brew", "bottle", "--merge", "--write", *json_files
       else
         puts "brew bottle --merge --write $JSON_FILES"
@@ -186,12 +184,12 @@ module Homebrew
         "testing-#{upstream_number}"
       elsif (number = ENV["BUILD_NUMBER"])
         "other-#{number}"
-      elsif ARGV.include?("--dry-run")
+      elsif Homebrew.args.dry_run?
         "$GIT_TAG"
       end
 
       if git_tag
-        if ARGV.include?("--dry-run")
+        if Homebrew.args.dry_run?
           puts "git push --force #{remote} origin/master:master :refs/tags/#{git_tag}"
         else
           safe_system "git", "push", "--force", remote, "origin/master:master",
@@ -214,7 +212,7 @@ module Homebrew
           filename = Bottle::Filename.new(formula_name, version, tag, rebuild)
           bintray_url =
             "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename.bintray}"
-          filename_already_published = if ARGV.include?("--dry-run")
+          filename_already_published = if Homebrew.args.dry_run?
             puts "curl -I --output /dev/null #{bintray_url}"
             false
           else
@@ -233,7 +231,7 @@ module Homebrew
 
           unless formula_packaged[formula_name]
             package_url = "#{bintray_packages_url}/#{bintray_package}"
-            package_exists = if ARGV.include?("--dry-run")
+            package_exists = if Homebrew.args.dry_run?
               puts "curl --output /dev/null #{package_url}"
               false
             else
@@ -246,7 +244,7 @@ module Homebrew
                 "public_download_numbers": true,
                 "public_stats": true}
               EOS
-              if ARGV.include?("--dry-run")
+              if Homebrew.args.dry_run?
                 puts <<~EOS
                   curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                       --header Content-Type: application/json
@@ -267,8 +265,8 @@ module Homebrew
           content_url = "https://api.bintray.com/content/#{bintray_org}"
           content_url +=
             "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename.bintray}"
-          content_url += "?publish=1" if ARGV.include?("--publish")
-          if ARGV.include?("--dry-run")
+          content_url += "?publish=1" if Homebrew.args.publish?
+          if Homebrew.args.dry_run?
             puts <<~EOS
               curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                   --upload-file #{filename}
@@ -285,7 +283,7 @@ module Homebrew
 
       return unless git_tag
 
-      if ARGV.include?("--dry-run")
+      if Homebrew.args.dry_run?
         puts "git tag --force #{git_tag}"
         puts "git push --force #{remote} origin/master:master refs/tags/#{git_tag}"
       else
@@ -295,8 +293,11 @@ module Homebrew
       end
     end
 
-    def sanitize_argv_and_env
-      if Pathname.pwd == HOMEBREW_PREFIX && ARGV.include?("--cleanup")
+    def run!
+      $stdout.sync = true
+      $stderr.sync = true
+
+      if Pathname.pwd == HOMEBREW_PREFIX && Homebrew.args.cleanup?
         odie "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
       end
 
@@ -307,65 +308,13 @@ module Homebrew
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
-      jenkins = !ENV["JENKINS_HOME"].nil?
-
-      azure_pipelines = !ENV["TF_BUILD"].nil?
-      if azure_pipelines
-        ARGV << "--verbose" << "--ci-auto" << "--no-pull"
-        ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
-        ENV["HOMEBREW_COLOR"] = "1"
-      end
-
-      github_actions = !ENV["GITHUB_ACTIONS"].nil?
-      if github_actions
-        ARGV << "--verbose" << "--ci-auto" << "--no-pull"
-        ENV["HOMEBREW_COLOR"] = "1"
-        ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
-      end
-
-      jenkins_pr = !ENV["ghprbPullLink"].nil?
-      jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
-      azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
-      github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
-
-      if ARGV.include?("--ci-auto")
-        if jenkins_pr || azure_pipelines_pr || github_actions_pr
-          ARGV << "--ci-pr"
-        else
-          ARGV << "--ci-testing"
-        end
-      end
-
-      if ARGV.include?("--ci-master") ||
-         ARGV.include?("--ci-pr") ||
-         ARGV.include?("--ci-testing")
-        ARGV << "--cleanup"
-        ARGV << "--test-default-formula"
-        ARGV << "--local" if jenkins
-        ARGV << "--junit" if jenkins || azure_pipelines
-      end
-
-      ARGV << "--fast" if ARGV.include?("--ci-master")
-
       test_bot_revision = Utils.popen_read(
         "git", "-C", Tap.fetch("homebrew/test-bot").path.to_s,
               "log", "-1", "--format=%h (%s)"
       ).strip
       puts "Homebrew/homebrew-test-bot #{test_bot_revision}"
       puts "ARGV: #{ARGV.join(" ")}"
-
-      return unless ARGV.include?("--local")
-
-      ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
-      FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
-      ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
-    end
-
-    def test_bot
-      $stdout.sync = true
-      $stderr.sync = true
-
-      sanitize_argv_and_env
+      puts "Homebrew.args: #{Homebrew.args}"
 
       tap = resolve_test_tap
       # Tap repository if required, this is done before everything else
@@ -380,17 +329,17 @@ module Homebrew
         end
       end
 
-      ENV["HOMEBREW_GIT_NAME"] = ARGV.value("git-name") || "BrewTestBot"
-      ENV["HOMEBREW_GIT_EMAIL"] = ARGV.value("git-email") ||
+      ENV["HOMEBREW_GIT_NAME"] = Homebrew.args.git_name || "BrewTestBot"
+      ENV["HOMEBREW_GIT_EMAIL"] = Homebrew.args.git_email ||
                                   "homebrew-test-bot@lists.sfconservancy.org"
 
-      return test_ci_upload(tap) if ARGV.include?("--ci-upload")
+      return test_ci_upload(tap) if Homebrew.args.ci_upload?
 
       tests = []
       any_errors = false
-      skip_setup = ARGV.include?("--skip-setup")
+      skip_setup = Homebrew.args.skip_setup?
       skip_cleanup_before = false
-      if ARGV.named.empty?
+      if Homebrew.args.named.empty?
         # With no arguments just build the most recent commit.
         current_test = Test.new("HEAD", tap:                 tap,
                                         skip_setup:          skip_setup,
@@ -398,8 +347,8 @@ module Homebrew
         any_errors = !current_test.run
         tests << current_test
       else
-        ARGV.named.each do |argument|
-          skip_cleanup_after = argument != ARGV.named.last
+        Homebrew.args.named.each do |argument|
+          skip_cleanup_after = argument != Homebrew.args.named.last
           test_error = false
           begin
             current_test =
@@ -420,7 +369,7 @@ module Homebrew
         end
       end
 
-      if ARGV.include? "--junit"
+      if Homebrew.args.junit?
         xml_document = REXML::Document.new
         xml_document << REXML::XMLDecl.new
         testsuites = xml_document.add_element "testsuites"
@@ -463,7 +412,7 @@ module Homebrew
       end
     ensure
       if HOMEBREW_CACHE.exist?
-        if ARGV.include? "--clean-cache"
+        if Homebrew.args.clean_cache?
           HOMEBREW_CACHE.children.each(&:rmtree)
         else
           Dir.glob("*.bottle*.tar.gz") do |bottle_file|
