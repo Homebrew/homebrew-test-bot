@@ -133,10 +133,10 @@ module Homebrew
         diff_end_sha1 = ENV["GITHUB_SHA"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
-        unless ENV["ghprbPullLink"]
+        if !ENV["ghprbPullLink"] && !ENV["BOT_PARAMS"]
           onoe <<~EOS
             No known CI provider detected! If you are using GitHub Actions, Jenkins
-            ghprb-plugin, or Azure Pipelines then we cannot find the expected  environment
+            ghprb-plugin, or Azure Pipelines then we cannot find the expected environment
             variables! Check you have e.g. exported them to a Docker container.
           EOS
         end
