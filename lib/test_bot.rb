@@ -44,11 +44,10 @@ module Homebrew
       end
 
       # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
-      # Azure Pipelines BUILD_REPOSITORY_URI or GitHub Actions GITHUB_REPOSITORY
+      # GitHub Actions GITHUB_REPOSITORY
       git_url =
         ENV["UPSTREAM_GIT_URL"] ||
         ENV["GIT_URL"] ||
-        ENV["BUILD_REPOSITORY_URI"] ||
         ENV["GITHUB_REPOSITORY"]
       return unless git_url
 

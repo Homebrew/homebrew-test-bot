@@ -106,10 +106,6 @@ module Homebrew
         @url = ENV["ghprbPullLink"]
         @hash = nil
         test "git", "-C", @repository, "checkout", "origin/master"
-      # Use Azure Pipeline variables for pull request jobs.
-      elsif ENV["BUILD_REPOSITORY_URI"] && ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]
-        @url = "#{ENV["BUILD_REPOSITORY_URI"]}/pull/#{ENV["SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"]}"
-        @hash = nil
       # Use GitHub Actions variables for pull request jobs.
       elsif ENV["GITHUB_REF"] && ENV["GITHUB_REPOSITORY"] &&
             %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
@@ -117,15 +113,8 @@ module Homebrew
         @hash = nil
       end
 
-      # Use Azure Pipeline variables for master or branch jobs.
-      if ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]
-        diff_start_sha1 =
-          Utils.popen_read("git", "-C", @repository, "rev-parse",
-                                  "--short",
-                                  "origin/#{ENV["SYSTEM_PULLREQUEST_TARGETBRANCH"]}").strip
-        diff_end_sha1 = current_sha1
       # Use GitHub Actions variables for master or branch jobs.
-      elsif ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
+      if ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
         diff_start_sha1 =
           Utils.popen_read("git", "-C", @repository, "rev-parse",
                                   "--short",
@@ -135,8 +124,8 @@ module Homebrew
       else
         if !ENV["ghprbPullLink"] && !ENV["BOT_PARAMS"]
           onoe <<~EOS
-            No known CI provider detected! If you are using GitHub Actions, Jenkins
-            ghprb-plugin, or Azure Pipelines then we cannot find the expected environment
+            No known CI provider detected! If you are using GitHub Actions or Jenkins
+            ghprb-plugin, then we cannot find the expected environment
             variables! Check you have e.g. exported them to a Docker container.
           EOS
         end
@@ -874,11 +863,6 @@ module Homebrew
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
-
-      # Cleanup NodeJS headers on Azure Pipelines
-      if OS.linux? && ENV["TF_BUILD"]
-        test "sudo", "rm", "-rf", "/usr/local/include/node"
-      end
 
       cleanup_shared
     end

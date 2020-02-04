@@ -84,13 +84,6 @@ module Homebrew
   def setup_argv_and_env
     jenkins = !ENV["JENKINS_HOME"].nil?
 
-    azure_pipelines = !ENV["TF_BUILD"].nil?
-    if azure_pipelines
-      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
-      ENV["HOMEBREW_AZURE_PIPELINES"] = "1"
-      ENV["HOMEBREW_COLOR"] = "1"
-    end
-
     github_actions = !ENV["GITHUB_ACTIONS"].nil?
     if github_actions
       ARGV << "--verbose" << "--ci-auto" << "--no-pull"
@@ -100,11 +93,10 @@ module Homebrew
 
     jenkins_pr = !ENV["ghprbPullLink"].nil?
     jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
-    azure_pipelines_pr = ENV["BUILD_REASON"] == "PullRequest"
     github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
 
     if ARGV.include?("--ci-auto")
-      if jenkins_pr || azure_pipelines_pr || github_actions_pr
+      if jenkins_pr ||  github_actions_pr
         ARGV << "--ci-pr"
       else
         ARGV << "--ci-testing"
@@ -116,7 +108,7 @@ module Homebrew
       ARGV << "--cleanup"
       ARGV << "--test-default-formula"
       ARGV << "--local" if jenkins
-      ARGV << "--junit" if jenkins || azure_pipelines
+      ARGV << "--junit" if jenkins 
     end
 
     ARGV << "--verbose" if ARGV.include?("--ci-upload")
