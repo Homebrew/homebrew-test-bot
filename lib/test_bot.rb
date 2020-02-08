@@ -265,7 +265,7 @@ module Homebrew
           content_url = "https://api.bintray.com/content/#{bintray_org}"
           content_url +=
             "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename.bintray}"
-          content_url += "?publish=1" if Homebrew.args.publish?
+          content_url += "?override=1" if Homebrew.args.override?
           if Homebrew.args.dry_run?
             puts <<~EOS
               curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
@@ -275,6 +275,29 @@ module Homebrew
           else
             curl "--user", "#{bintray_user}:#{bintray_key}",
                 "--upload-file", filename, content_url,
+                secrets: [bintray_key]
+            puts
+          end
+
+          next unless Homebrew.args.publish?
+
+          publish_url = "https://api.bintray.com/content/#{bintray_org}"
+          publish_url +=
+            "/#{bintray_repo}/#{bintray_package}/#{version}/publish"
+          publish_blob = <<~EOS
+            {"publish_wait_for_secs": 0}
+          EOS
+          if Homebrew.args.dry_run?
+            puts <<~EOS
+              curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
+                  --header Content-Type: application/json
+                  --data #{publish_blob.delete("\n")}
+                  #{publish_url}
+            EOS
+          else
+            curl "--user", "#{bintray_user}:#{bintray_key}",
+                "--header", "Content-Type: application/json",
+                "--data", publish_blob, publish_url,
                 secrets: [bintray_key]
             puts
           end

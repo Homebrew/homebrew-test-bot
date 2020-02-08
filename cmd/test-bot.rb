@@ -63,6 +63,8 @@ module Homebrew
              description: "automatically pick one of the Homebrew CI options based on the environment. Implies `--cleanup`: use with care!"
       switch "--ci-upload",
              description: "use the Homebrew CI bottle upload options."
+      switch "--override",
+             description: "override already uploaded and published bottles."
       switch "--publish",
              description: "publish the uploaded bottles."
       switch "--skip-recursive-dependents",
