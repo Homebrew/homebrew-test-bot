@@ -96,7 +96,7 @@ module Homebrew
     github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
 
     if ARGV.include?("--ci-auto")
-      if jenkins_pr ||  github_actions_pr
+      if jenkins_pr || github_actions_pr
         ARGV << "--ci-pr"
       else
         ARGV << "--ci-testing"
@@ -107,8 +107,7 @@ module Homebrew
        ARGV.include?("--ci-testing")
       ARGV << "--cleanup"
       ARGV << "--test-default-formula"
-      ARGV << "--local" if jenkins
-      ARGV << "--junit" if jenkins 
+      ARGV << "--local" << "--junit" if jenkins
     end
 
     ARGV << "--verbose" if ARGV.include?("--ci-upload")
