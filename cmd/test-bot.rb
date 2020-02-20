@@ -117,5 +117,7 @@ module Homebrew
     ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
     FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
     ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
+
+    ENV["HOMEBREW_CURL_RETRIES"] = "3"
   end
 end
