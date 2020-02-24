@@ -882,7 +882,7 @@ module Homebrew
       @category = __method__
       return if @skip_cleanup_after
 
-      if ENV["HOMEBREW_AZURE_PIPELINES"] || ENV["HOMEBREW_GITHUB_ACTIONS"]
+      if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
         # don't need to do post-build cleanup unless testing test-bot itself.
         return if @tap.to_s != "homebrew/test-bot"
       end
