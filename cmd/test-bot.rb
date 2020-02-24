@@ -83,6 +83,7 @@ module Homebrew
 
   def setup_argv_and_env
     jenkins = !ENV["JENKINS_HOME"].nil?
+    github_actions_self_hosted = !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].nil?
 
     github_actions = !ENV["GITHUB_ACTIONS"].nil?
     if github_actions
@@ -107,7 +108,8 @@ module Homebrew
        ARGV.include?("--ci-testing")
       ARGV << "--cleanup"
       ARGV << "--test-default-formula"
-      ARGV << "--local" << "--junit" if jenkins
+      ARGV << "--local" if github_actions_self_hosted || jenkins
+      ARGV << "--junit" if jenkins
     end
 
     ARGV << "--verbose" if ARGV.include?("--ci-upload")
