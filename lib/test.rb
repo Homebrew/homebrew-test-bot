@@ -909,13 +909,15 @@ module Homebrew
       return if @skip_cleanup_before
       return unless Homebrew.args.cleanup?
 
-      clear_stash_if_needed(@repository)
-      quiet_system @git, "-C", @repository, "am", "--abort"
-      quiet_system @git, "-C", @repository, "rebase", "--abort"
+      unless @test_bot_tap
+        clear_stash_if_needed(@repository)
+        quiet_system @git, "-C", @repository, "am", "--abort"
+        quiet_system @git, "-C", @repository, "rebase", "--abort"
 
-      unless Homebrew.args.no_pull?
-        checkout_branch_if_needed(@repository)
-        reset_if_needed(@repository)
+        unless Homebrew.args.no_pull?
+          checkout_branch_if_needed(@repository)
+          reset_if_needed(@repository)
+        end
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
@@ -948,8 +950,10 @@ module Homebrew
       end
 
       if Homebrew.args.cleanup?
-        clear_stash_if_needed(@repository)
-        reset_if_needed(@repository)
+        unless @test_bot_tap
+          clear_stash_if_needed(@repository)
+          reset_if_needed(@repository)
+        end
 
         test "brew", "cleanup", "--prune=3"
 
