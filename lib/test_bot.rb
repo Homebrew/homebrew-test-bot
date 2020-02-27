@@ -21,6 +21,8 @@ module Homebrew
   module TestBot
     module_function
 
+    GIT = "/usr/bin/git"
+
     BYTES_IN_1_MEGABYTE = 1024*1024
     MAX_STEP_OUTPUT_SIZE = BYTES_IN_1_MEGABYTE - (200*1024) # margin of safety
 
@@ -146,17 +148,17 @@ module Homebrew
       if pr = ENV["UPSTREAM_PULL_REQUEST"]
         if Homebrew.args.dry_run?
           puts <<~EOS
-            git am --abort
-            git rebase --abort
-            git checkout -f master
-            git reset --hard origin/master
+            #{GIT} am --abort
+            #{GIT} rebase --abort
+            #{GIT} checkout -f master
+            #{GIT} reset --hard origin/master
             brew update
           EOS
         else
-          quiet_system "git", "am", "--abort"
-          quiet_system "git", "rebase", "--abort"
-          safe_system "git", "checkout", "-f", "master"
-          safe_system "git", "reset", "--hard", "origin/master"
+          quiet_system GIT, "am", "--abort"
+          quiet_system GIT, "rebase", "--abort"
+          safe_system GIT, "checkout", "-f", "master"
+          safe_system GIT, "reset", "--hard", "origin/master"
           safe_system "brew", "update"
         end
         pull_pr = "#{tap.default_remote}/pull/#{pr}"
@@ -189,10 +191,10 @@ module Homebrew
 
       if git_tag
         if Homebrew.args.dry_run?
-          puts "git push --force #{remote} origin/master:master :refs/tags/#{git_tag}"
+          puts "#{GIT} push --force #{remote} origin/master:master :refs/tags/#{git_tag}"
         else
-          safe_system "git", "push", "--force", remote, "origin/master:master",
-                                                        ":refs/tags/#{git_tag}"
+          safe_system GIT, "push", "--force", remote, "origin/master:master",
+                                                      ":refs/tags/#{git_tag}"
         end
       end
 
@@ -283,12 +285,12 @@ module Homebrew
       return unless git_tag
 
       if Homebrew.args.dry_run?
-        puts "git tag --force #{git_tag}"
-        puts "git push --force #{remote} origin/master:master refs/tags/#{git_tag}"
+        puts "#{GIT} tag --force #{git_tag}"
+        puts "#{GIT} push --force #{remote} origin/master:master refs/tags/#{git_tag}"
       else
-        safe_system "git", "tag", "--force", git_tag
-        safe_system "git", "push", "--force", remote, "origin/master:master",
-                                                      "refs/tags/#{git_tag}"
+        safe_system GIT, "tag", "--force", git_tag
+        safe_system GIT, "push", "--force", remote, "origin/master:master",
+                                                    "refs/tags/#{git_tag}"
       end
     end
 
@@ -308,8 +310,8 @@ module Homebrew
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
       test_bot_revision = Utils.popen_read(
-        "git", "-C", Tap.fetch("homebrew/test-bot").path.to_s,
-              "log", "-1", "--format=%h (%s)"
+        GIT, "-C", Tap.fetch("homebrew/test-bot").path.to_s,
+             "log", "-1", "--format=%h (%s)"
       ).strip
       puts "Homebrew/homebrew-test-bot #{test_bot_revision}"
       puts "ARGV: #{ARGV.join(" ")}"
@@ -324,7 +326,7 @@ module Homebrew
         if !tap.path.exist?
           safe_system "brew", "tap", tap.name, "--full"
         elsif (tap.path/".git/shallow").exist?
-          raise unless quiet_system "git", "-C", tap.path, "fetch", "--unshallow"
+          raise unless quiet_system GIT, "-C", tap.path, "fetch", "--unshallow"
         end
       end
 
@@ -341,6 +343,7 @@ module Homebrew
       if Homebrew.args.named.empty?
         # With no arguments just build the most recent commit.
         current_test = Test.new("HEAD", tap:                 tap,
+                                        git:                 GIT,
                                         skip_setup:          skip_setup,
                                         skip_cleanup_before: skip_cleanup_before)
         any_errors = !current_test.run
@@ -352,6 +355,7 @@ module Homebrew
           begin
             current_test =
               Test.new(argument, tap:                 tap,
+                                 git:                 GIT,
                                  skip_setup:          skip_setup,
                                  skip_cleanup_before: skip_cleanup_before,
                                  skip_cleanup_after:  skip_cleanup_after)

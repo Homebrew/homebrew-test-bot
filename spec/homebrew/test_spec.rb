@@ -8,7 +8,9 @@ describe Homebrew::Test do
   end
 
   let(:argument) { "HEAD" }
-  let(:test) { described_class.new(argument) }
+  let(:tap) { CoreTap.instance }
+  let(:git) { "git" }
+  let(:test) { described_class.new(argument, tap: tap, git: git) }
 
   describe "#setup" do
     it "is successful" do

@@ -21,7 +21,7 @@ module Homebrew
 
     attr_reader :log_root, :category, :name, :steps
 
-    def initialize(argument, tap: nil, skip_setup: false, skip_cleanup_before: false, skip_cleanup_after: false)
+    def initialize(argument, tap:, git:, skip_setup: false, skip_cleanup_before: false, skip_cleanup_after: false)
       @hash = nil
       @url = nil
       @formulae = []
@@ -36,6 +36,7 @@ module Homebrew
       else
         CoreTap.instance.path
       end
+      @git = git
       @skip_setup = skip_setup
       @skip_cleanup_before = skip_cleanup_before
       @skip_cleanup_after = skip_cleanup_after
@@ -47,8 +48,8 @@ module Homebrew
         @pr_url = @url if pr
       elsif canonical_formula_name = safe_formula_canonical_name(argument)
         @formulae = [canonical_formula_name]
-      elsif quiet_system("git", "-C", @repository, "rev-parse",
-                             "--verify", "-q", argument)
+      elsif quiet_system(@git, "-C", @repository, "rev-parse",
+                               "--verify", "-q", argument)
         @hash = argument
       else
         raise ArgumentError,
@@ -76,17 +77,17 @@ module Homebrew
     end
 
     def current_sha1
-      Utils.popen_read("git", "-C", @repository,
-                              "rev-parse", "--short", "HEAD").strip
+      Utils.popen_read(@git, "-C", @repository,
+                             "rev-parse", "--short", "HEAD").strip
     end
 
     def diff_formulae(start_revision, end_revision, path, filter)
       return unless @tap
 
       Utils.popen_read(
-        "git", "-C", @repository,
-               "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
-               start_revision, end_revision, "--", path
+        @git, "-C", @repository,
+              "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
+              start_revision, end_revision, "--", path
       ).lines.map do |line|
         file = Pathname.new line.chomp
         next unless @tap.formula_file?(file)
@@ -98,14 +99,14 @@ module Homebrew
     def download
       @category = __method__
       @start_branch = Utils.popen_read(
-        "git", "-C", @repository, "symbolic-ref", "HEAD"
+        @git, "-C", @repository, "symbolic-ref", "HEAD"
       ).gsub("refs/heads/", "").strip
 
       # Use Jenkins GitHub Pull Request Builder variables for pull request jobs.
       if ENV["ghprbPullLink"]
         @url = ENV["ghprbPullLink"]
         @hash = nil
-        test "git", "-C", @repository, "checkout", "origin/master"
+        test @git, "-C", @repository, "checkout", "origin/master"
       # Use GitHub Actions variables for pull request jobs.
       elsif ENV["GITHUB_REF"] && ENV["GITHUB_REPOSITORY"] &&
             %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
@@ -116,9 +117,9 @@ module Homebrew
       # Use GitHub Actions variables for master or branch jobs.
       if ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
         diff_start_sha1 =
-          Utils.popen_read("git", "-C", @repository, "rev-parse",
-                                  "--short",
-                                  "origin/#{ENV["GITHUB_BASE_REF"]}").strip
+          Utils.popen_read(@git, "-C", @repository, "rev-parse",
+                                 "--short",
+                                 "origin/#{ENV["GITHUB_BASE_REF"]}").strip
         diff_end_sha1 = ENV["GITHUB_SHA"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
       else
@@ -134,8 +135,8 @@ module Homebrew
 
       if diff_start_sha1.present? && diff_end_sha1.present?
         diff_start_sha1 =
-          Utils.popen_read("git", "-C", @repository, "merge-base",
-                                  diff_start_sha1, diff_end_sha1).strip
+          Utils.popen_read(@git, "-C", @repository, "merge-base",
+                                 diff_start_sha1, diff_end_sha1).strip
       end
       diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
       diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
@@ -144,7 +145,7 @@ module Homebrew
       #   brew test-bot`
       if @hash == "HEAD"
         diff_commit_count = Utils.popen_read(
-          "git", "-C", @repository, "rev-list", "--count",
+          @git, "-C", @repository, "rev-list", "--count",
           "#{diff_start_sha1}..#{diff_end_sha1}"
         )
         @name = if (diff_start_sha1 == diff_end_sha1) ||
@@ -162,7 +163,7 @@ module Homebrew
       # Handle a hash being passed on the command-line
       #   brew test-bot 1a2b3c
       elsif @hash
-        test "git", "-C", @repository, "checkout", @hash
+        test @git, "-C", @repository, "checkout", @hash
         diff_start_sha1 = "#{@hash}^"
         diff_end_sha1 = @hash
         @name = @hash
@@ -192,41 +193,41 @@ module Homebrew
 
       # Output post-cleanup/download repository revisions.
       brew_version = Utils.popen_read(
-        "git", "-C", HOMEBREW_REPOSITORY.to_s,
-               "describe", "--tags", "--abbrev", "--dirty"
+        @git, "-C", HOMEBREW_REPOSITORY.to_s,
+              "describe", "--tags", "--abbrev", "--dirty"
       ).strip
       brew_commit_subject = Utils.popen_read(
-        "git", "-C", HOMEBREW_REPOSITORY.to_s,
-               "log", "-1", "--format=%s"
+        @git, "-C", HOMEBREW_REPOSITORY.to_s,
+              "log", "-1", "--format=%s"
       ).strip
       puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
       if @tap.to_s != CoreTap.instance.name
         core_path = CoreTap.instance.path
         if core_path.exist?
           if Homebrew.args.cleanup?
-            test "git", "-C", core_path.to_s, "fetch", "--depth=1", "origin"
-            test "git", "-C", core_path.to_s, "reset", "--hard", "origin/master"
+            test @git, "-C", core_path.to_s, "fetch", "--depth=1", "origin"
+            test @git, "-C", core_path.to_s, "reset", "--hard", "origin/master"
           end
         else
-          test "git", "clone", "--depth=1",
+          test @git, "clone", "--depth=1",
                CoreTap.instance.default_remote,
                core_path.to_s
         end
 
         core_revision = Utils.popen_read(
-          "git", "-C", core_path.to_s,
-                 "log", "-1", "--format=%h (%s)"
+          @git, "-C", core_path.to_s,
+                "log", "-1", "--format=%h (%s)"
         ).strip
         puts "#{CoreTap.instance.full_name} #{core_revision}"
       end
       if @tap
         tap_origin_master_revision = Utils.popen_read(
-          "git", "-C", @tap.path.to_s,
-                 "log", "-1", "--format=%h (%s)", "origin/master"
+          @git, "-C", @tap.path.to_s,
+                "log", "-1", "--format=%h (%s)", "origin/master"
         ).strip
         tap_revision = Utils.popen_read(
-          "git", "-C", @tap.path.to_s,
-                 "log", "-1", "--format=%h (%s)"
+          @git, "-C", @tap.path.to_s,
+                "log", "-1", "--format=%h (%s)"
         ).strip
       end
 
@@ -301,6 +302,7 @@ module Homebrew
       if OS.mac? && MacOS.version < :sierra
         test "brew", "install", "git"
         ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
+        @git = "git"
       end
       test "brew", "doctor"
       test "brew", "--env"
@@ -810,37 +812,37 @@ module Homebrew
         "--exclude=#{@brewbot_root.basename}",
       ]
       return if Utils.popen_read(
-        "git", "-C", repository, "clean", "--dry-run", *clean_args
+        @git, "-C", repository, "clean", "--dry-run", *clean_args
       ).strip.empty?
 
-      test "git", "-C", repository, "clean", "-ff", *clean_args
+      test @git, "-C", repository, "clean", "-ff", *clean_args
     end
 
     def prune_if_needed(repository)
       return unless Utils.popen_read(
-        "git -C '#{repository}' -c gc.autoDetach=false gc --auto 2>&1",
+        "#{@git} -C '#{repository}' -c gc.autoDetach=false gc --auto 2>&1",
       ).include?("git prune")
 
-      test "git", "-C", repository, "prune"
+      test @git, "-C", repository, "prune"
     end
 
     def checkout_branch_if_needed(repository, branch = "master")
       current_branch = Utils.popen_read(
-        "git", "-C", repository, "symbolic-ref", "--short", "HEAD"
+        @git, "-C", repository, "symbolic-ref", "--short", "HEAD"
       ).strip
       return if branch == current_branch
 
       checkout_args = [branch]
       checkout_args << "-f" if Homebrew.args.cleanup?
-      test "git", "-C", repository, "checkout", *checkout_args
+      test @git, "-C", repository, "checkout", *checkout_args
     end
 
     def reset_if_needed(repository)
-      if system("git", "-C", repository, "diff", "--quiet", "origin/master")
+      if system(@git, "-C", repository, "diff", "--quiet", "origin/master")
         return
       end
 
-      test "git", "-C", repository, "reset", "--hard", "origin/master"
+      test @git, "-C", repository, "reset", "--hard", "origin/master"
     end
 
     def cleanup_shared
@@ -896,10 +898,10 @@ module Homebrew
 
     def clear_stash_if_needed(repository)
       return if Utils.popen_read(
-        "git", "-C", repository, "stash", "list"
+        @git, "-C", repository, "stash", "list"
       ).strip.empty?
 
-      test "git", "-C", repository, "stash", "clear"
+      test @git, "-C", repository, "stash", "clear"
     end
 
     def cleanup_before
@@ -907,13 +909,15 @@ module Homebrew
       return if @skip_cleanup_before
       return unless Homebrew.args.cleanup?
 
-      clear_stash_if_needed(@repository)
-      quiet_system "git", "-C", @repository, "am", "--abort"
-      quiet_system "git", "-C", @repository, "rebase", "--abort"
+      unless @test_bot_tap
+        clear_stash_if_needed(@repository)
+        quiet_system @git, "-C", @repository, "am", "--abort"
+        quiet_system @git, "-C", @repository, "rebase", "--abort"
 
-      unless Homebrew.args.no_pull?
-        checkout_branch_if_needed(@repository)
-        reset_if_needed(@repository)
+        unless Homebrew.args.no_pull?
+          checkout_branch_if_needed(@repository)
+          reset_if_needed(@repository)
+        end
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
@@ -946,8 +950,10 @@ module Homebrew
       end
 
       if Homebrew.args.cleanup?
-        clear_stash_if_needed(@repository)
-        reset_if_needed(@repository)
+        unless @test_bot_tap
+          clear_stash_if_needed(@repository)
+          reset_if_needed(@repository)
+        end
 
         test "brew", "cleanup", "--prune=3"
 
