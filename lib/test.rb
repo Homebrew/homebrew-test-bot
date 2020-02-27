@@ -406,19 +406,37 @@ module Homebrew
       build_dependencies = dependencies - runtime_or_test_dependencies
       @unchanged_build_dependencies = build_dependencies - @formulae
 
+      if Homebrew.args.keep_old?
+        @testable_dependents = @bottled_dependents = @source_dependents = []
+        return
+      end
+
+      build_dependents_from_source = %w[
+        cabal-install
+        ghc
+        go
+        ocaml
+        rust
+      ].include?(formula_name)
+
       uses_args = []
       uses_args << "--recursive" unless Homebrew.args.skip_recursive_dependents?
+      # whitelist specific formula where we want to test build dependants.
+      uses_args << "--include-build" if build_dependents_from_source
       dependents =
         Utils.popen_read("brew", "uses", "--include-test", *uses_args, formula_name)
              .split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
 
-      if Homebrew.args.keep_old?
-        @testable_dependents = @bottled_dependents = []
+      if build_dependents_from_source
+        @source_dependents = dependents
+        @testable_dependents = @source_dependents.select(&:test_defined?)
+        @bottled_dependents = []
         return
       end
 
+      @source_dependents = []
       @bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
         dependents.select(&:bottled?)
       end
@@ -519,6 +537,39 @@ module Homebrew
 
       test "brew", "install", "--only-dependencies", bottle_filename
       test "brew", "install", bottle_filename
+    end
+
+    def install_dependent_from_source(dependent)
+      return if Homebrew.args.fast?
+
+      cleanup_during
+
+      unless dependent.installed?
+        test "brew", "fetch", "--retry", dependent.full_name
+        return if steps.last.failed?
+
+        unlink_conflicts dependent
+        test "brew", "install", "--build-from-source", "--only-dependencies",
+             dependent.full_name
+        test "brew", "install", "--build-from-source", dependent.full_name
+        return if steps.last.failed?
+      end
+      return unless dependent.installed?
+
+      if !dependent.keg_only? && !dependent.linked_keg.exist?
+        unlink_conflicts dependent
+        test "brew", "link", dependent.full_name
+      end
+      test "brew", "install", "--only-dependencies", dependent.full_name
+      test "brew", "linkage", "--test", dependent.full_name
+
+      if @testable_dependents.include? dependent
+        test "brew", "install", "--only-dependencies", "--include-test",
+                                dependent.full_name
+        test "brew", "test", "--verbose", dependent.full_name
+      end
+
+      test "brew", "uninstall", "--force", dependent.full_name
     end
 
     def install_bottled_dependent(dependent)
@@ -680,6 +731,9 @@ module Homebrew
           test "brew", "test", formula_name, *test_args
         end
 
+        @source_dependents.each do |dependent|
+          install_dependent_from_source(dependent)
+        end
         @bottled_dependents.each do |dependent|
           install_bottled_dependent(dependent)
         end
