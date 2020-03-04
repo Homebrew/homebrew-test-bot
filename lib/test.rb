@@ -774,6 +774,7 @@ module Homebrew
       return if @unchanged_dependencies.empty?
 
       test "brew", "uninstall", "--force", *@unchanged_dependencies
+      test "brew", "uninstall", "--force", formula_name if formula.installed?
     end
 
     def deleted_formula(formula_name)
