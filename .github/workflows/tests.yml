@@ -30,14 +30,14 @@ jobs:
         fi
 
     - name: Run brew style
-      run: brew style homebrew/test-bot
       if: matrix.os == 'macOS-latest'
+      run: brew style homebrew/test-bot
 
     - name: Set up Ruby
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/setup-ruby@v1
       with:
-        ruby-version: '>=2.3'
-      if: matrix.os == 'ubuntu-latest'
+        ruby-version: '2.6'
 
     - name: Install Homebrew/homebrew-test-bot RubyGems
       run: |
@@ -48,8 +48,8 @@ jobs:
       run: bundle exec rspec
 
     - name: Build Docker image
-      run: docker-compose -f Dockerfile.yml build sut
       if: matrix.os == 'ubuntu-latest'
+      run: docker-compose -f Dockerfile.yml build sut
 
     - name: Run brew test-bot
       run: |
@@ -60,8 +60,8 @@ jobs:
         fi
 
     - name: Run brew test-bot --dry-run tests
+      if: matrix.os == 'macOS-latest'
       run: |
         brew test-bot --ci-upload --dry-run
         brew test-bot --ci-pr https://github.com/Homebrew/brew/pull/4170 --dry-run
         brew test-bot --ci-pr https://github.com/Homebrew/brew/commit/dc96e6f73551fbadd0c2169c3a79c47a936f71ae --dry-run
-      if: matrix.os == 'macOS-latest'
