@@ -542,7 +542,7 @@ module Homebrew
     end
 
     def install_dependent_from_source(dependent)
-      return if Homebrew.args.fast?
+      return if Homebrew.args.fast? || !satisfied_requirements?(dependent, :stable)
 
       cleanup_during
 
@@ -575,6 +575,8 @@ module Homebrew
     end
 
     def install_bottled_dependent(dependent)
+      return unless satisfied_requirements?(dependent, :stable)
+
       cleanup_during
 
       unless dependent.installed?
