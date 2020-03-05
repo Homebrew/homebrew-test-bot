@@ -22,6 +22,7 @@ module Homebrew
     module_function
 
     GIT = "/usr/bin/git"
+    CURL = "/usr/bin/curl"
 
     BYTES_IN_1_MEGABYTE = 1024*1024
     MAX_STEP_OUTPUT_SIZE = BYTES_IN_1_MEGABYTE - (200*1024) # margin of safety
@@ -214,11 +215,11 @@ module Homebrew
           bintray_url =
             "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename.bintray}"
           filename_already_published = if Homebrew.args.dry_run?
-            puts "curl -I --output /dev/null #{bintray_url}"
+            puts "#{CURL} -I --output /dev/null #{bintray_url}"
             false
           else
             begin
-              system(curl_executable, *curl_args("-I", "--output", "/dev/null",
+              system(CURL, *curl_args("-I", "--output", "/dev/null",
                     bintray_url))
             end
           end
@@ -233,10 +234,10 @@ module Homebrew
           unless formula_packaged[formula_name]
             package_url = "#{bintray_packages_url}/#{bintray_package}"
             package_exists = if Homebrew.args.dry_run?
-              puts "curl --output /dev/null #{package_url}"
+              puts "#{CURL} --output /dev/null #{package_url}"
               false
             else
-              system(curl_executable, *curl_args("--output", "/dev/null", package_url))
+              system(CURL, *curl_args("--output", "/dev/null", package_url))
             end
 
             unless package_exists
@@ -247,13 +248,13 @@ module Homebrew
               EOS
               if Homebrew.args.dry_run?
                 puts <<~EOS
-                  curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
+                  #{CURL} --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                       --header Content-Type: application/json
                       --data #{package_blob.delete("\n")}
                       #{bintray_packages_url}
                 EOS
               else
-                curl "--user", "#{bintray_user}:#{bintray_key}",
+                CURL "--user", "#{bintray_user}:#{bintray_key}",
                     "--header", "Content-Type: application/json",
                     "--data", package_blob, bintray_packages_url,
                     secrets: [bintray_key]
@@ -269,12 +270,12 @@ module Homebrew
           content_url += "?publish=1" if Homebrew.args.publish?
           if Homebrew.args.dry_run?
             puts <<~EOS
-              curl --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
+              #{CURL} --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                   --upload-file #{filename}
                   #{content_url}
             EOS
           else
-            curl "--user", "#{bintray_user}:#{bintray_key}",
+            CURL "--user", "#{bintray_user}:#{bintray_key}",
                 "--upload-file", filename, content_url,
                 secrets: [bintray_key]
             puts
