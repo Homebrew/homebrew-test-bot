@@ -219,8 +219,8 @@ module Homebrew
             false
           else
             begin
-              system(CURL, *curl_args("-I", "--output", "/dev/null",
-                    bintray_url))
+              system CURL, *curl_args("-I", "--output", "/dev/null",
+                                      bintray_url)
             end
           end
 
@@ -237,7 +237,7 @@ module Homebrew
               puts "#{CURL} --output /dev/null #{package_url}"
               false
             else
-              system(CURL, *curl_args("--output", "/dev/null", package_url))
+              system CURL, *curl_args("--output", "/dev/null", package_url)
             end
 
             unless package_exists
@@ -254,10 +254,10 @@ module Homebrew
                       #{bintray_packages_url}
                 EOS
               else
-                CURL "--user", "#{bintray_user}:#{bintray_key}",
-                    "--header", "Content-Type: application/json",
-                    "--data", package_blob, bintray_packages_url,
-                    secrets: [bintray_key]
+                system_curl "--user", "#{bintray_user}:#{bintray_key}",
+                            "--header", "Content-Type: application/json",
+                            "--data", package_blob, bintray_packages_url,
+                            secrets: [bintray_key]
                 puts
               end
             end
@@ -275,9 +275,9 @@ module Homebrew
                   #{content_url}
             EOS
           else
-            CURL "--user", "#{bintray_user}:#{bintray_key}",
-                "--upload-file", filename, content_url,
-                secrets: [bintray_key]
+            system_curl "--user", "#{bintray_user}:#{bintray_key}",
+                        "--upload-file", filename, content_url,
+                        secrets: [bintray_key]
             puts
           end
         end
@@ -293,6 +293,13 @@ module Homebrew
         safe_system GIT, "push", "--force", remote, "origin/master:master",
                                                     "refs/tags/#{git_tag}"
       end
+    end
+
+    def system_curl(*args, secrets: [], **options)
+      system_command! CURL,
+                      args:         curl_args(*args, **options),
+                      print_stdout: true,
+                      secrets:      secrets
     end
 
     def run!
