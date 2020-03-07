@@ -552,8 +552,9 @@ module Homebrew
 
         unlink_conflicts dependent
         test "brew", "install", "--build-from-source", "--only-dependencies",
-             dependent.full_name
-        test "brew", "install", "--build-from-source", dependent.full_name
+             dependent.full_name, env: { "HOMEBREW_DEVELOPER" => nil }
+        test "brew", "install", "--build-from-source", dependent.full_name,
+             env: { "HOMEBREW_DEVELOPER" => nil }
         return if steps.last.failed?
       end
       return unless dependent.installed?
