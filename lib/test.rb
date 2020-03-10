@@ -661,7 +661,23 @@ module Homebrew
 
     def fetch_formula(fetch_args, audit_args, spec_args = [])
       test "brew", "fetch", "--retry", *spec_args, *fetch_args
-      test "brew", "audit", *audit_args
+      audit audit_args
+    end
+
+    def audit_with_matcher(audit_args)
+      matcher_json = Tap.fetch("homebrew/test-bot").path/".github/brew-audit.json"
+      puts "::add-matcher::#{matcher_json}"
+      test "brew", "audit", *audit_args, "--display-filename"
+      puts "::remove-matcher owner=brew-audit::"
+      FileUtils.rm "#{ENV["GITHUB_WORKSPACE"]}/brew-audit.json"
+    end
+
+    def audit(audit_args)
+      if ENV["HOMEBREW_GITHUB_ACTIONS"]
+        audit_with_matcher audit_args
+      else
+        test "brew", "audit", *audit_args
+      end
     end
 
     def formula(formula_name)
@@ -771,7 +787,7 @@ module Homebrew
                               MacOS.active_developer_dir == "/Applications/Xcode.app/Contents/Developer"
 
       unless broken_xcode_rubygems
-        test "brew", "audit", *audit_args
+        audit audit_args
 
         # Only check for style violations if not already shown by
         # `brew audit --new-formula`

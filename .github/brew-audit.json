@@ -1,0 +1,16 @@
+{
+    "problemMatcher": [
+        {
+            "owner": "brew-audit",
+            "pattern": [
+                {
+                    "regexp": "^(.+): \\* (?:[RCWEF]: (\\d+): )?(?:col (\\d+): )?(.+)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "message": 4
+                }
+            ]
+        }
+    ]
+}
