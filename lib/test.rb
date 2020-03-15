@@ -420,7 +420,7 @@ module Homebrew
         return
       end
 
-      build_dependents_from_source = %w[
+      build_dependents_from_source_whitelist = %w[
         cabal-install
         docbook-xsl
         ghc
@@ -428,30 +428,59 @@ module Homebrew
         ocaml
         openjdk
         rust
-      ].include?(formula_name)
+      ]
 
       uses_args = []
       uses_args << "--recursive" unless Homebrew.args.skip_recursive_dependents?
-      # whitelist specific formula where we want to test build dependants.
-      uses_args << "--include-build" if build_dependents_from_source
       dependents =
-        Utils.popen_read("brew", "uses", "--include-test", *uses_args, formula_name)
+        Utils.popen_read("brew", "uses", "--include-build", "--include-test", *uses_args, formula_name)
              .split("\n")
       dependents -= @formulae
       dependents = dependents.map { |d| Formulary.factory(d) }
 
-      if build_dependents_from_source
-        @source_dependents = dependents
-        @testable_dependents = @source_dependents.select(&:test_defined?)
-        @bottled_dependents = []
-        return
+      dependents = dependents.zip(dependents.map do |f|
+        if Homebrew.args.skip_recursive_dependents?
+          f.deps
+        else
+          f.recursive_dependencies
+        end.reject(&:optional?)
+      end)
+
+      # Defer formulae which could be tested later
+      # i.e. formulae that also depend on something else yet to be built in this test run.
+      dependents.select! do |_, deps|
+        still_to_test = @formulae - @formulae_that_have_been_built
+        (deps.map { |d| d.to_formula.full_name } & still_to_test).empty?
       end
 
-      @source_dependents = []
+      # Split into dependents that we could potentially be building from source and those
+      # we should not. The criteria is that it depends on a formula in the whitelist and
+      # that formula has been, or will be, built in this test run.
+      @source_dependents, dependents = dependents.partition do |_, deps|
+        deps.any? do |d|
+          full_name = d.to_formula.full_name
+
+          next false unless build_dependents_from_source_whitelist.include?(full_name)
+
+          @formulae.include?(full_name)
+        end
+      end
+
+      # From the non-source list, get rid of any dependents we are only a build dependency to
+      dependents.select! do |_, deps|
+        deps.reject { |d| d.build? && !d.test? }
+            .map(&:to_formula)
+            .include?(formula)
+      end
+
+      dependents = dependents.transpose.first.to_a
+      @source_dependents = @source_dependents.transpose.first.to_a
+
+      @testable_dependents = @source_dependents.select(&:test_defined?)
       @bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
         dependents.select(&:bottled?)
       end
-      @testable_dependents = @bottled_dependents.select(&:test_defined?)
+      @testable_dependents += @bottled_dependents.select(&:test_defined?)
     end
 
     def unlink_conflicts(formula)
@@ -629,6 +658,7 @@ module Homebrew
       cleanup_during
 
       @category = "#{__method__}.#{formula_name}"
+      @formulae_that_have_been_built << formula_name
 
       formula = Formulary.factory(formula_name)
 
@@ -1071,6 +1101,7 @@ module Homebrew
     end
 
     def run
+      @formulae_that_have_been_built = []
       cleanup_before
       begin
         download
