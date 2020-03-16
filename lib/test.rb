@@ -426,6 +426,8 @@ module Homebrew
         ghc
         go
         ocaml
+        ocaml-findlib
+        ocaml-num
         openjdk
         rust
       ]
