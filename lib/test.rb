@@ -354,6 +354,13 @@ module Homebrew
       end
     end
 
+    def install_subversion_if_needed(deps, reqs)
+      if (deps | reqs).any? { |d| d.name == "subversion" && d.build? }
+        test "brew", "install", "subversion",
+             env: { "HOMEBREW_DEVELOPER" => nil }
+      end
+    end
+
     def setup_formulae_deps_instances(formula, formula_name)
       conflicts = formula.conflicts
       formula.recursive_dependencies.each do |dependency|
@@ -665,6 +672,7 @@ module Homebrew
       tap_needed_taps(deps)
       install_gcc_if_needed(formula, deps)
       install_mercurial_if_needed(deps, reqs)
+      install_subversion_if_needed(deps, reqs)
       setup_formulae_deps_instances(formula, formula_name)
 
       test "brew", "fetch", "--retry", *fetch_args
