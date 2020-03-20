@@ -425,6 +425,7 @@ module Homebrew
         ghc
         go
         ocaml
+        openjdk
         rust
       ].include?(formula_name)
 
