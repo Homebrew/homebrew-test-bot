@@ -422,6 +422,7 @@ module Homebrew
 
       build_dependents_from_source = %w[
         cabal-install
+        docbook-xsl
         ghc
         go
         ocaml
