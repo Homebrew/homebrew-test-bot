@@ -780,6 +780,11 @@ module Homebrew
 
         @source_dependents.each do |dependent|
           install_dependent_from_source(dependent)
+
+          bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
+            dependent.bottled?
+          end
+          install_bottled_dependent(dependent) if bottled
         end
         @bottled_dependents.each do |dependent|
           install_bottled_dependent(dependent)
