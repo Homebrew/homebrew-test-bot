@@ -34,14 +34,12 @@ module Homebrew
         return Tap.fetch(tap)
       end
 
-      if HOMEBREW_TAP_REGEX.match?(tap)
-        return Tap.fetch(tap)
-      end
+      return Tap.fetch(tap) if HOMEBREW_TAP_REGEX.match?(tap)
 
       if ENV["UPSTREAM_BOT_PARAMS"]
         bot_argv = ENV["UPSTREAM_BOT_PARAMS"].split(" ")
         bot_argv.extend HomebrewArgvExtension
-        if tap = bot_argv.value("tap")
+        if (tap = bot_argv.value("tap"))
           return Tap.fetch(tap)
         end
       end
@@ -69,9 +67,7 @@ module Homebrew
       jenkins = ENV["JENKINS_HOME"]
       job = ENV["UPSTREAM_JOB_NAME"]
       id = ENV["UPSTREAM_BUILD_ID"]
-      if (!job || !id) && !Homebrew.args.dry_run?
-        raise "Missing Jenkins variables!"
-      end
+      raise "Missing Jenkins variables!" unless (job && id) || Homebrew.args.dry_run?
 
       jenkins_dir  = "#{jenkins}/jobs/#{job}/configurations/axis-version/*/"
       jenkins_dir += "builds/#{id}/archive/*.bottle*.*"
@@ -89,16 +85,12 @@ module Homebrew
       bintray_user = ENV["HOMEBREW_BINTRAY_USER"]
       bintray_key = ENV["HOMEBREW_BINTRAY_KEY"]
       if !bintray_user || !bintray_key
-        unless Homebrew.args.dry_run?
-          raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!"
-        end
+        raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!" unless Homebrew.args.dry_run?
       end
 
       # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
       bintray_org = Homebrew.args.bintray_org || "homebrew"
-      if bintray_org == "homebrew" && !OS.mac?
-        ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"] = "1"
-      end
+      ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"] = "1" if bintray_org == "homebrew" && !OS.mac?
 
       # Don't pass keys/cookies to subprocesses
       ENV.clear_sensitive_environment!
@@ -146,7 +138,7 @@ module Homebrew
       ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
 
       # This variable is for Jenkins.
-      if pr = ENV["UPSTREAM_PULL_REQUEST"]
+      if (pr = ENV["UPSTREAM_PULL_REQUEST"])
         if Homebrew.args.dry_run?
           puts <<~EOS
             #{GIT} am --abort

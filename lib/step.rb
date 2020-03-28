@@ -97,9 +97,7 @@ module Homebrew
         return
       end
 
-      if @command[0] == "git" && !%w[-C clone].include?(@command[1])
-        raise "git should always be called with -C!"
-      end
+      raise "git should always be called with -C!" if @command[0] == "git" && !%w[-C clone].include?(@command[1])
 
       executable, *args = @command
 
