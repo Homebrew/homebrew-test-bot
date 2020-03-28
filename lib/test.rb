@@ -43,10 +43,10 @@ module Homebrew
 
       if argument == "HEAD"
         @hash = "HEAD"
-      elsif url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
+      elsif (url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX))
         @url, _, _, pr = *url_match
         @pr_url = @url if pr
-      elsif canonical_formula_name = safe_formula_canonical_name(argument)
+      elsif (canonical_formula_name = safe_formula_canonical_name(argument))
         @formulae = [canonical_formula_name]
       elsif quiet_system(@git, "-C", @repository, "rev-parse",
                                "--verify", "-q", argument)
@@ -391,9 +391,7 @@ module Homebrew
 
       dependencies -= installed
       @unchanged_dependencies = dependencies - @formulae
-      unless @unchanged_dependencies.empty?
-        test "brew", "fetch", "--retry", *@unchanged_dependencies
-      end
+      test "brew", "fetch", "--retry", *@unchanged_dependencies unless @unchanged_dependencies.empty?
 
       changed_dependencies = dependencies - @unchanged_dependencies
       unless changed_dependencies.empty?
@@ -528,9 +526,7 @@ module Homebrew
       return if Homebrew.args.no_bottle?
       return if formula.bottle_disabled?
 
-      if MacOS.version >= :catalina
-        ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1"
-      end
+      ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
       root_url = Homebrew.args.root_url
       bottle_args = ["--verbose", "--json", formula.name]
       bottle_args << "--keep-old" if Homebrew.args.keep_old? && !new_formula
@@ -551,9 +547,7 @@ module Homebrew
         bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
       bottle_merge_args =
         ["--merge", "--write", "--no-commit", bottle_json_filename]
-      if Homebrew.args.keep_old? && !new_formula
-        bottle_merge_args << "--keep-old"
-      end
+      bottle_merge_args << "--keep-old" if Homebrew.args.keep_old? && !new_formula
 
       test "brew", "bottle", *bottle_merge_args
       test "brew", "uninstall", "--force", formula.name
@@ -678,7 +672,7 @@ module Homebrew
       audit_args = [formula_name, "--online"]
       if new_formula
         audit_args << "--new-formula"
-        if url_match = @url.to_s.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX)
+        if (url_match = @url.to_s.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX))
           _, _, _, pr = *url_match
           ENV["HOMEBREW_NEW_FORMULA_PULL_REQUEST_URL"] = @url if pr
         end
@@ -888,9 +882,7 @@ module Homebrew
     end
 
     def reset_if_needed(repository)
-      if system(@git, "-C", repository, "diff", "--quiet", "origin/master")
-        return
-      end
+      return if system(@git, "-C", repository, "diff", "--quiet", "origin/master")
 
       test @git, "-C", repository, "reset", "--hard", "origin/master"
     end
@@ -995,9 +987,7 @@ module Homebrew
         return if @tap.to_s != "homebrew/test-bot"
       end
 
-      unless @start_branch.to_s.empty?
-        checkout_branch_if_needed(@repository, @start_branch)
-      end
+      checkout_branch_if_needed(@repository, @start_branch) unless @start_branch.to_s.empty?
 
       if Homebrew.args.cleanup?
         unless @test_bot_tap
@@ -1065,9 +1055,7 @@ module Homebrew
                                              "--include-test", formula)
                  .split("\n")
           # deps can fail if deps are not tapped
-          unless $CHILD_STATUS.success?
-            Formulary.factory(formula).recursive_dependencies
-          end
+          Formulary.factory(formula).recursive_dependencies unless $CHILD_STATUS.success?
         rescue TapFormulaUnavailableError => e
           raise if e.tap.installed?
 

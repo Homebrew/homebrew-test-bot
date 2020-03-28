@@ -60,7 +60,8 @@ module Homebrew
       switch "--ci-testing",
              description: "use the Homebrew testing CI options. Implies `--cleanup`: use with care!"
       switch "--ci-auto",
-             description: "automatically pick one of the Homebrew CI options based on the environment. Implies `--cleanup`: use with care!"
+             description: "automatically pick one of the Homebrew CI options based on the environment. "\
+                          "Implies `--cleanup`: use with care!"
       switch "--ci-upload",
              description: "use the Homebrew CI bottle upload options."
       switch "--publish",
@@ -97,10 +98,10 @@ module Homebrew
     github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
 
     if ARGV.include?("--ci-auto")
-      if jenkins_pr || github_actions_pr
-        ARGV << "--ci-pr"
+      ARGV << if jenkins_pr || github_actions_pr
+        "--ci-pr"
       else
-        ARGV << "--ci-testing"
+        "--ci-testing"
       end
     end
 

@@ -1,9 +1,8 @@
-def quiet_system(*)
-end
+def quiet_system(*) end
 
 def system_command(*)
   OpenStruct.new(
-    success?: true,
+    success?:      true,
     merged_output: "",
   )
 end
@@ -11,6 +10,5 @@ end
 module Formatter
   module_function
 
-  def headline(*)
-  end
+  def headline(*) end
 end
