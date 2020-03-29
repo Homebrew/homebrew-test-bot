@@ -278,9 +278,16 @@ module Homebrew
         publish_url = "https://api.bintray.com/content/#{bintray_org}"
         publish_url += "/#{bintray_repo}/#{bintray_package}/#{version}/publish"
 
-        system_curl "--user", "#{bintray_user}:#{bintray_key}",
-                    publish_url, "--request", "POST",
-                    secrets: [bintray_key]
+        if Homebrew.args.dry_run?
+          puts <<~EOS
+            #{CURL} --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY --request POST
+                #{publish_url}
+          EOS
+        else
+          system_curl "--user", "#{bintray_user}:#{bintray_key}",
+                      publish_url, "--request", "POST",
+                      secrets: [bintray_key]
+        end
       end
 
       return unless git_tag
