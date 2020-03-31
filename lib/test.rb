@@ -526,7 +526,6 @@ module Homebrew
       return if Homebrew.args.no_bottle?
       return if formula.bottle_disabled?
 
-      ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
       root_url = Homebrew.args.root_url
       bottle_args = ["--verbose", "--json", formula.name]
       bottle_args << "--keep-old" if Homebrew.args.keep_old? && !new_formula
