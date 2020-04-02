@@ -578,6 +578,13 @@ module Homebrew
     def install_dependent_from_source(dependent)
       return if Homebrew.args.fast? || !satisfied_requirements?(dependent, :stable)
 
+      if dependent.deprecated? || dependent.disabled?
+        verb = dependent.deprecated? ? :deprecated : :disabled
+        puts "#{dependent.full_name} has been #{verb}!"
+        skip dependent.name
+        return
+      end
+
       cleanup_during
 
       unless dependent.installed?
@@ -611,6 +618,13 @@ module Homebrew
 
     def install_bottled_dependent(dependent)
       return unless satisfied_requirements?(dependent, :stable)
+
+      if dependent.deprecated? || dependent.disabled?
+        verb = dependent.deprecated? ? :deprecated : :disabled
+        puts "#{dependent.full_name} has been #{verb}!"
+        skip dependent.name
+        return
+      end
 
       cleanup_during
 
@@ -657,6 +671,11 @@ module Homebrew
       @formulae_that_have_been_built << formula_name
 
       formula = Formulary.factory(formula_name)
+      if formula.disabled?
+        ofail "#{formula.full_name} has been disabled!"
+        skip formula.name
+        return
+      end
 
       deps = []
       reqs = []
