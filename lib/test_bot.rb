@@ -205,7 +205,7 @@ module Homebrew
         bottle_hash["bottle"]["tags"].each do |tag, _tag_hash|
           filename = Bottle::Filename.new(formula_name, version, tag, rebuild)
           bintray_url =
-            "#{HOMEBREW_BOTTLE_DOMAIN}/#{bintray_repo}/#{filename.bintray}"
+            "#{Homebrew::EnvConfig.bottle_domain}/#{bintray_repo}/#{filename.bintray}"
           filename_already_published = if Homebrew.args.dry_run?
             puts "#{CURL} -I --output /dev/null #{bintray_url}"
             false
