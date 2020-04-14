@@ -54,7 +54,7 @@ jobs:
     - name: Run brew test-bot
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
-          docker-compose -f Dockerfile.yml run --rm -v $GITHUB_WORKSPACE:/tmp/test-bot sut
+          docker-compose -f Dockerfile.yml run --rm -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE sut
         else
           brew test-bot
         fi
