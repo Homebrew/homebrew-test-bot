@@ -15,19 +15,9 @@ jobs:
 
     - name: Set up Homebrew
       run: |
-        if [ "$RUNNER_OS" = "Linux" ]; then
-          umask 022
-          HOMEBREW_REPOSITORY=/home/linuxbrew/.linuxbrew
-          sudo mkdir -p /home/linuxbrew
-          sudo git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
-          sudo mkdir -p "$HOMEBREW_REPOSITORY/Library/Taps/homebrew"
-          sudo ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
-          sudo chown -R "$USER" /home/linuxbrew
-          sudo chmod -R og-w /home/linuxbrew
-        else
-          brew update-reset /usr/local/Homebrew
-          ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
-        fi
+        HOMEBREW_REPOSITORY="$(brew --repo)"
+        brew update-reset "$HOMEBREW_REPOSITORY"
+        ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
 
     - name: Run brew style
       if: matrix.os == 'macOS-latest'
