@@ -14,14 +14,24 @@ module Homebrew
 
       switch "--dry-run",
              description: "print what would be done rather than doing it."
+      switch "--keep-logs",
+             description: "write and keep log files under `./brewbot/`."
       switch "--cleanup",
              description: "clean all state from the Homebrew directory. Use with care!"
       switch "--skip-setup",
              description: "don't check if the local system is set up correctly."
+      switch "--junit",
+             description: "generate a JUnit XML test results file."
+      switch "--no-bottle",
+             description: "run `brew install` without `--build-bottle`."
       switch "--keep-old",
              description: "run `brew bottle --keep-old` to build new bottles for a single platform."
       switch "--skip-relocation",
              description: "run `brew bottle --skip-relocation` to build new bottles that don't require relocation."
+      switch "--HEAD",
+             description: "run `brew install` with `--HEAD`."
+      switch "--local",
+             description: "ask Homebrew to write verbose logs under `./logs/` and set `$HOME` to `./home/`"
       flag   "--tap=",
              description: "use the `git` repository of the given tap."
       switch "--fail-fast",
@@ -29,6 +39,10 @@ module Homebrew
       switch :verbose,
              description: "print test step output in real time. Has the side effect of " \
                           "passing output as raw bytes instead of re-encoding in UTF-8."
+      switch "--fast",
+             description: "don't install any packages, but run e.g. `brew audit` anyway."
+      switch "--keep-tmp",
+             description: "keep temporary files written by main installs and tests that are run."
       switch "--no-pull",
              description: "don't use `brew pull` when possible."
       switch "--test-default-formula",
@@ -41,6 +55,15 @@ module Homebrew
              description: "set the Git author/committer names to the given name."
       flag   "--git-email=",
              description: "set the Git author/committer email to the given email."
+      switch "--ci-pr",
+             description: "use the Homebrew pull request CI options. Implies `--cleanup`: use with care!"
+      switch "--ci-testing",
+             description: "use the Homebrew testing CI options. Implies `--cleanup`: use with care!"
+      switch "--ci-auto",
+             description: "automatically pick one of the Homebrew CI options based on the environment. "\
+                          "Implies `--cleanup`: use with care!"
+      switch "--ci-upload",
+             description: "use the Homebrew CI bottle upload options."
       switch "--publish",
              description: "publish the uploaded bottles."
       switch "--skip-recursive-dependents",
@@ -60,18 +83,39 @@ module Homebrew
   end
 
   def setup_argv_and_env
-    github_actions = ENV["GITHUB_ACTIONS"].present?
-    if ENV["GITHUB_ACTIONS"].present?
-      ARGV << "--verbose" << "--no-pull"
+    jenkins = !ENV["JENKINS_HOME"].nil?
+    github_actions_self_hosted = !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].nil?
+
+    github_actions = !ENV["GITHUB_ACTIONS"].nil?
+    if github_actions
+      ARGV << "--verbose" << "--ci-auto" << "--no-pull"
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
     end
 
-    if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
-      ARGV << "--cleanup"
-    elsif github_actions
-      ARGV << "--test-default-formula"
+    jenkins_pr = !ENV["ghprbPullLink"].nil?
+    jenkins_pr ||= !ENV["ROOT_BUILD_CAUSE_GHPRBCAUSE"].nil?
+    github_actions_pr = ENV["GITHUB_EVENT_NAME"] == "pull_request"
+
+    if ARGV.include?("--ci-auto")
+      ARGV << if jenkins_pr || github_actions_pr
+        "--ci-pr"
+      else
+        "--ci-testing"
+      end
     end
+
+    if ARGV.include?("--ci-pr") ||
+       ARGV.include?("--ci-testing")
+      ARGV << "--cleanup"
+      ARGV << "--test-default-formula"
+      ARGV << "--local" if github_actions_self_hosted || jenkins
+      ARGV << "--junit" if jenkins
+    end
+
+    ARGV << "--verbose" if ARGV.include?("--ci-upload")
+
+    return unless ARGV.include?("--local")
 
     ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
     FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
