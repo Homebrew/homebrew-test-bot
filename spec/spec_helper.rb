@@ -15,7 +15,6 @@ Dir.glob("#{PROJECT_ROOT}/lib/**/*.rb").sort.each do |file|
 end
 
 require "global"
-require "active_support/core_ext/object/blank"
 
 SimpleCov.formatters = [SimpleCov::Formatter::HTMLFormatter]
 
