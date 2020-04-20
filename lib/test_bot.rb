@@ -5,9 +5,6 @@ require_relative "test"
 
 require "date"
 require "json"
-require "rexml/document"
-require "rexml/xmldecl"
-require "rexml/cdata"
 
 require "development_tools"
 require "formula"
@@ -36,21 +33,9 @@ module Homebrew
 
       return Tap.fetch(tap) if HOMEBREW_TAP_REGEX.match?(tap)
 
-      if ENV["UPSTREAM_BOT_PARAMS"]
-        bot_argv = ENV["UPSTREAM_BOT_PARAMS"].split(" ")
-        bot_argv.extend HomebrewArgvExtension
-        if (tap = bot_argv.value("tap"))
-          return Tap.fetch(tap)
-        end
-      end
-
-      # Get tap from Jenkins UPSTREAM_GIT_URL, GIT_URL or
-      # GitHub Actions GITHUB_REPOSITORY
-      git_url =
-        ENV["UPSTREAM_GIT_URL"] ||
-        ENV["GIT_URL"] ||
-        ENV["GITHUB_REPOSITORY"]
-      return unless git_url
+      # Get tap from GitHub Actions GITHUB_REPOSITORY
+      git_url = ENV["GITHUB_REPOSITORY"]
+      return if git_url.blank?
 
       url_path = git_url.sub(%r{^https?://.*github\.com/}, "")
                         .chomp("/")
@@ -61,21 +46,6 @@ module Homebrew
         # Don't care if tap fetch fails
         nil
       end
-    end
-
-    def copy_bottles_from_jenkins
-      jenkins = ENV["JENKINS_HOME"]
-      job = ENV["UPSTREAM_JOB_NAME"]
-      id = ENV["UPSTREAM_BUILD_ID"]
-      raise "Missing Jenkins variables!" unless (job && id) || Homebrew.args.dry_run?
-
-      jenkins_dir  = "#{jenkins}/jobs/#{job}/configurations/axis-version/*/"
-      jenkins_dir += "builds/#{id}/archive/*.bottle*.*"
-      bottles = Dir[jenkins_dir]
-
-      raise "No bottles found in #{jenkins_dir}!" if bottles.empty? && !Homebrew.args.dry_run?
-
-      FileUtils.cp bottles, Dir.pwd, verbose: true
     end
 
     def test_ci_upload(tap)
@@ -94,8 +64,6 @@ module Homebrew
 
       # Don't pass keys/cookies to subprocesses
       ENV.clear_sensitive_environment!
-
-      copy_bottles_from_jenkins unless ENV["JENKINS_HOME"].nil?
 
       raise "No bottles found in #{Dir.pwd}!" if Dir["*.bottle*.*"].empty? && !Homebrew.args.dry_run?
 
@@ -137,58 +105,12 @@ module Homebrew
       ENV["GIT_WORK_TREE"] = tap.path
       ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
 
-      # This variable is for Jenkins.
-      if (pr = ENV["UPSTREAM_PULL_REQUEST"])
-        if Homebrew.args.dry_run?
-          puts <<~EOS
-            #{GIT} am --abort
-            #{GIT} rebase --abort
-            #{GIT} checkout -f master
-            #{GIT} reset --hard origin/master
-            brew update
-          EOS
-        else
-          quiet_system GIT, "am", "--abort"
-          quiet_system GIT, "rebase", "--abort"
-          safe_system GIT, "checkout", "-f", "master"
-          safe_system GIT, "reset", "--hard", "origin/master"
-          safe_system "brew", "update"
-        end
-        pull_pr = "#{tap.default_remote}/pull/#{pr}"
-        safe_system "brew", "pull", "--clean", pull_pr
-      end
-
-      if ENV["UPSTREAM_BOTTLE_KEEP_OLD"] ||
-         ENV["BOT_PARAMS"].to_s.include?("--keep-old") ||
-         Homebrew.args.keep_old?
+      if Homebrew.args.keep_old?
         system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
       elsif !Homebrew.args.dry_run?
         system "brew", "bottle", "--merge", "--write", *json_files
       else
         puts "brew bottle --merge --write $JSON_FILES"
-      end
-
-      # This variable is for Jenkins.
-      upstream_number = ENV["UPSTREAM_BUILD_NUMBER"]
-      git_name = ENV["HOMEBREW_GIT_NAME"]
-      remote = "git@github.com:#{git_name}/homebrew-#{tap.repo}.git"
-      git_tag = if pr
-        "pr-#{pr}"
-      elsif upstream_number
-        "testing-#{upstream_number}"
-      elsif (number = ENV["BUILD_NUMBER"])
-        "other-#{number}"
-      elsif Homebrew.args.dry_run?
-        "$GIT_TAG"
-      end
-
-      if git_tag
-        if Homebrew.args.dry_run?
-          puts "#{GIT} push --force #{remote} origin/master:master :refs/tags/#{git_tag}"
-        else
-          safe_system GIT, "push", "--force", remote, "origin/master:master",
-                                                      ":refs/tags/#{git_tag}"
-        end
       end
 
       formula_packaged = {}
@@ -289,17 +211,6 @@ module Homebrew
                       secrets: [bintray_key]
         end
       end
-
-      return unless git_tag
-
-      if Homebrew.args.dry_run?
-        puts "#{GIT} tag --force #{git_tag}"
-        puts "#{GIT} push --force #{remote} origin/master:master refs/tags/#{git_tag}"
-      else
-        safe_system GIT, "tag", "--force", git_tag
-        safe_system GIT, "push", "--force", remote, "origin/master:master",
-                                                    "refs/tags/#{git_tag}"
-      end
     end
 
     def system_curl(*args, secrets: [], **options)
@@ -329,8 +240,6 @@ module Homebrew
              "log", "-1", "--format=%h (%s)"
       ).strip
       puts "Homebrew/homebrew-test-bot #{test_bot_revision}"
-      puts "ARGV: #{ARGV.join(" ")}"
-      puts "Homebrew.args: #{Homebrew.args}"
 
       tap = resolve_test_tap
       # Tap repository if required, this is done before everything else
@@ -386,48 +295,6 @@ module Homebrew
           any_errors ||= test_error
         end
       end
-
-      if Homebrew.args.junit?
-        xml_document = REXML::Document.new
-        xml_document << REXML::XMLDecl.new
-        testsuites = xml_document.add_element "testsuites"
-
-        tests.each do |test|
-          testsuite = testsuites.add_element "testsuite"
-          testsuite.add_attribute "name", "brew-test-bot.#{Utils::Bottles.tag}"
-          testsuite.add_attribute "tests", test.steps.count(&:passed?)
-          testsuite.add_attribute "failures", test.steps.count(&:failed?)
-          testsuite.add_attribute "timestamp", test.steps.first.start_time.iso8601
-
-          test.steps.each do |step|
-            testcase = testsuite.add_element "testcase"
-            testcase.add_attribute "name", step.command_short
-            testcase.add_attribute "status", step.status
-            testcase.add_attribute "time", step.time
-            testcase.add_attribute "timestamp", step.start_time.iso8601
-
-            next unless step.output?
-
-            output = sanitize_output_for_xml(step.output)
-            cdata = REXML::CData.new output
-
-            if step.passed?
-              elem = testcase.add_element "system-out"
-            else
-              elem = testcase.add_element "failure"
-              elem.add_attribute "message",
-                                "#{step.status}: #{step.command.join(" ")}"
-            end
-
-            elem << cdata
-          end
-        end
-
-        open("brew-test-bot.xml", "w") do |xml_file|
-          pretty_print_indent = 2
-          xml_document.write(xml_file, pretty_print_indent)
-        end
-      end
     ensure
       if HOMEBREW_CACHE.exist?
         if Homebrew.args.clean_cache?
@@ -440,24 +307,6 @@ module Homebrew
       end
 
       Homebrew.failed = any_errors
-    end
-
-    def sanitize_output_for_xml(output)
-      return output if output.empty?
-
-      # Remove invalid XML CData characters from step output.
-      invalid_xml_pat =
-        /[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/
-      output.gsub!(invalid_xml_pat, "\uFFFD")
-
-      return output if output.bytesize <= MAX_STEP_OUTPUT_SIZE
-
-      # Truncate to 1MB to avoid hitting CI limits
-      output =
-        truncate_text_to_approximate_size(
-          output, MAX_STEP_OUTPUT_SIZE, front_weight: 0.0
-        )
-      "truncated output to 1MB:\n#{output}"
     end
   end
 end
