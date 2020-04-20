@@ -76,9 +76,5 @@ module Homebrew
     end
 
     ARGV << "--verbose" if ARGV.include?("--ci-upload")
-
-    ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
-    FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
-    ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
   end
 end
