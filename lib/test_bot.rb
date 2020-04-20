@@ -271,36 +271,32 @@ module Homebrew
       any_errors = false
       skip_setup = Homebrew.args.skip_setup?
       skip_cleanup_before = false
-      if Homebrew.args.named.empty?
-        # With no arguments just build the most recent commit.
-        current_test = Test.new("HEAD", tap:                 tap,
-                                        git:                 GIT,
-                                        skip_setup:          skip_setup,
-                                        skip_cleanup_before: skip_cleanup_before)
-        any_errors = !current_test.run
-        tests << current_test
-      else
-        Homebrew.args.named.each do |argument|
-          skip_cleanup_after = argument != Homebrew.args.named.last
-          test_error = false
-          begin
-            current_test =
-              Test.new(argument, tap:                 tap,
-                                 git:                 GIT,
-                                 skip_setup:          skip_setup,
-                                 skip_cleanup_before: skip_cleanup_before,
-                                 skip_cleanup_after:  skip_cleanup_after)
-            skip_setup = true
-            skip_cleanup_before = true
-          rescue ArgumentError => e
-            test_error = true
-            ofail e.message
-          else
-            test_error = !current_test.run
-            tests << current_test
-          end
-          any_errors ||= test_error
+
+      test_bot_args = Homebrew.args.named
+
+      # With no arguments just build the most recent commit.
+      test_bot_args << "HEAD" if test_bot_args.empty?
+
+      test_bot_args.each do |argument|
+        skip_cleanup_after = argument != test_bot_args.last
+        test_error = false
+        begin
+          current_test =
+            Test.new(argument, tap:                 tap,
+                               git:                 GIT,
+                               skip_setup:          skip_setup,
+                               skip_cleanup_before: skip_cleanup_before,
+                               skip_cleanup_after:  skip_cleanup_after)
+          skip_setup = true
+          skip_cleanup_before = true
+        rescue ArgumentError => e
+          test_error = true
+          ofail e.message
+        else
+          test_error = !current_test.run
+          tests << current_test
         end
+        any_errors ||= test_error
       end
     ensure
       if HOMEBREW_CACHE.exist?
