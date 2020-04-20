@@ -228,8 +228,6 @@ module Homebrew
         odie "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
       end
 
-      ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
-      ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
       ENV["HOMEBREW_DEVELOPER"] = "1"
       ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
       ENV["HOMEBREW_NO_EMOJI"] = "1"
@@ -237,8 +235,12 @@ module Homebrew
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
-      FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
-      FileUtils.mkdir_p ENV["HOMEBREW_LOGS"]
+      if Homebrew.args.local?
+        ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
+        ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
+        FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
+        FileUtils.mkdir_p ENV["HOMEBREW_LOGS"]
+      end
 
       test_bot_revision = Utils.popen_read(
         GIT, "-C", Tap.fetch("homebrew/test-bot").path.to_s,
