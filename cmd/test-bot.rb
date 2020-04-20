@@ -22,6 +22,8 @@ module Homebrew
              description: "run `brew bottle --keep-old` to build new bottles for a single platform."
       switch "--skip-relocation",
              description: "run `brew bottle --skip-relocation` to build new bottles that don't require relocation."
+      switch "--local",
+             description: "ask Homebrew to write verbose logs under `./logs/` and set `$HOME` to `./home/`"
       flag   "--tap=",
              description: "use the `git` repository of the given tap."
       switch "--fail-fast",
@@ -70,7 +72,7 @@ module Homebrew
     end
 
     if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
-      ARGV << "--cleanup"
+      ARGV << "--cleanup" << "--local"
     elsif github_actions
       ARGV << "--test-default-formula"
     end
