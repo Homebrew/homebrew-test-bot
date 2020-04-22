@@ -73,7 +73,7 @@ module Homebrew
 
       output = result.merged_output
 
-      if output.present?
+      unless output.empty?
         output.force_encoding(Encoding::UTF_8)
 
         @output = if output.valid_encoding?
