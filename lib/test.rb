@@ -162,7 +162,6 @@ module Homebrew
       # Handle a URL being passed on the command-line e.g.
       #   brew test-bot https://github.com/Homebrew/homebrew-core/pull/678
       elsif url
-        diff_start_sha1 = current_sha1
         unless Homebrew.args.no_pull?
           test "brew", "pull", "--clean", url
           raise "Cannot 'brew pull'!" if steps.last.failed?
