@@ -22,22 +22,41 @@ module Homebrew
     attr_reader :log_root, :category, :name, :steps
 
     def initialize(argument, tap:, git:, skip_setup: false, skip_cleanup_before: false, skip_cleanup_after: false)
-      @argument = argument
-      @tap = tap
-      @git = git
-      @skip_setup = skip_setup
-      @skip_cleanup_before = skip_cleanup_before
-      @skip_cleanup_after = skip_cleanup_after
-
+      @hash = nil
+      @url = nil
+      @formulae = []
+      @added_formulae = []
+      @modified_formulae = []
+      @deleted_formulae = []
       @steps = []
-
+      @tap = tap
       @repository = if @tap
         @test_bot_tap = @tap.to_s == "homebrew/test-bot"
         @tap.path
       else
         CoreTap.instance.path
       end
+      @git = git
+      @skip_setup = skip_setup
+      @skip_cleanup_before = skip_cleanup_before
+      @skip_cleanup_after = skip_cleanup_after
 
+      if argument == "HEAD"
+        @hash = "HEAD"
+      elsif (url_match = argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX))
+        @url, _, _, pr = *url_match
+        @pr_url = @url if pr
+      elsif (canonical_formula_name = safe_formula_canonical_name(argument))
+        @formulae = [canonical_formula_name]
+      elsif quiet_system(@git, "-C", @repository, "rev-parse",
+                               "--verify", "-q", argument)
+        @hash = argument
+      else
+        raise ArgumentError,
+          "#{argument} is not a pull request URL, commit URL or formula name."
+      end
+
+      @category = __method__
       @brewbot_root = Pathname.pwd + "brewbot"
       FileUtils.mkdir_p @brewbot_root
     end
@@ -79,35 +98,16 @@ module Homebrew
 
     def download
       @category = __method__
-
-      hash = nil
-      url = nil
-      name = nil
-
-      if @argument == "HEAD"
-        # Use GitHub Actions variables for pull request jobs.
-        hash = if ENV["GITHUB_REF"] && ENV["GITHUB_REPOSITORY"] &&
-                  %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
-          url = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
-          nil
-        else
-          "HEAD"
-        end
-      elsif (url_match = @argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX))
-        url, = *url_match
-      elsif (canonical_formula_name = safe_formula_canonical_name(@argument))
-        @formulae = [canonical_formula_name]
-      elsif quiet_system(@git, "-C", @repository, "rev-parse",
-                               "--verify", "-q", @argument)
-        hash = @argument
-      else
-        raise ArgumentError,
-          "#{@argument} is not a pull request URL, commit URL or formula name."
-      end
-
       @start_branch = Utils.popen_read(
         @git, "-C", @repository, "symbolic-ref", "HEAD"
       ).gsub("refs/heads/", "").strip
+
+      # Use GitHub Actions variables for pull request jobs.
+      if ENV["GITHUB_REF"] && ENV["GITHUB_REPOSITORY"] &&
+         %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
+        @url = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
+        @hash = nil
+      end
 
       # Use GitHub Actions variables for master or branch jobs.
       if ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
@@ -136,53 +136,51 @@ module Homebrew
 
       # Handle no arguments being passed on the command-line e.g.
       #   brew test-bot
-      if hash == "HEAD"
+      if @hash == "HEAD"
         diff_commit_count = Utils.popen_read(
           @git, "-C", @repository, "rev-list", "--count",
           "#{diff_start_sha1}..#{diff_end_sha1}"
         )
-        name = if (diff_start_sha1 == diff_end_sha1) ||
-                  (diff_commit_count.to_i == 1)
+        @name = if (diff_start_sha1 == diff_end_sha1) ||
+                   (diff_commit_count.to_i == 1)
           diff_end_sha1
         else
           "#{diff_start_sha1}-#{diff_end_sha1}"
         end
       # Handle formulae arguments being passed on the command-line e.g.
       #   brew test-bot wget fish
-      elsif @formulae.present?
-        name = "#{@formulae.first}-#{diff_end_sha1}"
+      elsif !@formulae.empty?
+        @name = "#{@formulae.first}-#{diff_end_sha1}"
         diff_start_sha1 = diff_end_sha1
       # Handle a hash being passed on the command-line e.g.
       #   brew test-bot 1a2b3c
-      elsif hash
-        test @git, "-C", @repository, "checkout", hash
-        diff_start_sha1 = "#{hash}^"
-        diff_end_sha1 = hash
-        name = hash
+      elsif @hash
+        test @git, "-C", @repository, "checkout", @hash
+        diff_start_sha1 = "#{@hash}^"
+        diff_end_sha1 = @hash
+        @name = @hash
       # Handle a URL being passed on the command-line e.g.
       #   brew test-bot https://github.com/Homebrew/homebrew-core/pull/678
-      elsif url
-        diff_start_sha1 = current_sha1
+      elsif @url
         unless Homebrew.args.no_pull?
-          test "brew", "pull", "--clean", url
-          raise "Cannot 'brew pull'!" if steps.last.failed?
-
+          diff_start_sha1 = current_sha1
+          test "brew", "pull", "--clean", @url
           diff_end_sha1 = current_sha1
         end
-        short_url = url.gsub("https://github.com/", "")
-        name = if short_url.include? "/commit/"
+        @short_url = @url.gsub("https://github.com/", "")
+        @name = if @short_url.include? "/commit/"
           # 7 characters should be enough for a commit (not 40).
-          short_url.gsub(%r{(commit/\w{7}).*/}, '\1')
-          short_url
+          @short_url.gsub!(%r{(commit/\w{7}).*/}, '\1')
+          @short_url
         else
-          "#{short_url}-#{diff_end_sha1}"
+          "#{@short_url}-#{diff_end_sha1}"
         end
       else
-        raise "Cannot set name: invalid command-line arguments!"
+        raise "Cannot set @name: invalid command-line arguments!"
       end
 
-      log_root = @brewbot_root + name
-      FileUtils.mkdir_p log_root
+      @log_root = @brewbot_root + @name
+      FileUtils.mkdir_p @log_root
 
       # Output post-cleanup/download repository revisions.
       brew_version = Utils.popen_read(
@@ -231,33 +229,26 @@ module Homebrew
           HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
           diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
           diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
-          url             #{url.blank? ? "(undefined)" : url}
       EOS
 
-      @formulae ||= []
-      @added_formulae = []
-      @deleted_formulae = []
-      @built_formulae = []
-
       return if diff_start_sha1 == diff_end_sha1
-
-      modified_formulae = nil
+      return if @url && steps.last && !steps.last.passed?
 
       if @tap && !@test_bot_tap
         formula_path = @tap.formula_dir.to_s
         @added_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
-        modified_formulae =
+        @modified_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
         @deleted_formulae +=
           diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
       elsif @formulae.empty? && Homebrew.args.test_default_formula?
         # Build the default test formula.
         @test_default_formula = true
-        modified_formulae = ["testbottest"]
+        @modified_formulae = ["testbottest"]
       end
 
-      @formulae += @added_formulae + modified_formulae
+      @formulae += @added_formulae + @modified_formulae
 
       installed_taps = Tap.select(&:installed?).map(&:name)
       (REQUIRED_TAPS - installed_taps).each do |tap|
@@ -268,7 +259,7 @@ module Homebrew
 
         Formula changes to be tested:
           added formulae    #{@added_formulae.blank? ? "(empty)" : @added_formulae.join(" ")}
-          modified formulae #{modified_formulae.blank? ? "(empty)" : modified_formulae.join(" ")}
+          modified formulae #{@modified_formulae.blank? ? "(empty)" : @modified_formulae.join(" ")}
           deleted formulae  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae.join(" ")}
       EOS
     end
@@ -435,7 +426,7 @@ module Homebrew
       # Defer formulae which could be tested later
       # i.e. formulae that also depend on something else yet to be built in this test run.
       dependents.select! do |_, deps|
-        still_to_test = @formulae - @built_formulae
+        still_to_test = @formulae - @formulae_that_have_been_built
         (deps.map { |d| d.to_formula.full_name } & still_to_test).empty?
       end
 
@@ -650,7 +641,7 @@ module Homebrew
       cleanup_during
 
       @category = "#{__method__}.#{formula_name}"
-      @built_formulae << formula_name
+      @formulae_that_have_been_built << formula_name
 
       formula = Formulary.factory(formula_name)
       if formula.disabled?
@@ -668,7 +659,13 @@ module Homebrew
 
       new_formula = @added_formulae.include?(formula_name)
       audit_args = [formula_name, "--online"]
-      audit_args << "--new-formula" if new_formula
+      if new_formula
+        audit_args << "--new-formula"
+        if (url_match = @url.to_s.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX))
+          _, _, _, pr = *url_match
+          ENV["HOMEBREW_NEW_FORMULA_PULL_REQUEST_URL"] = @url if pr
+        end
+      end
 
       unless satisfied_requirements?(formula, :stable)
         fetch_formula(fetch_args, audit_args)
@@ -933,8 +930,8 @@ module Homebrew
       HOMEBREW_CACHE.children.each(&:rmtree)
     end
 
-    def test(*args, env: {})
-      step = Step.new(args, env: env)
+    def test(*args, **options)
+      step = Step.new(self, args, repository: @repository, **options)
       step.run
       steps << step
       step
@@ -977,6 +974,7 @@ module Homebrew
     end
 
     def run
+      @formulae_that_have_been_built = []
       cleanup_before
       begin
         download
