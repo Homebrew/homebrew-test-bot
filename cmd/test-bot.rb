@@ -66,13 +66,13 @@ module Homebrew
   def setup_argv_and_env
     github_actions = ENV["GITHUB_ACTIONS"].present?
     if github_actions
-      ARGV << "--verbose" << "--no-pull"
+      ARGV << "--verbose" << "--no-pull" << "--cleanup"
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
     end
 
     if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
-      ARGV << "--cleanup" << "--local"
+      ARGV << "--local"
     elsif github_actions
       ARGV << "--test-default-formula"
     end
