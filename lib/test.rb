@@ -154,7 +154,7 @@ module Homebrew
       # Handle a hash being passed on the command-line e.g.
       #   brew test-bot 1a2b3c
       elsif hash
-        test @git, "-C", @repository, "checkout", hash
+        test @git, "-C", @repository, "checkout", hash unless Homebrew.args.no_pull?
         diff_start_sha1 = "#{hash}^"
         diff_end_sha1 = hash
         name = hash
