@@ -7,25 +7,20 @@ module Homebrew
     attr_reader :command, :output
 
     # Instantiates a Step object.
-    # @param test [Test] The parent Test object
     # @param command [Array<String>] Command to execute and arguments
-    # @param options [Hash] Recognized options are:
-    #   :repository
-    #   :env
-    def initialize(test, command, repository:, env: {})
-      @test = test
-      @category = test.category
+    # @param env [Hash] Environment variables to set when running command.
+    def initialize(command, env:)
       @command = command
       @status = :running
-      @repository = repository
       @env = env
+      @output = nil
     end
 
     def command_trimmed
-      @command.reject { |arg| arg.to_s.start_with?("--exclude") }
-              .join(" ")
-              .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
-              .gsub("#{HOMEBREW_PREFIX}/", "")
+      command.reject { |arg| arg.to_s.start_with?("--exclude") }
+             .join(" ")
+             .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
+             .gsub("#{HOMEBREW_PREFIX}/", "")
     end
 
     def passed?
@@ -57,9 +52,9 @@ module Homebrew
         return
       end
 
-      raise "git should always be called with -C!" if @command[0] == "git" && !%w[-C clone].include?(@command[1])
+      raise "git should always be called with -C!" if command[0] == "git" && !%w[-C clone].include?(command[1])
 
-      executable, *args = @command
+      executable, *args = command
 
       verbose = Homebrew.args.verbose?
 
