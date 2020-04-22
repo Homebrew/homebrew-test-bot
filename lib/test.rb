@@ -59,7 +59,7 @@ module Homebrew
 
     def current_sha1
       Utils.popen_read(@git, "-C", @repository,
-                             "rev-parse", "--short", "HEAD").strip
+                             "rev-parse", "HEAD").strip
     end
 
     def diff_formulae(start_revision, end_revision, path, filter)
@@ -113,7 +113,6 @@ module Homebrew
       if ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
         diff_start_sha1 =
           Utils.popen_read(@git, "-C", @repository, "rev-parse",
-                                 "--short",
                                  "origin/#{ENV["GITHUB_BASE_REF"]}").strip
         diff_end_sha1 = ENV["GITHUB_SHA"]
       # Otherwise just use the current SHA-1 (which may be overriden later)
@@ -779,7 +778,7 @@ module Homebrew
 
     def checkout_branch_if_needed(repository, branch = "master")
       current_branch = Utils.popen_read(
-        @git, "-C", repository, "symbolic-ref", "--short", "HEAD"
+        @git, "-C", repository, "symbolic-ref", "HEAD"
       ).strip
       return if branch == current_branch
 
