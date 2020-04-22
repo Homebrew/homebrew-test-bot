@@ -298,6 +298,22 @@ module Homebrew
         end
         any_errors ||= test_error
       end
+
+      failed_steps = tests.map { |test| test.steps.select(&:failed?) }
+                          .flatten
+                          .compact
+      steps_output = if failed_steps.empty?
+        "All steps passed!"
+      else
+        failed_steps_output = ["Error: #{failed_steps.length} failed steps!"]
+        failed_steps_output += failed_steps.map(&:command_trimmed)
+        failed_steps_output.join("\n")
+      end
+      puts steps_output
+
+      steps_output_path = Pathname("steps_output.txt")
+      steps_output_path.unlink if steps_output_path.exist?
+      steps_output_path.write(steps_output)
     ensure
       if HOMEBREW_CACHE.exist?
         if Homebrew.args.clean_cache?
