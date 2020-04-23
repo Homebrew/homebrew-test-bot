@@ -63,5 +63,5 @@ jobs:
       if: matrix.os == 'macOS-latest'
       run: |
         brew test-bot --ci-upload --dry-run
-        brew test-bot https://github.com/Homebrew/brew/pull/4170 --dry-run
-        brew test-bot https://github.com/Homebrew/brew/commit/dc96e6f73551fbadd0c2169c3a79c47a936f71ae --dry-run
+        brew test-bot testbottest --dry-run
+        brew test-bot HEAD --dry-run

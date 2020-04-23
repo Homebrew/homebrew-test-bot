@@ -7,7 +7,7 @@ module Homebrew
   def test_bot_args
     Homebrew::CLI::Parser.new do
       usage_banner <<~EOS
-        `test-bot` [<options>] <URL>|<formula>:
+        `test-bot` [<options>] [<formula>]:
 
         Test the full lifecycle of a formula change.
       EOS

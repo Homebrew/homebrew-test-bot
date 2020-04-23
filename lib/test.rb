@@ -82,7 +82,6 @@ module Homebrew
 
       hash = nil
       url = nil
-      name = nil
 
       if @argument == "HEAD"
         # Use GitHub Actions variables for pull request jobs.
@@ -93,16 +92,11 @@ module Homebrew
         else
           "HEAD"
         end
-      elsif (url_match = @argument.match(HOMEBREW_PULL_OR_COMMIT_URL_REGEX))
-        url, = *url_match
       elsif (canonical_formula_name = safe_formula_canonical_name(@argument))
         @formulae = [canonical_formula_name]
-      elsif quiet_system(@git, "-C", @repository, "rev-parse",
-                               "--verify", "-q", @argument)
-        hash = @argument
       else
-        raise ArgumentError,
-          "#{@argument} is not a pull request URL, commit URL or formula name."
+        raise UsageError,
+          "#{@argument} is not detected from GitHub Actions or a formula name!"
       end
 
       @start_branch = Utils.popen_read(
@@ -133,6 +127,8 @@ module Homebrew
       diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
       diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
+      name = nil
+
       # Handle no arguments being passed on the command-line e.g.
       #   brew test-bot
       if hash == "HEAD"
@@ -151,13 +147,6 @@ module Homebrew
       elsif @formulae.present?
         name = "#{@formulae.first}-#{diff_end_sha1}"
         diff_start_sha1 = diff_end_sha1
-      # Handle a hash being passed on the command-line e.g.
-      #   brew test-bot 1a2b3c
-      elsif hash
-        test @git, "-C", @repository, "checkout", hash unless Homebrew.args.no_pull?
-        diff_start_sha1 = "#{hash}^"
-        diff_end_sha1 = hash
-        name = hash
       # Handle a URL being passed on the command-line e.g.
       #   brew test-bot https://github.com/Homebrew/homebrew-core/pull/678
       elsif url
@@ -176,7 +165,7 @@ module Homebrew
           "#{short_url}-#{diff_end_sha1}"
         end
       else
-        raise "Cannot set name: invalid command-line arguments!"
+        raise UsageError, "Cannot set name: invalid command-line arguments!"
       end
 
       log_root = @brewbot_root + name
