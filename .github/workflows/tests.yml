@@ -59,6 +59,12 @@ jobs:
           brew test-bot
         fi
 
+    - name: Output brew test-bot failures
+      if: matrix.os == 'macOS-latest'
+      run: |
+        cat steps_output.txt
+        rm steps_output.txt
+
     - name: Run brew test-bot --dry-run tests
       if: matrix.os == 'macOS-latest'
       run: |
