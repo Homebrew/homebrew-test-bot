@@ -42,6 +42,12 @@ module Homebrew
       FileUtils.mkdir_p @brewbot_root
     end
 
+    def method_header(method)
+      @category = method
+      puts
+      oh1 "Running #{method}..."
+    end
+
     def safe_formula_canonical_name(formula_name)
       Formulary.factory(formula_name).full_name
     rescue TapFormulaUnavailableError => e
@@ -78,7 +84,7 @@ module Homebrew
     end
 
     def detect_formulae
-      @category = __method__
+      method_header(__method__)
 
       hash = nil
       url = nil
@@ -250,8 +256,9 @@ module Homebrew
     end
 
     def setup
-      @category = __method__
       return if @skip_setup
+
+      method_header(__method__)
 
       test "brew", "doctor"
       test "brew", "--env"
@@ -598,7 +605,8 @@ module Homebrew
     def formula(formula_name)
       cleanup_during
 
-      @category = "#{__method__}.#{formula_name}"
+      method_header("#{__method__}.#{formula_name}")
+
       @built_formulae << formula_name
 
       formula = Formulary.factory(formula_name)
@@ -679,7 +687,8 @@ module Homebrew
     end
 
     def deleted_formula(formula_name)
-      @category = "#{__method__}.#{formula_name}"
+      method_header("#{__method__}.#{formula_name}")
+
       test "brew", "uses", "--include-build",
                            "--include-optional",
                            "--include-test",
@@ -687,8 +696,9 @@ module Homebrew
     end
 
     def tap_syntax
-      @category = __method__
       return unless @tap
+
+      method_header(__method__)
 
       test "brew", "readall", "--aliases", @tap.name
       broken_xcode_rubygems = MacOS.version == :mojave &&
@@ -806,9 +816,10 @@ module Homebrew
     end
 
     def cleanup_before
-      @category = __method__
       return if @skip_cleanup_before
       return unless Homebrew.args.cleanup?
+
+      method_header(__method__)
 
       unless @test_bot_tap
         clear_stash_if_needed(@repository)
@@ -859,13 +870,14 @@ module Homebrew
     end
 
     def cleanup_after
-      @category = __method__
       return if @skip_cleanup_after
 
       if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
         # don't need to do post-build cleanup unless testing test-bot itself.
         return if @tap.to_s != "homebrew/test-bot"
       end
+
+      method_header(__method__)
 
       # Needed even when --cleanup not set to ensure we go back to the
       # user's start branch.
@@ -893,7 +905,6 @@ module Homebrew
     end
 
     def cleanup_during
-      @category = __method__
       return unless Homebrew.args.cleanup?
       return unless HOMEBREW_CACHE.exist?
 
@@ -902,6 +913,8 @@ module Homebrew
                              .split[4] # used %
                              .to_i
       return if used_percentage < 95
+
+      method_header(__method__)
 
       test "brew", "cleanup", "--prune=0"
 
