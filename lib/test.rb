@@ -77,7 +77,7 @@ module Homebrew
       end.compact
     end
 
-    def download
+    def detect_formulae
       @category = __method__
 
       hash = nil
@@ -708,7 +708,7 @@ module Homebrew
                            formula_name
     end
 
-    def readall
+    def tap_syntax
       @category = __method__
       return unless @tap
 
@@ -942,22 +942,30 @@ module Homebrew
       changed_formulae + unchanged_formulae
     end
 
+    def all_steps_passed?
+      steps.all?(&:passed?)
+    end
+
+    def test_formulae
+      detect_formulae
+      formulae.each do |f|
+        formula(f)
+      end
+      @deleted_formulae.each do |f|
+        deleted_formula(f)
+      end
+    end
+
     def run
       cleanup_before
       begin
-        download
         setup
-        readall
-        formulae.each do |f|
-          formula(f)
-        end
-        @deleted_formulae.each do |f|
-          deleted_formula(f)
-        end
+        tap_syntax
+        test_formulae
       ensure
         cleanup_after
       end
-      steps.all?(&:passed?)
+      all_steps_passed?
     end
   end
 end
