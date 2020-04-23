@@ -155,7 +155,6 @@ module Homebrew
       log_root = @brewbot_root + name
       FileUtils.mkdir_p log_root
 
-      # Output post-cleanup/download repository revisions.
       brew_version = Utils.popen_read(
         @git, "-C", HOMEBREW_REPOSITORY.to_s,
               "describe", "--tags", "--abbrev", "--dirty"
@@ -165,25 +164,15 @@ module Homebrew
               "log", "-1", "--format=%s"
       ).strip
       puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
-      if @tap.to_s != CoreTap.instance.name
-        core_path = CoreTap.instance.path
-        if core_path.exist?
-          if Homebrew.args.cleanup?
-            test @git, "-C", core_path.to_s, "fetch", "--depth=1", "origin"
-            test @git, "-C", core_path.to_s, "reset", "--hard", "origin/master"
-          end
-        else
-          test @git, "clone", "--depth=1",
-               CoreTap.instance.default_remote,
-               core_path.to_s
-        end
 
+      if @tap.to_s != CoreTap.instance.name
         core_revision = Utils.popen_read(
-          @git, "-C", core_path.to_s,
+          @git, "-C", CoreTap.instance.path.to_s,
                 "log", "-1", "--format=%h (%s)"
         ).strip
         puts "#{CoreTap.instance.full_name} #{core_revision}"
       end
+
       if @tap
         tap_origin_master_revision = Utils.popen_read(
           @git, "-C", @tap.path.to_s,
@@ -230,11 +219,6 @@ module Homebrew
 
       @formulae += @added_formulae + modified_formulae
 
-      installed_taps = Tap.select(&:installed?).map(&:name)
-      (REQUIRED_TAPS - installed_taps).each do |tap|
-        test "brew", "tap", tap
-      end
-
       puts <<~EOS
 
         Formula changes to be tested:
@@ -269,12 +253,6 @@ module Homebrew
       @category = __method__
       return if @skip_setup
 
-      # install newer Git when needed
-      if OS.mac? && MacOS.version < :sierra
-        test "brew", "install", "git"
-        ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
-        @git = "git"
-      end
       test "brew", "doctor"
       test "brew", "--env"
       test "brew", "config"
@@ -771,13 +749,6 @@ module Homebrew
       clean_if_needed(@repository)
       prune_if_needed(@repository)
 
-      Tap.names.each do |tap_name|
-        next if tap_name == @tap&.name
-        next if REQUIRED_TAPS.include?(tap_name)
-
-        test "brew", "untap", tap_name
-      end
-
       Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
       Pathname.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
         next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
@@ -805,6 +776,15 @@ module Homebrew
         checkout_branch_if_needed(HOMEBREW_REPOSITORY)
         reset_if_needed(HOMEBREW_REPOSITORY)
         clean_if_needed(HOMEBREW_REPOSITORY)
+      end
+
+      # Keep all "brew" invocations after HOMEBREW_REPOSITORY operations
+      # (which cleans up Homebrew/brew)
+      Tap.names.each do |tap_name|
+        next if tap_name == @tap&.name
+        next if REQUIRED_TAPS.include?(tap_name)
+
+        test "brew", "untap", tap_name
       end
 
       Pathname.glob("#{HOMEBREW_LIBRARY}/Taps/*/*").each do |git_repo|
@@ -836,9 +816,35 @@ module Homebrew
         quiet_system @git, "-C", @repository, "rebase", "--abort"
       end
 
+      if @tap.to_s != CoreTap.instance.name
+        core_path = CoreTap.instance.path
+        if core_path.exist?
+          test @git, "-C", core_path.to_s, "fetch", "--depth=1", "origin"
+          reset_if_needed(core_path.to_s)
+        else
+          test @git, "clone", "--depth=1",
+               CoreTap.instance.default_remote,
+               core_path.to_s
+        end
+      end
+
       Pathname.glob("*.bottle*.*").each(&:unlink)
 
+      # Keep all "brew" invocations after cleanup_shared
+      # (which cleans up Homebrew/brew)
       cleanup_shared
+
+      installed_taps = Tap.select(&:installed?).map(&:name)
+      (REQUIRED_TAPS - installed_taps).each do |tap|
+        test "brew", "tap", tap
+      end
+
+      # install newer Git when needed
+      if OS.mac? && MacOS.version < :sierra
+        test "brew", "install", "git"
+        ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
+        @git = "git"
+      end
     end
 
     def pkill_if_needed!
@@ -861,24 +867,28 @@ module Homebrew
         return if @tap.to_s != "homebrew/test-bot"
       end
 
+      # Needed even when --cleanup not set to ensure we go back to the
+      # user's start branch.
       checkout_branch_if_needed(@repository, @start_branch) unless @start_branch.to_s.empty?
 
-      if Homebrew.args.cleanup?
-        unless @test_bot_tap
-          clear_stash_if_needed(@repository)
-          reset_if_needed(@repository)
-        end
+      return unless Homebrew.args.cleanup?
 
-        test "brew", "cleanup", "--prune=3"
+      unless @test_bot_tap
+        clear_stash_if_needed(@repository)
+        reset_if_needed(@repository)
+      end
 
-        pkill_if_needed!
+      pkill_if_needed!
 
-        cleanup_shared
+      cleanup_shared
 
-        if Homebrew.args.local?
-          FileUtils.rm_rf ENV["HOMEBREW_HOME"]
-          FileUtils.rm_rf ENV["HOMEBREW_LOGS"]
-        end
+      # Keep all "brew" invocations after cleanup_shared
+      # (which cleans up Homebrew/brew)
+      test "brew", "cleanup", "--prune=3"
+
+      if Homebrew.args.local?
+        FileUtils.rm_rf ENV["HOMEBREW_HOME"]
+        FileUtils.rm_rf ENV["HOMEBREW_LOGS"]
       end
     end
 
