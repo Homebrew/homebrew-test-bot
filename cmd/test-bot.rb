@@ -31,10 +31,6 @@ module Homebrew
       switch :verbose,
              description: "print test step output in real time. Has the side effect of " \
                           "passing output as raw bytes instead of re-encoding in UTF-8."
-      switch "--no-pull",
-             description: "don't use `brew pull` to download URLs or `git checkout` to " \
-                          "checkout hashes. This assumes your CI system has already put you " \
-                          "on the correct revision to test."
       switch "--test-default-formula",
              description: "use a default testing formula when not building a tap and no other formulae are specified."
       flag   "--bintray-org=",
@@ -68,7 +64,7 @@ module Homebrew
   def setup_argv_and_env
     github_actions = ENV["GITHUB_ACTIONS"].present?
     if github_actions
-      ARGV << "--verbose" << "--no-pull" << "--cleanup"
+      ARGV << "--verbose" << "--cleanup"
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
     end

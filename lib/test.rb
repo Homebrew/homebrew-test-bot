@@ -127,17 +127,14 @@ module Homebrew
       diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
       diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
-      name = nil
-
       # Handle no arguments being passed on the command-line e.g.
       #   brew test-bot
-      if hash == "HEAD"
+      name = if hash == "HEAD"
         diff_commit_count = Utils.popen_read(
           @git, "-C", @repository, "rev-list", "--count",
           "#{diff_start_sha1}..#{diff_end_sha1}"
         )
-        name = if (diff_start_sha1 == diff_end_sha1) ||
-                  (diff_commit_count.to_i == 1)
+        if (diff_start_sha1 == diff_end_sha1) || (diff_commit_count.to_i == 1)
           diff_end_sha1
         else
           "#{diff_start_sha1}-#{diff_end_sha1}"
@@ -145,25 +142,12 @@ module Homebrew
       # Handle formulae arguments being passed on the command-line e.g.
       #   brew test-bot wget fish
       elsif @formulae.present?
-        name = "#{@formulae.first}-#{diff_end_sha1}"
         diff_start_sha1 = diff_end_sha1
-      # Handle a URL being passed on the command-line e.g.
-      #   brew test-bot https://github.com/Homebrew/homebrew-core/pull/678
+        "#{@formulae.first}-#{diff_end_sha1}"
+      # Handle a URL being detected from GitHub Actions environment variables.
       elsif url
-        unless Homebrew.args.no_pull?
-          test "brew", "pull", "--clean", url
-          raise "Cannot 'brew pull'!" if steps.last.failed?
-
-          diff_end_sha1 = current_sha1
-        end
         short_url = url.gsub("https://github.com/", "")
-        name = if short_url.include? "/commit/"
-          # 7 characters should be enough for a commit (not 40).
-          short_url.gsub(%r{(commit/\w{7}).*/}, '\1')
-          short_url
-        else
-          "#{short_url}-#{diff_end_sha1}"
-        end
+        "#{short_url}-#{diff_end_sha1}"
       else
         raise UsageError, "Cannot set name: invalid command-line arguments!"
       end
@@ -850,11 +834,6 @@ module Homebrew
         clear_stash_if_needed(@repository)
         quiet_system @git, "-C", @repository, "am", "--abort"
         quiet_system @git, "-C", @repository, "rebase", "--abort"
-
-        unless Homebrew.args.no_pull?
-          checkout_branch_if_needed(@repository)
-          reset_if_needed(@repository)
-        end
       end
 
       Pathname.glob("*.bottle*.*").each(&:unlink)
