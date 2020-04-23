@@ -21,6 +21,7 @@ module Homebrew
              .join(" ")
              .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
              .gsub("#{HOMEBREW_PREFIX}/", "")
+             .gsub(%r{^/usr/bin/}, "")
     end
 
     def passed?

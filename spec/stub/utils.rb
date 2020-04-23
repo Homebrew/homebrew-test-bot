@@ -7,6 +7,8 @@ def system_command(*)
   )
 end
 
+def oh1(*) end
+
 module Formatter
   module_function
 
