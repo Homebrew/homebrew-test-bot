@@ -6,9 +6,6 @@ def system_command(*)
     merged_output: "",
   )
 end
-
-def oh1(*) end
-
 module Formatter
   module_function
 

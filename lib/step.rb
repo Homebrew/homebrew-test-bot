@@ -9,10 +9,12 @@ module Homebrew
     # Instantiates a Step object.
     # @param command [Array<String>] Command to execute and arguments
     # @param env [Hash] Environment variables to set when running command.
-    def initialize(command, env:)
+    def initialize(command, env:, verbose:)
       @command = command
-      @status = :running
       @env = env
+      @verbose = verbose
+
+      @status = :running
       @output = nil
     end
 
@@ -33,12 +35,11 @@ module Homebrew
     end
 
     def puts_command
-      puts
       puts Formatter.headline(command_trimmed, color: :blue)
     end
 
     def puts_result
-      puts Formatter.headline(Formatter.error("FAILED")) if failed?
+      puts Formatter.headline(Formatter.error("FAILED"), color: :red) if failed?
     end
 
     def output?
@@ -57,11 +58,9 @@ module Homebrew
 
       executable, *args = command
 
-      verbose = Homebrew.args.verbose?
-
       result = system_command executable, args:         args,
-                                          print_stdout: verbose,
-                                          print_stderr: verbose,
+                                          print_stdout: @verbose,
+                                          print_stderr: @verbose,
                                           env:          @env
 
       @status = result.success? ? :passed : :failed
@@ -79,7 +78,12 @@ module Homebrew
           output.encode!(Encoding::UTF_8)
         end
 
-        puts @output if failed? && !verbose
+        if @verbose
+          puts
+        elsif failed?
+          puts @output
+          puts
+        end
       end
 
       exit 1 if Homebrew.args.fail_fast? && failed?

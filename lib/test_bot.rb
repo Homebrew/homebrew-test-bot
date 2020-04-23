@@ -246,7 +246,7 @@ module Homebrew
         GIT, "-C", Tap.fetch("homebrew/test-bot").path.to_s,
              "log", "-1", "--format=%h (%s)"
       ).strip
-      puts "Homebrew/homebrew-test-bot #{test_bot_revision}"
+      puts Formatter.headline("Using Homebrew/homebrew-test-bot #{test_bot_revision}", color: :cyan)
 
       tap = resolve_test_tap
       # Tap repository if required, this is done before everything else

@@ -45,7 +45,7 @@ module Homebrew
     def method_header(method)
       @category = method
       puts
-      oh1 "Running #{method}..."
+      puts Formatter.headline("Running Test##{method}", color: :magenta)
     end
 
     def safe_formula_canonical_name(formula_name)
@@ -161,22 +161,12 @@ module Homebrew
       log_root = @brewbot_root + name
       FileUtils.mkdir_p log_root
 
-      brew_version = Utils.popen_read(
-        @git, "-C", HOMEBREW_REPOSITORY.to_s,
-              "describe", "--tags", "--abbrev", "--dirty"
-      ).strip
-      brew_commit_subject = Utils.popen_read(
-        @git, "-C", HOMEBREW_REPOSITORY.to_s,
-              "log", "-1", "--format=%s"
-      ).strip
-      puts "Homebrew/brew #{brew_version} (#{brew_commit_subject})"
-
       if @tap.to_s != CoreTap.instance.name
         core_revision = Utils.popen_read(
           @git, "-C", CoreTap.instance.path.to_s,
                 "log", "-1", "--format=%h (%s)"
         ).strip
-        puts "#{CoreTap.instance.full_name} #{core_revision}"
+        puts Formatter.headline("Using #{CoreTap.instance.full_name} #{core_revision}", color: :cyan)
       end
 
       if @tap
@@ -188,16 +178,15 @@ module Homebrew
           @git, "-C", @tap.path.to_s,
                 "log", "-1", "--format=%h (%s)"
         ).strip
+        puts Formatter.headline("Testing #{@tap.full_name} #{tap_revision}:", color: :cyan)
       end
 
-      puts <<~EOS
-
-        Testing#{" tap #{@tap}" if @tap.present?} with:
-          origin/master   #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
-          HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
-          diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
-          diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
-          url             #{url.blank? ? "(undefined)" : url}
+      puts <<-EOS
+    url             #{url.blank? ? "(undefined)" : url}
+    origin/master   #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
+    diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
+    diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
+    HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
       EOS
 
       @formulae ||= []
@@ -225,17 +214,16 @@ module Homebrew
 
       @formulae += @added_formulae + modified_formulae
 
-      puts <<~EOS
-
-        Formula changes to be tested:
-          added formulae    #{@added_formulae.blank? ? "(empty)" : @added_formulae.join(" ")}
-          modified formulae #{modified_formulae.blank? ? "(empty)" : modified_formulae.join(" ")}
-          deleted formulae  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae.join(" ")}
+      puts Formatter.headline("Testing Formula changes:", color: :cyan)
+      puts <<-EOS
+    added    #{@added_formulae.blank? ? "(empty)" : @added_formulae.join(" ")}
+    modified #{modified_formulae.blank? ? "(empty)" : modified_formulae.join(" ")}
+    deleted  #{@deleted_formulae.blank? ? "(empty)" : @deleted_formulae.join(" ")}
       EOS
     end
 
     def skip(formula_name)
-      puts Formatter.headline("SKIPPING: #{Formatter.identifier(formula_name)}")
+      puts Formatter.headline("#{Formatter.warning("SKIPPED")} #{Formatter.identifier(formula_name)}", color: :yellow)
     end
 
     def satisfied_requirements?(formula, spec, dependency = nil)
@@ -260,9 +248,10 @@ module Homebrew
 
       method_header(__method__)
 
+      # Always output `brew config` output even when it doesn't fail.
+      test "brew", "config", verbose: true
+
       test "brew", "doctor"
-      test "brew", "--env"
-      test "brew", "config"
     end
 
     def tap_needed_taps(deps)
@@ -856,6 +845,17 @@ module Homebrew
         ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
         @git = "git"
       end
+
+      brew_version = Utils.popen_read(
+        @git, "-C", HOMEBREW_REPOSITORY.to_s,
+              "describe", "--tags", "--abbrev", "--dirty"
+      ).strip
+      brew_commit_subject = Utils.popen_read(
+        @git, "-C", HOMEBREW_REPOSITORY.to_s,
+              "log", "-1", "--format=%s"
+      ).strip
+      puts
+      puts Formatter.headline("Using Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
     end
 
     def pkill_if_needed!
@@ -922,8 +922,8 @@ module Homebrew
       HOMEBREW_CACHE.children.each(&:rmtree)
     end
 
-    def test(*args, env: {})
-      step = Step.new(args, env: env)
+    def test(*args, env: {}, verbose: Homebrew.args.verbose?)
+      step = Step.new(args, env: env, verbose: verbose)
       step.run
       steps << step
       step
