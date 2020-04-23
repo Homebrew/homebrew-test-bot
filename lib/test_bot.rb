@@ -279,24 +279,16 @@ module Homebrew
 
       test_bot_args.each do |argument|
         skip_cleanup_after = argument != test_bot_args.last
-        test_error = false
-        begin
-          current_test =
-            Test.new(argument, tap:                 tap,
-                               git:                 GIT,
-                               skip_setup:          skip_setup,
-                               skip_cleanup_before: skip_cleanup_before,
-                               skip_cleanup_after:  skip_cleanup_after)
-          skip_setup = true
-          skip_cleanup_before = true
-        rescue ArgumentError => e
-          test_error = true
-          ofail e.message
-        else
-          test_error = !current_test.run
-          tests << current_test
-        end
-        any_errors ||= test_error
+        current_test =
+          Test.new(argument, tap:                 tap,
+                             git:                 GIT,
+                             skip_setup:          skip_setup,
+                             skip_cleanup_before: skip_cleanup_before,
+                             skip_cleanup_after:  skip_cleanup_after)
+        skip_setup = true
+        skip_cleanup_before = true
+        tests << current_test
+        any_errors ||= !current_test.run
       end
 
       failed_steps = tests.map { |test| test.steps.select(&:failed?) }
