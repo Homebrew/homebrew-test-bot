@@ -47,6 +47,18 @@ module Homebrew
              description: "publish the uploaded bottles."
       switch "--skip-recursive-dependents",
              description: "only test the direct dependents."
+      switch "--only-cleanup-before",
+             description: "Only run the pre-cleanup step. Needs `--cleanup`."
+      switch "--only-setup",
+             description: "Only run the local system setup check step."
+      switch "--only-tap-syntax",
+             description: "Only run the tap syntax check step."
+      switch "--only-formulae",
+             description: "Only run the formulae steps."
+      switch "--only-cleanup-after",
+             description: "Only run the post-cleanup step. Needs `--cleanup`."
+      conflicts "--only-cleanup-before", "--only-setup", "--only-tap-syntax",
+                "--only-formulae", "--only-cleanup-after"
     end
   end
 
