@@ -980,13 +980,20 @@ module Homebrew
     end
 
     def run
-      cleanup_before
+      any_only = Homebrew.args.only_cleanup_before? ||
+                 Homebrew.args.only_setup? ||
+                 Homebrew.args.only_tap_syntax? ||
+                 Homebrew.args.only_formulae? ||
+                 Homebrew.args.only_cleanup_after?
+      no_only = !any_only
+
+      cleanup_before if no_only || Homebrew.args.only_cleanup_before?
       begin
-        setup
-        tap_syntax
-        test_formulae
+        setup if no_only || Homebrew.args.only_setup?
+        tap_syntax if no_only || Homebrew.args.only_tap_syntax?
+        test_formulae if no_only || Homebrew.args.only_formulae?
       ensure
-        cleanup_after
+        cleanup_after if no_only || Homebrew.args.only_cleanup_after?
       end
       all_steps_passed?
     end

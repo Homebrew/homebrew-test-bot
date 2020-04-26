@@ -69,5 +69,6 @@ jobs:
       if: matrix.os == 'macOS-latest'
       run: |
         brew test-bot --ci-upload --dry-run
+        brew test-bot --only-setup --dry-run
         brew test-bot testbottest --dry-run
         brew test-bot HEAD --dry-run
