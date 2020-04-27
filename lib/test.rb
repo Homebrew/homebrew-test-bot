@@ -21,7 +21,7 @@ module Homebrew
 
     attr_reader :log_root, :category, :name, :steps
 
-    def initialize(argument, tap:, git:, skip_setup: false, skip_cleanup_before: false, skip_cleanup_after: false)
+    def initialize(argument, tap:, git:, skip_setup:, skip_cleanup_before:, skip_cleanup_after:)
       @argument = argument
       @tap = tap
       @git = git
@@ -42,10 +42,10 @@ module Homebrew
       FileUtils.mkdir_p @brewbot_root
     end
 
-    def method_header(method)
+    def method_header(method, klass: "Test")
       @category = method
       puts
-      puts Formatter.headline("Running Test##{method}", color: :magenta)
+      puts Formatter.headline("Running #{klass}##{method}", color: :magenta)
     end
 
     def safe_formula_canonical_name(formula_name)
@@ -684,17 +684,6 @@ module Homebrew
                            formula_name
     end
 
-    def tap_syntax
-      return unless @tap
-
-      method_header(__method__)
-
-      test "brew", "readall", "--aliases", @tap.name
-      broken_xcode_rubygems = MacOS.version == :mojave &&
-                              MacOS.active_developer_dir == "/Applications/Xcode.app/Contents/Developer"
-      test "brew", "style", @tap.name unless broken_xcode_rubygems
-    end
-
     def cleanup_git_meta(repository)
       pr_locks = "#{repository}/.git/refs/remotes/*/pr/*/*.lock"
       Dir.glob(pr_locks) { |lock| FileUtils.rm_f lock }
@@ -977,25 +966,6 @@ module Homebrew
       @deleted_formulae.each do |f|
         deleted_formula(f)
       end
-    end
-
-    def run
-      any_only = Homebrew.args.only_cleanup_before? ||
-                 Homebrew.args.only_setup? ||
-                 Homebrew.args.only_tap_syntax? ||
-                 Homebrew.args.only_formulae? ||
-                 Homebrew.args.only_cleanup_after?
-      no_only = !any_only
-
-      cleanup_before if no_only || Homebrew.args.only_cleanup_before?
-      begin
-        setup if no_only || Homebrew.args.only_setup?
-        tap_syntax if no_only || Homebrew.args.only_tap_syntax?
-        test_formulae if no_only || Homebrew.args.only_formulae?
-      ensure
-        cleanup_after if no_only || Homebrew.args.only_cleanup_after?
-      end
-      all_steps_passed?
     end
   end
 end

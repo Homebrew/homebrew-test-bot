@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative "step"
-require_relative "test"
 require_relative "test_ci_upload"
 require_relative "test_runner"
 
