@@ -4,8 +4,6 @@ module Homebrew
   module Tests
     class TapSyntax < Test
       def run!
-        return unless tap
-
         test_header(:TapSyntax)
 
         test "brew", "readall", "--aliases", tap.name
