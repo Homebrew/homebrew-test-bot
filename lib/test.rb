@@ -954,10 +954,6 @@ module Homebrew
       changed_formulae + unchanged_formulae
     end
 
-    def all_steps_passed?
-      steps.all?(&:passed?)
-    end
-
     def test_formulae
       detect_formulae
       formulae.each do |f|

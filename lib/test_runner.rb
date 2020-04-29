@@ -9,7 +9,6 @@ module Homebrew
 
     def run!(tap, git:)
       tests = []
-      any_errors = false
       skip_setup = Homebrew.args.skip_setup?
       skip_cleanup_before = false
 
@@ -28,7 +27,7 @@ module Homebrew
         skip_setup = true
         skip_cleanup_before = true
         tests += current_tests.values
-        any_errors ||= !run_tests(current_tests)
+        run_tests(current_tests)
       end
 
       failed_steps = tests.map { |test| test.steps.select(&:failed?) }
@@ -47,7 +46,7 @@ module Homebrew
       steps_output_path.unlink if steps_output_path.exist?
       steps_output_path.write(steps_output)
 
-      !any_errors
+      failed_steps.empty?
     end
 
     def no_only_args?
@@ -85,7 +84,6 @@ module Homebrew
       ensure
         test.cleanup_after if no_only_args? || Homebrew.args.only_cleanup_after?
       end
-      test.all_steps_passed?
     end
   end
 end
