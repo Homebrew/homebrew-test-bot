@@ -3,6 +3,13 @@
 module Homebrew
   module Tests
     class TapSyntax < Test
+      def initialize(tap)
+        @tap = tap
+
+        # TODO: refactor into Test initializer exclusively
+        @steps = []
+      end
+
       # TODO: rename this when all classes ported.
       def tap_syntax
         return unless @tap
