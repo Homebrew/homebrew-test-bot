@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test"
+require_relative "tests/cleanup"
 require_relative "tests/setup"
 require_relative "tests/tap_syntax"
 
@@ -60,30 +61,30 @@ module Homebrew
     end
 
     def build_tests(argument, tap:, git:, skip_setup:, skip_cleanup_before:, skip_cleanup_after:)
-      tests = {
-        test: Test.new(argument, tap:                 tap,
-                                 git:                 git,
-                                 skip_cleanup_before: skip_cleanup_before,
-                                 skip_cleanup_after:  skip_cleanup_after),
-      }
-
-      # TODO: clean this up when all classes ported.
+      tests = { test: Test.new(argument, tap: tap, git: git) }
       tests[:setup] = Tests::Setup.new if !skip_setup && (no_only_args? || Homebrew.args.only_setup?)
       tests[:tap_syntax] = Tests::TapSyntax.new(tap) if no_only_args? || Homebrew.args.only_tap_syntax?
-
+      if Homebrew.args.cleanup?
+        if !skip_cleanup_before && (no_only_args? || Homebrew.args.only_cleanup_before?)
+          tests[:cleanup_before] = Tests::Cleanup.new(tap: tap, git: git)
+        end
+        if !skip_cleanup_after &&  (no_only_args? || Homebrew.args.only_cleanup_after?)
+          tests[:cleanup_after]  = Tests::Cleanup.new(tap: tap, git: git)
+        end
+      end
       tests
     end
 
     def run_tests(tests)
       test = tests[:test]
 
-      test.cleanup_before if no_only_args? || Homebrew.args.only_cleanup_before?
+      tests[:cleanup_before]&.cleanup_before
       begin
         tests[:setup]&.setup
         tests[:tap_syntax]&.tap_syntax
         test.test_formulae if no_only_args? || Homebrew.args.only_formulae?
       ensure
-        test.cleanup_after if no_only_args? || Homebrew.args.only_cleanup_after?
+        tests[:cleanup_after]&.cleanup_after
       end
     end
   end
