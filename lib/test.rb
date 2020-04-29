@@ -2,16 +2,38 @@
 
 module Homebrew
   class Test
-    attr_reader :steps
+    def failed_steps
+      @steps.select(&:failed?)
+    end
 
     protected
 
-    def initialize
-      # TODO: move code from subclasses here
+    attr_reader :tap, :git, :steps, :repository, :test_bot_tap, :brewbot_root
+
+    def initialize(tap: nil, git: nil, create_brewbot_root: false)
+      @tap = tap
+      @git = git
+
+      @steps = []
+
+      @repository = if @tap
+        @test_bot_tap = @tap.to_s == "homebrew/test-bot"
+        @tap.path
+      else
+        CoreTap.instance.path
+      end
+
+      if create_brewbot_root
+        @brewbot_root = Pathname.pwd + "brewbot"
+        FileUtils.mkdir_p @brewbot_root
+      end
     end
 
-    def method_header(method, klass: "Test")
-      @category = method
+    def change_git!(git)
+      @git = git
+    end
+
+    def test_header(klass, method: "run!")
       puts
       puts Formatter.headline("Running #{klass}##{method}", color: :magenta)
     end
