@@ -21,11 +21,10 @@ module Homebrew
 
     attr_reader :log_root, :category, :name, :steps
 
-    def initialize(argument, tap:, git:, skip_setup:, skip_cleanup_before:, skip_cleanup_after:)
+    def initialize(argument, tap:, git:, skip_cleanup_before:, skip_cleanup_after:)
       @argument = argument
       @tap = tap
       @git = git
-      @skip_setup = skip_setup
       @skip_cleanup_before = skip_cleanup_before
       @skip_cleanup_after = skip_cleanup_after
 
@@ -241,17 +240,6 @@ module Homebrew
       skip name
       puts unsatisfied_requirements.values.flatten.map(&:message)
       false
-    end
-
-    def setup
-      return if @skip_setup
-
-      method_header(__method__)
-
-      # Always output `brew config` output even when it doesn't fail.
-      test "brew", "config", verbose: true
-
-      test "brew", "doctor"
     end
 
     def tap_needed_taps(deps)
