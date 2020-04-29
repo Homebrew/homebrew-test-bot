@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "os"
+require "tap"
+
 module Homebrew
   module Tests
     class Cleanup < Test
