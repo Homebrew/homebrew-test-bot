@@ -7,9 +7,9 @@ describe Homebrew::Tests::Setup do
     allow(Homebrew).to receive(:args).and_return(OpenStruct.new)
   end
 
-  describe "#setup" do
+  describe "#run!" do
     it "is successful" do
-      expect(described_class.new.setup.passed?).to be(true)
+      expect(described_class.new.run!.passed?).to be(true)
     end
   end
 end

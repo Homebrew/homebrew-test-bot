@@ -4,32 +4,23 @@ module Homebrew
   module Tests
     class Formulae < Test
       def initialize(argument, tap:, git:)
+        super(tap: tap, git: git, create_brewbot_root: true)
+
         @argument = argument
-        @tap = tap
-        @git = git
 
-        # TODO: refactor everything below into Test initializer exclusively
-        @steps = []
-
-        @repository = if @tap
-          @test_bot_tap = @tap.to_s == "homebrew/test-bot"
-          @tap.path
-        else
-          CoreTap.instance.path
-        end
-
-        @brewbot_root = Pathname.pwd + "brewbot"
-        FileUtils.mkdir_p @brewbot_root
+        @formulae = []
+        @added_formulae = []
+        @deleted_formulae = []
+        @built_formulae = []
       end
 
-      # TODO: rename this when all classes ported.
-      def test_formulae
-        detect_formulae
+      def run!
+        detect_formulae!
         formulae.each do |f|
-          formula(f)
+          formula!(f)
         end
         @deleted_formulae.each do |f|
-          deleted_formula(f)
+          deleted_formula!(f)
         end
       end
 
@@ -51,27 +42,27 @@ module Homebrew
       end
 
       def current_sha1
-        Utils.popen_read(@git, "-C", @repository,
+        Utils.popen_read(git, "-C", repository,
                                "rev-parse", "HEAD").strip
       end
 
       def diff_formulae(start_revision, end_revision, path, filter)
-        return unless @tap
+        return unless tap
 
         Utils.popen_read(
-          @git, "-C", @repository,
+          git, "-C", repository,
                 "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
                 start_revision, end_revision, "--", path
         ).lines.map do |line|
           file = Pathname.new line.chomp
-          next unless @tap.formula_file?(file)
+          next unless tap.formula_file?(file)
 
-          @tap.formula_file_to_name(file)
+          tap.formula_file_to_name(file)
         end.compact
       end
 
-      def detect_formulae
-        method_header(__method__)
+      def detect_formulae!
+        test_header(:Formulae, method: :detect_formulae!)
 
         hash = nil
         url = nil
@@ -95,7 +86,7 @@ module Homebrew
         # Use GitHub Actions variables for master or branch jobs.
         if ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
           diff_start_sha1 =
-            Utils.popen_read(@git, "-C", @repository, "rev-parse",
+            Utils.popen_read(git, "-C", repository, "rev-parse",
                                    "origin/#{ENV["GITHUB_BASE_REF"]}").strip
           diff_end_sha1 = ENV["GITHUB_SHA"]
         # Otherwise just use the current SHA-1 (which may be overriden later)
@@ -110,7 +101,7 @@ module Homebrew
 
         if diff_start_sha1.present? && diff_end_sha1.present?
           diff_start_sha1 =
-            Utils.popen_read(@git, "-C", @repository, "merge-base",
+            Utils.popen_read(git, "-C", repository, "merge-base",
                                    diff_start_sha1, diff_end_sha1).strip
         end
         diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
@@ -120,7 +111,7 @@ module Homebrew
         #   brew test-bot
         name = if hash == "HEAD"
           diff_commit_count = Utils.popen_read(
-            @git, "-C", @repository, "rev-list", "--count",
+            git, "-C", repository, "rev-list", "--count",
             "#{diff_start_sha1}..#{diff_end_sha1}"
           )
           if (diff_start_sha1 == diff_end_sha1) || (diff_commit_count.to_i == 1)
@@ -141,27 +132,27 @@ module Homebrew
           raise UsageError, "Cannot set name: invalid command-line arguments!"
         end
 
-        log_root = @brewbot_root + name
+        log_root = brewbot_root + name
         FileUtils.mkdir_p log_root
 
-        if @tap.to_s != CoreTap.instance.name
+        if tap.to_s != CoreTap.instance.name
           core_revision = Utils.popen_read(
-            @git, "-C", CoreTap.instance.path.to_s,
+            git, "-C", CoreTap.instance.path.to_s,
                   "log", "-1", "--format=%h (%s)"
           ).strip
           puts Formatter.headline("Using #{CoreTap.instance.full_name} #{core_revision}", color: :cyan)
         end
 
-        if @tap
+        if tap
           tap_origin_master_revision = Utils.popen_read(
-            @git, "-C", @tap.path.to_s,
+            git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)", "origin/master"
           ).strip
           tap_revision = Utils.popen_read(
-            @git, "-C", @tap.path.to_s,
+            git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)"
           ).strip
-          puts Formatter.headline("Testing #{@tap.full_name} #{tap_revision}:", color: :cyan)
+          puts Formatter.headline("Testing #{tap.full_name} #{tap_revision}:", color: :cyan)
         end
 
         puts <<-EOS
@@ -172,17 +163,12 @@ module Homebrew
     HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
         EOS
 
-        @formulae ||= []
-        @added_formulae = []
-        @deleted_formulae = []
-        @built_formulae = []
-
         return if diff_start_sha1 == diff_end_sha1
 
         modified_formulae = nil
 
-        if @tap && !@test_bot_tap
-          formula_path = @tap.formula_dir.to_s
+        if tap && !test_bot_tap
+          formula_path = tap.formula_dir.to_s
           @added_formulae +=
             diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
           modified_formulae =
@@ -488,7 +474,7 @@ module Homebrew
           return
         end
 
-        cleanup_during
+        cleanup_during!
 
         unless dependent.installed?
           test "brew", "fetch", "--retry", dependent.full_name
@@ -529,7 +515,7 @@ module Homebrew
           return
         end
 
-        cleanup_during
+        cleanup_during!
 
         unless dependent.installed?
           test "brew", "fetch", "--retry", dependent.full_name
@@ -566,10 +552,10 @@ module Homebrew
         test "brew", "audit", *audit_args
       end
 
-      def formula(formula_name)
-        cleanup_during
+      def formula!(formula_name)
+        cleanup_during!
 
-        method_header("#{__method__}.#{formula_name}")
+        test_header(:Formulae, method: "formula!(#{formula_name})")
 
         @built_formulae << formula_name
 
@@ -650,8 +636,8 @@ module Homebrew
         test "brew", "uninstall", "--force", *@unchanged_dependencies
       end
 
-      def deleted_formula(formula_name)
-        method_header("#{__method__}.#{formula_name}")
+      def deleted_formula!(formula_name)
+        test_header(:Formulae, method: "deleted_formula!(#{formula_name})")
 
         test "brew", "uses", "--include-build",
                              "--include-optional",
@@ -659,7 +645,7 @@ module Homebrew
                              formula_name
       end
 
-      def cleanup_during
+      def cleanup_during!
         return unless Homebrew.args.cleanup?
         return unless HOMEBREW_CACHE.exist?
 
@@ -669,7 +655,7 @@ module Homebrew
                                .to_i
         return if used_percentage < 95
 
-        method_header(__method__)
+        test_header(:Formulae, method: :cleanup_during!)
 
         test "brew", "cleanup", "--prune=0"
 

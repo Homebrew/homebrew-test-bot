@@ -33,7 +33,7 @@ module Homebrew
         run_tests(current_tests)
       end
 
-      failed_steps = tests.map { |test| test.steps.select(&:failed?) }
+      failed_steps = tests.map(&:failed_steps)
                           .flatten
                           .compact
       steps_output = if failed_steps.empty?
@@ -65,7 +65,7 @@ module Homebrew
       tests = {}
 
       tests[:setup] = Tests::Setup.new if !skip_setup && (no_only_args? || Homebrew.args.only_setup?)
-      tests[:tap_syntax] = Tests::TapSyntax.new(tap) if no_only_args? || Homebrew.args.only_tap_syntax?
+      tests[:tap_syntax] = Tests::TapSyntax.new(tap: tap) if no_only_args? || Homebrew.args.only_tap_syntax?
 
       if no_only_args? || Homebrew.args.only_formulae?
         tests[:formulae] = Tests::Formulae.new(argument, tap: tap, git: git)
@@ -85,13 +85,13 @@ module Homebrew
     end
 
     def run_tests(tests)
-      tests[:cleanup_before]&.cleanup_before
+      tests[:cleanup_before]&.run_before!
       begin
-        tests[:setup]&.setup
-        tests[:tap_syntax]&.tap_syntax
-        tests[:formulae]&.test_formulae
+        tests[:setup]&.run!
+        tests[:tap_syntax]&.run!
+        tests[:formulae]&.run!
       ensure
-        tests[:cleanup_after]&.cleanup_after
+        tests[:cleanup_after]&.run_after!
       end
     end
   end
