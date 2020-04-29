@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test"
+require_relative "tests/setup"
 require_relative "tests/tap_syntax"
 
 module Homebrew
@@ -9,7 +10,6 @@ module Homebrew
 
     def run!(tap, git:)
       tests = []
-      any_errors = false
       skip_setup = Homebrew.args.skip_setup?
       skip_cleanup_before = false
 
@@ -28,7 +28,7 @@ module Homebrew
         skip_setup = true
         skip_cleanup_before = true
         tests += current_tests.values
-        any_errors ||= !run_tests(current_tests)
+        run_tests(current_tests)
       end
 
       failed_steps = tests.map { |test| test.steps.select(&:failed?) }
@@ -47,7 +47,7 @@ module Homebrew
       steps_output_path.unlink if steps_output_path.exist?
       steps_output_path.write(steps_output)
 
-      !any_errors
+      failed_steps.empty?
     end
 
     def no_only_args?
@@ -63,12 +63,12 @@ module Homebrew
       tests = {
         test: Test.new(argument, tap:                 tap,
                                  git:                 git,
-                                 skip_setup:          skip_setup,
                                  skip_cleanup_before: skip_cleanup_before,
                                  skip_cleanup_after:  skip_cleanup_after),
       }
 
       # TODO: clean this up when all classes ported.
+      tests[:setup] = Tests::Setup.new if !skip_setup && (no_only_args? || Homebrew.args.only_setup?)
       tests[:tap_syntax] = Tests::TapSyntax.new(tap) if no_only_args? || Homebrew.args.only_tap_syntax?
 
       tests
@@ -79,13 +79,12 @@ module Homebrew
 
       test.cleanup_before if no_only_args? || Homebrew.args.only_cleanup_before?
       begin
-        test.setup if no_only_args? || Homebrew.args.only_setup?
-        tests[:tap_syntax].tap_syntax if no_only_args? || Homebrew.args.only_tap_syntax?
+        tests[:setup]&.setup
+        tests[:tap_syntax]&.tap_syntax
         test.test_formulae if no_only_args? || Homebrew.args.only_formulae?
       ensure
         test.cleanup_after if no_only_args? || Homebrew.args.only_cleanup_after?
       end
-      test.all_steps_passed?
     end
   end
 end
