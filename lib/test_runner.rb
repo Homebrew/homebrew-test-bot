@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require_relative "test"
-require_relative "tests/cleanup"
+require_relative "test_cleanup"
+require_relative "tests/cleanup_after"
+require_relative "tests/cleanup_before"
 require_relative "tests/formulae"
 require_relative "tests/setup"
 require_relative "tests/tap_syntax"
@@ -73,11 +75,11 @@ module Homebrew
 
       if Homebrew.args.cleanup?
         if !skip_cleanup_before && (no_only_args? || Homebrew.args.only_cleanup_before?)
-          tests[:cleanup_before] = Tests::Cleanup.new(tap: tap, git: git)
+          tests[:cleanup_before] = Tests::CleanupBefore.new(tap: tap, git: git)
         end
 
         if !skip_cleanup_after &&  (no_only_args? || Homebrew.args.only_cleanup_after?)
-          tests[:cleanup_after]  = Tests::Cleanup.new(tap: tap, git: git)
+          tests[:cleanup_after]  = Tests::CleanupAfter.new(tap: tap, git: git)
         end
       end
 
@@ -85,13 +87,13 @@ module Homebrew
     end
 
     def run_tests(tests)
-      tests[:cleanup_before]&.run_before!
+      tests[:cleanup_before]&.run!
       begin
         tests[:setup]&.run!
         tests[:tap_syntax]&.run!
         tests[:formulae]&.run!
       ensure
-        tests[:cleanup_after]&.run_after!
+        tests[:cleanup_after]&.run!
       end
     end
   end
