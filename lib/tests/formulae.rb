@@ -95,19 +95,9 @@ module Homebrew
             diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
           end
           diff_end_sha1 = ENV["GITHUB_SHA"]
-          puts Formatter.headline("GitHub Actions PR:", color: :cyan)
-          puts <<-EOS
-    diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
-    diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
-          EOS
         # Use GitHub Actions variables for branch jobs.
         elsif ENV["GITHUB_SHA"].present?
           diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
-          puts Formatter.headline("GitHub Actions branch:", color: :cyan)
-          puts <<-EOS
-    diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
-    diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
-          EOS
         # Otherwise just use the current SHA-1 (which may be overriden later)
         else
           if ENV["CI"] || ENV["GITHUB_ACTIONS"]
@@ -123,12 +113,8 @@ module Homebrew
             Utils.popen_read(git, "-C", repository, "merge-base",
                                    diff_start_sha1, diff_end_sha1).strip
           diff_start_sha1 = merge_base_sha1 if merge_base_sha1.present?
-          puts Formatter.headline("Git Merge Base:", color: :cyan)
-          puts <<-EOS
-    diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
-    diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
-          EOS
         end
+
         diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
         diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
@@ -150,7 +136,7 @@ module Homebrew
           diff_start_sha1 = diff_end_sha1
           "#{@formulae.first}-#{diff_end_sha1}"
         # Handle a URL being detected from GitHub Actions environment variables.
-        elsif url
+        elsif url.present?
           short_url = url.gsub("https://github.com/", "")
           "#{short_url}-#{diff_end_sha1}"
         else
