@@ -42,7 +42,7 @@ module Homebrew
       end
 
       def rev_parse(ref)
-        Utils.popen_read(git, "-C", repository, "rev-parse", ref).strip
+        Utils.popen_read(git, "-C", repository, "rev-parse", "--verify", ref).strip
       end
 
       def current_sha1
