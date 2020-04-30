@@ -72,7 +72,7 @@ module Homebrew
 
         if @argument == "HEAD"
           # Use GitHub Actions variables for pull request jobs.
-          hash = if ENV["GITHUB_REF"] && ENV["GITHUB_REPOSITORY"] &&
+          hash = if ENV["GITHUB_REF"].present? && ENV["GITHUB_REPOSITORY"].present? &&
                     %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
             url = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
             nil
@@ -87,7 +87,7 @@ module Homebrew
         end
 
         # Use GitHub Actions variables for pull request jobs.
-        if ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
+        if ENV["GITHUB_BASE_REF"].present? && ENV["GITHUB_SHA"].present?
           diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
           if diff_start_sha1.blank?
             test git, "-C", repository, "fetch", "--depth=1",
@@ -101,7 +101,7 @@ module Homebrew
     diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
           EOS
         # Use GitHub Actions variables for branch jobs.
-        elsif ENV["GITHUB_SHA"]
+        elsif ENV["GITHUB_SHA"].present?
           diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
           puts Formatter.headline("GitHub Actions branch:", color: :cyan)
           puts <<-EOS
@@ -119,9 +119,10 @@ module Homebrew
         end
 
         if diff_start_sha1.present? && diff_end_sha1.present?
-          diff_start_sha1 =
+          merge_base_sha1 =
             Utils.popen_read(git, "-C", repository, "merge-base",
                                    diff_start_sha1, diff_end_sha1).strip
+          diff_start_sha1 = merge_base_sha1 if merge_base_sha1.present?
           puts Formatter.headline("Git Merge Base:", color: :cyan)
           puts <<-EOS
     diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
