@@ -41,9 +41,12 @@ module Homebrew
         puts e.backtrace if Homebrew.args.debug?
       end
 
+      def rev_parse(ref)
+        Utils.popen_read(git, "-C", repository, "rev-parse", ref).strip
+      end
+
       def current_sha1
-        Utils.popen_read(git, "-C", repository,
-                               "rev-parse", "HEAD").strip
+        rev_parse("HEAD")
       end
 
       def diff_formulae(start_revision, end_revision, path, filter)
@@ -83,15 +86,21 @@ module Homebrew
             "#{@argument} is not detected from GitHub Actions or a formula name!"
         end
 
-        # Use GitHub Actions variables for master or branch jobs.
+        # Use GitHub Actions variables for pull request jobs.
         if ENV["GITHUB_BASE_REF"] && ENV["GITHUB_SHA"]
-          diff_start_sha1 =
-            Utils.popen_read(git, "-C", repository, "rev-parse",
-                                   "origin/#{ENV["GITHUB_BASE_REF"]}").strip
+          diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
+          if diff_start_sha1.blank?
+            test git, "-C", repository, "fetch", "--depth=1",
+                 "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
+            diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
+          end
           diff_end_sha1 = ENV["GITHUB_SHA"]
+        # Use GitHub Actions variables for branch jobs.
+        elsif ENV["GITHUB_SHA"]
+          diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
         # Otherwise just use the current SHA-1 (which may be overriden later)
         else
-          if !ENV["GITHUB_REF"] && !ENV["GITHUB_BASE_REF"]
+          if ENV["CI"] || ENV["GITHUB_ACTIONS"]
             onoe <<~EOS
               No known CI provider detected! If you are using GitHub Actions then we cannot find the expected  environment variables! Check you have e.g. exported them to a Docker container.
             EOS
@@ -158,9 +167,9 @@ module Homebrew
         puts <<-EOS
     url             #{url.blank? ? "(undefined)" : url}
     origin/master   #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
+    HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
     diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
     diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
-    HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
         EOS
 
         return if diff_start_sha1 == diff_end_sha1
