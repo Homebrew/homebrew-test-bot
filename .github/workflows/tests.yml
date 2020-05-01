@@ -14,30 +14,59 @@ jobs:
       uses: actions/checkout@master
 
     - name: Set up Homebrew
+      id: set-up-homebrew
       run: |
         if which brew &>/dev/null; then
-          brew update-reset /usr/local/Homebrew
-          ln -s "$PWD" "/usr/local/Homebrew/Library/Taps/homebrew/homebrew-test-bot"
+          HOMEBREW_REPOSITORY="$(brew --repo)"
+          brew update-reset "$HOMEBREW_REPOSITORY"
+          ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
         else
-          umask 022
-          HOMEBREW_REPOSITORY=/home/linuxbrew/.linuxbrew
-          sudo mkdir -p /home/linuxbrew
-          sudo git clone https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
+          HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew
+          HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX/Homebrew"
+          sudo mkdir -p $HOMEBREW_PREFIX
+          sudo git clone --depth=1 https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
+
           sudo mkdir -p "$HOMEBREW_REPOSITORY/Library/Taps/homebrew"
           sudo ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
-          sudo chown -R "$USER" /home/linuxbrew
-          sudo chmod -R og-w /home/linuxbrew
+
+          cd "$HOMEBREW_PREFIX"
+          sudo mkdir -p bin etc include lib opt sbin share var/homebrew/linked Cellar
+          sudo ln -sf ../Homebrew/bin/brew "$HOMEBREW_PREFIX/bin/"
+          cd -
+
+          export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+          echo "::add-path::$HOMEBREW_PREFIX/bin"
         fi
 
-    - name: Run brew style
-      if: matrix.os == 'macOS-latest'
-      run: brew style homebrew/test-bot
+        GEMS_PATH="$HOMEBREW_REPOSITORY/Library/Homebrew/vendor/bundle/"
+        echo "::set-output name=gems-path::$GEMS_PATH"
+        GEMS_HASH=$(shasum -a 256 "$HOMEBREW_REPOSITORY/Library/Homebrew/Gemfile.lock" | cut -f1 -d' ')
+        echo "::set-output name=gems-hash::$GEMS_HASH"
+
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          sudo chown -R "$USER" "$HOMEBREW_PREFIX"
+        fi
 
     - name: Set up Ruby
       if: matrix.os == 'ubuntu-latest'
       uses: actions/setup-ruby@v1
       with:
         ruby-version: '2.6'
+
+    - name: Cache Bundler RubyGems
+      id: cache
+      uses: actions/cache@v1
+      with:
+        path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+        key: ${{ runner.os }}-gems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+        restore-keys: ${{ runner.os }}-gems-
+
+    - name: Install Bundler RubyGems
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: brew install-bundler-gems
+
+    - name: Run brew style
+      run: brew style homebrew/test-bot
 
     - name: Install Homebrew/homebrew-test-bot RubyGems
       run: |
