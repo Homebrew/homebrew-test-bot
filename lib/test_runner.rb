@@ -17,7 +17,7 @@ module Homebrew
       skip_setup = Homebrew.args.skip_setup?
       skip_cleanup_before = false
 
-      test_bot_args = Homebrew.args.named
+      test_bot_args = Homebrew.args.named.dup
 
       # With no arguments just build the most recent commit.
       test_bot_args << "HEAD" if test_bot_args.empty?
