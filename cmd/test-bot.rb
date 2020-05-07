@@ -59,6 +59,7 @@ module Homebrew
              description: "Only run the post-cleanup step. Needs `--cleanup`."
       conflicts "--only-cleanup-before", "--only-setup", "--only-tap-syntax",
                 "--only-formulae", "--only-cleanup-after"
+      switch :debug
     end
   end
 
