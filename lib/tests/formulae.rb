@@ -324,6 +324,7 @@ module Homebrew
         build_dependents_from_source_whitelist = %w[
           cabal-install
           docbook-xsl
+          erlang
           ghc
           go
           ocaml
