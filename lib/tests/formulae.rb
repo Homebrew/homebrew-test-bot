@@ -274,7 +274,7 @@ module Homebrew
         unlink_formulae = conflicts.map(&:name)
         unlink_formulae.uniq.each do |name|
           unlink_formula = Formulary.factory(name)
-          next unless unlink_formula.installed?
+          next unless unlink_formula.latest_version_installed?
           next unless unlink_formula.linked_keg.exist?
 
           test "brew", "unlink", name
@@ -488,7 +488,7 @@ module Homebrew
 
         cleanup_during!
 
-        unless dependent.installed?
+        unless dependent.latest_version_installed?
           test "brew", "fetch", "--retry", dependent.full_name
           return if steps.last.failed?
 
@@ -499,7 +499,7 @@ module Homebrew
                env: { "HOMEBREW_DEVELOPER" => nil }
           return if steps.last.failed?
         end
-        return unless dependent.installed?
+        return unless dependent.latest_version_installed?
 
         if !dependent.keg_only? && !dependent.linked_keg.exist?
           unlink_conflicts dependent
@@ -529,7 +529,7 @@ module Homebrew
 
         cleanup_during!
 
-        unless dependent.installed?
+        unless dependent.latest_version_installed?
           test "brew", "fetch", "--retry", dependent.full_name
           return if steps.last.failed?
 
@@ -541,7 +541,7 @@ module Homebrew
                 env: { "HOMEBREW_DEVELOPER" => nil }
           return if steps.last.failed?
         end
-        return unless dependent.installed?
+        return unless dependent.latest_version_installed?
 
         if !dependent.keg_only? && !dependent.linked_keg.exist?
           unlink_conflicts dependent
@@ -604,7 +604,7 @@ module Homebrew
         setup_formulae_deps_instances(formula, formula_name)
 
         test "brew", "fetch", "--retry", *fetch_args
-        test "brew", "uninstall", "--force", formula_name if formula.installed?
+        test "brew", "uninstall", "--force", formula_name if formula.latest_version_installed?
 
         install_args = ["--verbose"]
         install_args << "--build-bottle" unless formula.bottle_disabled?
