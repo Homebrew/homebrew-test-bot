@@ -8,6 +8,6 @@ Tests the full lifecycle of a Homebrew change.
 brew tap homebrew/test-bot
 ```
 
-## CI Jobs
+## CI Providers
 
-This repository has CI jobs for all currently supported CI providers. This is to ensure that we don't break providers we don't use on this repository.
+`test-bot` only supports GitHub Actions as a CI provider. This is because Homebrew uses GitHub Actions and it's freely available for public and private use with macOS and Linux workers.
