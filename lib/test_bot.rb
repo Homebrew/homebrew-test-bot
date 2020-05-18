@@ -38,7 +38,7 @@ module Homebrew
                         .chomp("/")
                         .sub(/\.git$/, "")
       begin
-        return Tap.fetch(url_path) if url_path.match?(HOMEBREW_TAP_REGEX)
+        Tap.fetch(url_path) if url_path.match?(HOMEBREW_TAP_REGEX)
       rescue
         # Don't care if tap fetch fails
         nil
@@ -79,6 +79,12 @@ module Homebrew
       # At the same time, make sure Tap is not a shallow clone.
       # bottle rebuild and bottle upload rely on full clone.
       if tap
+        tap_revision = Utils.popen_read(
+          GIT, "-C", tap.path.to_s,
+                "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts Formatter.headline("Testing #{tap.full_name} #{tap_revision}:", color: :cyan)
+
         if !tap.path.exist?
           safe_system "brew", "tap", tap.name, "--full"
         elsif (tap.path/".git/shallow").exist?
