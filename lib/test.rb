@@ -11,13 +11,17 @@ module Homebrew
     attr_reader :tap, :git, :steps, :repository, :test_bot_tap, :brewbot_root
 
     def initialize(tap: nil, git: nil, create_brewbot_root: false)
-      @tap = tap || CoreTap.instance
+      @tap = tap
       @git = git
 
       @steps = []
 
-      @test_bot_tap = @tap.to_s == "homebrew/test-bot"
-      @repository = @tap.path
+      @repository = if @tap
+        @test_bot_tap = @tap.to_s == "homebrew/test-bot"
+        @tap.path
+      else
+        CoreTap.instance.path
+      end
 
       if create_brewbot_root
         @brewbot_root = Pathname.pwd + "brewbot"

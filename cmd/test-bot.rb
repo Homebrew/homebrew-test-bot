@@ -25,7 +25,7 @@ module Homebrew
       switch "--local",
              description: "ask Homebrew to write verbose logs under `./logs/` and set `$HOME` to `./home/`"
       flag   "--tap=",
-             description: "use the `git` repository of the given tap. Defaults to the core tap."
+             description: "use the `git` repository of the given tap. Defaults to the core tap for syntax checking."
       switch "--fail-fast",
              description: "immediately exit on a failing step."
       switch :verbose,
