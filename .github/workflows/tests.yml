@@ -79,12 +79,14 @@ jobs:
 
     - name: Build Docker image
       if: matrix.os == 'ubuntu-latest'
-      run: docker-compose -f Dockerfile.yml build sut
+      run: docker build -t brew .
 
     - name: Run brew test-bot
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
-          docker-compose -f Dockerfile.yml run --rm -v $GITHUB_WORKSPACE:/tmp/test-bot sut
+          docker run \
+            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            --rm brew brew test-bot
         else
           brew test-bot
         fi
