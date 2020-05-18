@@ -67,7 +67,10 @@ module Homebrew
       tests = {}
 
       tests[:setup] = Tests::Setup.new if !skip_setup && (no_only_args? || Homebrew.args.only_setup?)
-      tests[:tap_syntax] = Tests::TapSyntax.new(tap: tap) if no_only_args? || Homebrew.args.only_tap_syntax?
+
+      if no_only_args? || Homebrew.args.only_tap_syntax?
+        tests[:tap_syntax] = Tests::TapSyntax.new(tap: tap || CoreTap.instance)
+      end
 
       if no_only_args? || Homebrew.args.only_formulae?
         tests[:formulae] = Tests::Formulae.new(argument, tap: tap, git: git)
