@@ -51,7 +51,8 @@ module Homebrew
                 "log", "-1", "--format=%s"
         ).strip
         puts
-        puts Formatter.headline("Using Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
+        verb = tap ? "Using" : "Testing"
+        puts Formatter.headline("#{verb} Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
       end
     end
   end
