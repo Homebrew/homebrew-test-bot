@@ -68,6 +68,12 @@ module Homebrew
       end
 
       if tap
+        tap_revision = Utils.popen_read(
+          git, "-C", tap.path.to_s,
+                "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts Formatter.headline("Testing #{tap.full_name} #{tap_revision}:", color: :cyan)
+
         checkout_branch_if_needed(HOMEBREW_REPOSITORY)
         reset_if_needed(HOMEBREW_REPOSITORY)
         clean_if_needed(HOMEBREW_REPOSITORY)
