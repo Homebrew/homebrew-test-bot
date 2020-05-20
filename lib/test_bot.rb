@@ -37,6 +37,9 @@ module Homebrew
       url_path = git_url.sub(%r{^https?://.*github\.com/}, "")
                         .chomp("/")
                         .sub(/\.git$/, "")
+
+      return CoreTap.instance if url_path == CoreTap.instance.full_name
+
       begin
         Tap.fetch(url_path) if url_path.match?(HOMEBREW_TAP_REGEX)
       rescue
