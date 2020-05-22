@@ -21,9 +21,9 @@ module Homebrew
     def command_trimmed
       command.reject { |arg| arg.to_s.start_with?("--exclude") }
              .join(" ")
-             .gsub("#{HOMEBREW_LIBRARY}/Taps/", "")
-             .gsub("#{HOMEBREW_PREFIX}/", "")
-             .gsub(%r{^/usr/bin/}, "")
+             .delete_prefix("#{HOMEBREW_LIBRARY}/Taps/")
+             .delete_prefix("#{HOMEBREW_PREFIX}/")
+             .delete_prefix("/usr/bin/")
     end
 
     def passed?
