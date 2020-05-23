@@ -63,8 +63,8 @@ module Homebrew
       end
 
       first_formula_name = bottles_hash.keys.first
-      tap_name = first_formula_name.rpartition("/").first.chuzzle
-      tap_name ||= CoreTap.instance.name
+      tap_name = first_formula_name.rpartition("/").first.chomp
+      tap_name = CoreTap.instance.name if tap_name.empty?
       tap ||= Tap.fetch(tap_name)
 
       ENV["GIT_WORK_TREE"] = tap.path
