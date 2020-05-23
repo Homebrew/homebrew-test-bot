@@ -392,7 +392,7 @@ module Homebrew
         return if formula.linked_keg.exist?
 
         conflicts = formula.conflicts.map { |c| Formulary.factory(c.name) }
-                           .select(&:installed?)
+                           .select(&:any_version_installed?)
         formula_recursive_dependencies = begin
           formula.recursive_dependencies
         rescue TapFormulaUnavailableError => e
