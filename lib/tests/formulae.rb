@@ -405,7 +405,7 @@ module Homebrew
         formula_recursive_dependencies.each do |dependency|
           conflicts += dependency.to_formula.conflicts.map do |c|
             Formulary.factory(c.name)
-          end.select(&:installed?)
+          end.select(&:any_version_installed?)
         end
         conflicts.each do |conflict|
           test "brew", "unlink", conflict.name
