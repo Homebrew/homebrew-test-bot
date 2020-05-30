@@ -1,13 +1,19 @@
 # Homebrew Test Bot
 
-Tests the full lifecycle of a Homebrew change.
+Tests the full lifecycle of a Homebrew change to a tap (Git repository).
 
-## Installation
+## Install
 
-```bash
-brew tap homebrew/test-bot
-```
+`brew test-bot` is automatically installed when first run.
 
-## CI Providers
+## Usage
 
-`test-bot` only supports GitHub Actions as a CI provider. This is because Homebrew uses GitHub Actions and it's freely available for public and private use with macOS and Linux workers.
+See `brew test-bot --help` or [the `brew man` output](https://docs.brew.sh/Manpage).
+
+## Tests
+
+Tests can be run with `bundle install && bundle exec rspec`.
+
+## Copyright
+
+Copyright (c) Homebrew maintainers. See [LICENSE.txt](https://github.com/Homebrew/homebrew-test-bot/blob/master/LICENSE.txt) for details.
