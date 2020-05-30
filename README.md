@@ -8,7 +8,7 @@ Tests the full lifecycle of a Homebrew change to a tap (Git repository).
 
 ## Usage
 
-See `brew test-bot --help` or [the `brew man` output](https://docs.brew.sh/Manpage).
+See [the `brew test-bot` section of the `brew man` output](https://docs.brew.sh/Manpage#test-bot-options-formula) or `brew test-bot --help`.
 
 ## Tests
 
