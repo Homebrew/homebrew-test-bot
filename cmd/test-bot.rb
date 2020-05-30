@@ -9,7 +9,9 @@ module Homebrew
       usage_banner <<~EOS
         `test-bot` [<options>] [<formula>]:
 
-        Test the full lifecycle of a formula change.
+        Tests the full lifecycle of a Homebrew change to a tap (Git repository). For example, for a GitHub Actions pull request that changes a formula `brew test-bot` will ensure the system is cleaned and setup to test the formula, install the formula, run various tests and checks on it, bottle (package) the binaries and test formulae that depend on it to ensure they aren't broken by these changes.
+
+        Only supports GitHub Actions as a CI provider. This is because Homebrew uses GitHub Actions and it's freely available for public and private use with macOS and Linux workers.
       EOS
 
       switch "--dry-run",
