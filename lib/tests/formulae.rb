@@ -586,8 +586,12 @@ module Homebrew
         fetch_args << "--force" if Homebrew.args.cleanup?
 
         new_formula = @added_formulae.include?(formula_name)
-        audit_args = [formula_name, "--online"]
-        audit_args << "--new-formula" if new_formula
+        audit_args = [formula_name]
+        if new_formula
+          audit_args << "--new-formula"
+        else
+          audit_args << "--online" << "--git"
+        end
 
         unless satisfied_requirements?(formula, :stable)
           fetch_formula(fetch_args, audit_args)
