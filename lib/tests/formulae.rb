@@ -669,10 +669,7 @@ module Homebrew
 
         test_header(:Formulae, method: :cleanup_during!)
 
-        test "brew", "cleanup", "--prune=0"
-
-        # remove any leftovers manually
-        HOMEBREW_CACHE.children.each(&:rmtree)
+        test "rm", "-rf", HOMEBREW_CACHE.to_s
       end
 
       def formulae
