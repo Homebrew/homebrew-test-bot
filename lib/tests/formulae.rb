@@ -346,7 +346,15 @@ module Homebrew
           if Homebrew.args.skip_recursive_dependents?
             f.deps
           else
-            f.recursive_dependencies
+            begin
+              f.recursive_dependencies
+            rescue TapFormulaUnavailableError => e
+              raise if e.tap.installed?
+
+              e.tap.clear_cache
+              safe_system "brew", "tap", e.tap.name
+              retry
+            end
           end.reject(&:optional?)
         end)
 
