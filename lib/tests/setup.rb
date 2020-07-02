@@ -6,6 +6,8 @@ module Homebrew
       def run!
         test_header(:Setup)
 
+        test "brew", "install-bundler-gems"
+
         # Always output `brew config` output even when it doesn't fail.
         test "brew", "config", verbose: true
 
