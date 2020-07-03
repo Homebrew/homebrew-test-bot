@@ -90,6 +90,8 @@ module Homebrew
         reset_if_needed(git_repo)
         prune_if_needed(git_repo)
       end
+
+      test "brew", "cleanup", "--prune=3"
     end
 
     private

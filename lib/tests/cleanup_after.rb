@@ -22,8 +22,6 @@ module Homebrew
 
         # Keep all "brew" invocations after cleanup_shared
         # (which cleans up Homebrew/brew)
-        test "brew", "cleanup", "--prune=3"
-
         if Homebrew.args.local?
           FileUtils.rm_rf ENV["HOMEBREW_HOME"]
           FileUtils.rm_rf ENV["HOMEBREW_LOGS"]
