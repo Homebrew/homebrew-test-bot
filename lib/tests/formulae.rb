@@ -4,7 +4,7 @@ module Homebrew
   module Tests
     class Formulae < Test
       def initialize(argument, tap:, git:)
-        super(tap: tap, git: git, create_brewbot_root: true)
+        super(tap: tap, git: git)
 
         @argument = argument
 
@@ -67,17 +67,13 @@ module Homebrew
       def detect_formulae!
         test_header(:Formulae, method: :detect_formulae!)
 
-        hash = nil
         url = nil
 
         if @argument == "HEAD"
           # Use GitHub Actions variables for pull request jobs.
-          hash = if ENV["GITHUB_REF"].present? && ENV["GITHUB_REPOSITORY"].present? &&
-                    %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
+          if ENV["GITHUB_REF"].present? && ENV["GITHUB_REPOSITORY"].present? &&
+             %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
             url = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
-            nil
-          else
-            "HEAD"
           end
         elsif (canonical_formula_name = safe_formula_canonical_name(@argument))
           @formulae = [canonical_formula_name]
@@ -118,33 +114,7 @@ module Homebrew
         diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
         diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
-        # Handle no arguments being passed on the command-line e.g.
-        #   brew test-bot
-        name = if hash == "HEAD"
-          diff_commit_count = Utils.popen_read(
-            git, "-C", repository, "rev-list", "--count",
-            "#{diff_start_sha1}..#{diff_end_sha1}"
-          )
-          if (diff_start_sha1 == diff_end_sha1) || (diff_commit_count.to_i == 1)
-            diff_end_sha1
-          else
-            "#{diff_start_sha1}-#{diff_end_sha1}"
-          end
-        # Handle formulae arguments being passed on the command-line e.g.
-        #   brew test-bot wget fish
-        elsif @formulae.present?
-          diff_start_sha1 = diff_end_sha1
-          "#{@formulae.first}-#{diff_end_sha1}"
-        # Handle a URL being detected from GitHub Actions environment variables.
-        elsif url.present?
-          short_url = url.gsub("https://github.com/", "")
-          "#{short_url}-#{diff_end_sha1}"
-        else
-          raise UsageError, "Cannot set name: invalid command-line arguments!"
-        end
-
-        log_root = brewbot_root + name
-        FileUtils.mkdir_p log_root
+        diff_start_sha1 = diff_end_sha1 if @formulae.present?
 
         if tap.to_s != CoreTap.instance.name
           core_revision = Utils.popen_read(

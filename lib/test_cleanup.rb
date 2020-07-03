@@ -22,7 +22,7 @@ module Homebrew
     end
 
     def initialize(tap:, git:)
-      super(tap: tap, git: git, create_brewbot_root: true)
+      super(tap: tap, git: git)
     end
 
     def clear_stash_if_needed(repository)
@@ -53,7 +53,6 @@ module Homebrew
 
         path_string = path.to_s
         next if path_string.start_with?(HOMEBREW_REPOSITORY.to_s)
-        next if path_string.start_with?(brewbot_root.to_s)
         next if path_string.start_with?(Dir.pwd.to_s)
 
         # allow deleting non-existent osxfuse symlinks.
@@ -119,7 +118,6 @@ module Homebrew
         "--exclude=*.bottle*.*",
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor",
-        "--exclude=#{brewbot_root.basename}",
       ]
       return if Utils.popen_read(
         git, "-C", repository, "clean", "--dry-run", *clean_args
