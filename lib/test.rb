@@ -8,9 +8,9 @@ module Homebrew
 
     protected
 
-    attr_reader :tap, :git, :steps, :repository, :test_bot_tap, :brewbot_root
+    attr_reader :tap, :git, :steps, :repository, :test_bot_tap
 
-    def initialize(tap: nil, git: nil, create_brewbot_root: false)
+    def initialize(tap: nil, git: nil)
       @tap = tap
       @git = git
 
@@ -21,11 +21,6 @@ module Homebrew
         @tap.path
       else
         CoreTap.instance.path
-      end
-
-      if create_brewbot_root
-        @brewbot_root = Pathname.pwd + "brewbot"
-        FileUtils.mkdir_p @brewbot_root
       end
     end
 
