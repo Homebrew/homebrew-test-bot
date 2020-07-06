@@ -44,12 +44,18 @@ module Homebrew
       clean_if_needed(repository)
       prune_if_needed(repository)
 
+      paths_to_delete = []
+
       Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
-      Pathname.glob("#{HOMEBREW_PREFIX}/**/*").each do |path|
+      Pathname.glob("#{HOMEBREW_PREFIX}/**/*", File::FNM_DOTMATCH).each do |path|
         next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
         next if path == HOMEBREW_PREFIX/"bin/brew"
         next if path == HOMEBREW_PREFIX/"var"
         next if path == HOMEBREW_PREFIX/"var/homebrew"
+
+        basename = path.basename.to_s
+        next if basename == "."
+        next if basename == ".keepme"
 
         path_string = path.to_s
         next if path_string.start_with?(HOMEBREW_REPOSITORY.to_s)
@@ -63,8 +69,12 @@ module Homebrew
           )
         end
 
-        FileUtils.rm_rf path
+        FileUtils.chmod("u+rw", path) if path.owned? && (!path.readable? || !path.writable?)
+        paths_to_delete << path
       end
+
+      # Do this in a second pass so that all children have their permissions fixed before we delete the parent.
+      FileUtils.rm_rf paths_to_delete
 
       if tap
         checkout_branch_if_needed(HOMEBREW_REPOSITORY)
