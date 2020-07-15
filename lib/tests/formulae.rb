@@ -564,11 +564,11 @@ module Homebrew
         fetch_args << "--force" if Homebrew.args.cleanup?
 
         new_formula = @added_formulae.include?(formula_name)
-        audit_args = [formula_name]
+        audit_args = [formula_name, "--online"]
         if new_formula
           audit_args << "--new-formula"
         else
-          audit_args << "--online" << "--git"
+          audit_args << "--git" << "--skip-style"
         end
 
         unless satisfied_requirements?(formula, :stable)
@@ -599,7 +599,7 @@ module Homebrew
               env: { "HOMEBREW_DEVELOPER" => nil }
         install_passed = steps.last.passed?
 
-        test "brew", "audit", "--skip-style", *audit_args
+        test "brew", "audit", *audit_args
 
         if install_passed
           bottle_reinstall_formula(formula, new_formula)
