@@ -6,8 +6,8 @@ SimpleCov.start do
   minimum_coverage 10
 end
 
-PROJECT_ROOT ||= Pathname(__dir__).parent
-STUB_PATH ||= PROJECT_ROOT/"spec/stub"
+PROJECT_ROOT ||= Pathname(__dir__).parent.freeze
+STUB_PATH ||= (PROJECT_ROOT/"spec/stub").freeze
 $LOAD_PATH.unshift(STUB_PATH)
 
 Dir.glob("#{PROJECT_ROOT}/lib/**/*.rb").sort.each do |file|
