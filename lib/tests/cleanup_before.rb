@@ -6,12 +6,6 @@ module Homebrew
       def run!
         test_header(:CleanupBefore)
 
-        unless test_bot_tap
-          clear_stash_if_needed(repository)
-          quiet_system git, "-C", repository, "am", "--abort"
-          quiet_system git, "-C", repository, "rebase", "--abort"
-        end
-
         if tap.to_s != CoreTap.instance.name
           core_path = CoreTap.instance.path
           if core_path.exist?
