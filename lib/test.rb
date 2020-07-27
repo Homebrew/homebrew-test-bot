@@ -8,7 +8,7 @@ module Homebrew
 
     protected
 
-    attr_reader :tap, :git, :steps, :repository, :test_bot_tap
+    attr_reader :tap, :git, :steps, :repository
 
     def initialize(tap: nil, git: nil)
       @tap = tap
@@ -17,7 +17,6 @@ module Homebrew
       @steps = []
 
       @repository = if @tap
-        @test_bot_tap = @tap.to_s == "homebrew/test-bot"
         @tap.path
       else
         CoreTap.instance.path

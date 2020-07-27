@@ -11,11 +11,6 @@ module Homebrew
 
         test_header(:CleanupAfter)
 
-        unless test_bot_tap
-          clear_stash_if_needed(repository)
-          reset_if_needed(repository)
-        end
-
         pkill_if_needed
 
         cleanup_shared
