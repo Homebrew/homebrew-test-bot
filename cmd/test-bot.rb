@@ -84,12 +84,7 @@ module Homebrew
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
     end
 
-    if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
-      ARGV << "--local"
-    elsif github_actions
-      ARGV << "--test-default-formula"
-    end
-
+    ARGV << "--local" if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
     ARGV << "--verbose" if ARGV.include?("--ci-upload")
   end
 end

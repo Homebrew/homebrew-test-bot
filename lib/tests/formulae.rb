@@ -146,20 +146,20 @@ module Homebrew
 
         return if diff_start_sha1 == diff_end_sha1
 
-        modified_formulae = nil
+        modified_formulae = []
 
         if tap && !test_bot_tap
           formula_path = tap.formula_dir.to_s
           @added_formulae +=
             diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
-          modified_formulae =
+          modified_formulae +=
             diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
           @deleted_formulae +=
             diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
         elsif @formulae.empty? && Homebrew.args.test_default_formula?
           # Build the default test formula.
           @test_default_formula = true
-          modified_formulae = ["testbottest"]
+          modified_formulae << "testbottest"
         end
 
         @formulae += @added_formulae + modified_formulae
