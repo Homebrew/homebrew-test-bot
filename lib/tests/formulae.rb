@@ -144,11 +144,9 @@ module Homebrew
     diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
         EOS
 
-        return if diff_start_sha1 == diff_end_sha1
-
         modified_formulae = []
 
-        if tap
+        if tap && diff_start_sha1 != diff_end_sha1
           formula_path = tap.formula_dir.to_s
           @added_formulae +=
             diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
@@ -165,6 +163,8 @@ module Homebrew
         end
 
         @formulae += @added_formulae + modified_formulae
+
+        return if @added_formulae.blank? && modified_formulae.blank? && @deleted_formulae.blank?
 
         puts Formatter.headline("Testing Formula changes:", color: :cyan)
         puts <<-EOS
