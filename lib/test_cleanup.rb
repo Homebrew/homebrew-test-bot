@@ -7,19 +7,19 @@ module Homebrew
   class TestCleanup < Test
     protected
 
-    REQUIRED_HOMEBREW_TAPS = [CoreTap.instance.name] + %w[
+    REQUIRED_HOMEBREW_TAPS = ([CoreTap.instance.name] + %w[
       homebrew/test-bot
-    ].freeze
+    ]).freeze
 
-    REQUIRED_LINUXBREW_TAPS = REQUIRED_HOMEBREW_TAPS + %w[
+    REQUIRED_LINUXBREW_TAPS = (REQUIRED_HOMEBREW_TAPS + %w[
       linuxbrew/xorg
-    ].freeze
+    ]).freeze
 
     REQUIRED_TAPS = if OS.mac? || ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"]
       REQUIRED_HOMEBREW_TAPS
     else
       REQUIRED_LINUXBREW_TAPS
-    end
+    end.freeze
 
     def initialize(tap:, git:)
       super(tap: tap, git: git)
