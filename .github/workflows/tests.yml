@@ -81,14 +81,14 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: docker build -t brew .
 
-    - name: Run brew test-bot
+    - name: Run brew test-bot --test-default-formula
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
           docker run \
             -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-            --rm brew brew test-bot
+            --rm brew brew test-bot --test-default-formula
         else
-          brew test-bot
+          brew test-bot --test-default-formula
         fi
 
     - name: Output brew test-bot failures
