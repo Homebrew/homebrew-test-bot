@@ -491,7 +491,7 @@ module Homebrew
         if @testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test",
                                   dependent.full_name
-          test "brew", "test", "--verbose", dependent.full_name
+          test "brew", "test", "--retry", "--verbose", dependent.full_name
         end
 
         test "brew", "uninstall", "--force", dependent.full_name
@@ -533,7 +533,7 @@ module Homebrew
         if @testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test",
                                   dependent.full_name
-          test "brew", "test", "--verbose", dependent.full_name
+          test "brew", "test", "--retry", "--verbose", dependent.full_name
         end
 
         test "brew", "uninstall", "--force", dependent.full_name
@@ -607,22 +607,30 @@ module Homebrew
           bottle_reinstall_formula(formula, new_formula)
           test "brew", "linkage", "--test", formula_name
 
-          if formula.test_defined?
+          test_passed_or_missing = if formula.test_defined?
             test "brew", "install", "--only-dependencies", "--include-test",
                                     formula_name
+            # Intentionally not passing --retry here to avoid papering over
+            # flaky tests when a formula isn't being pulled in as a dependent.
             test "brew", "test", "--verbose", formula_name
+
+            steps.last.passed?
           end
 
-          @source_dependents.each do |dependent|
-            install_dependent_from_source(dependent)
+          # Don't test dependents if the formula test failed.
+          if test_passed_or_missing
+            @source_dependents.each do |dependent|
+              install_dependent_from_source(dependent)
 
-            bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-              dependent.bottled?
+              bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
+                dependent.bottled?
+              end
+              install_bottled_dependent(dependent) if bottled
             end
-            install_bottled_dependent(dependent) if bottled
-          end
-          @bottled_dependents.each do |dependent|
-            install_bottled_dependent(dependent)
+
+            @bottled_dependents.each do |dependent|
+              install_bottled_dependent(dependent)
+            end
           end
           cleanup_bottle_etc_var(formula)
         end
