@@ -66,7 +66,7 @@ module Homebrew
         FileUtils.mkdir_p ENV["HOMEBREW_LOGS"]
       end
 
-      test_bot_revision = Utils.popen_read(
+      test_bot_revision = Utils.safe_popen_read(
         GIT, "-C", Tap.fetch("homebrew/test-bot").path.to_s,
              "log", "-1", "--format=%h (%s)"
       ).strip

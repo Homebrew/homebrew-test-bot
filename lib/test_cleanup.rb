@@ -98,7 +98,7 @@ module Homebrew
     private
 
     def checkout_branch_if_needed(repository, branch = "master", args:)
-      current_branch = Utils.popen_read(
+      current_branch = Utils.safe_popen_read(
         git, "-C", repository, "symbolic-ref", "HEAD"
       ).strip
       return if branch == current_branch
@@ -121,7 +121,7 @@ module Homebrew
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor",
       ]
-      return if Utils.popen_read(
+      return if Utils.safe_popen_read(
         git, "-C", repository, "clean", "--dry-run", *clean_args
       ).strip.empty?
 
@@ -129,7 +129,7 @@ module Homebrew
     end
 
     def prune_if_needed(repository, args:)
-      return unless Utils.popen_read(
+      return unless Utils.safe_popen_read(
         "#{git} -C '#{repository}' -c gc.autoDetach=false gc --auto 2>&1",
       ).include?("git prune")
 
