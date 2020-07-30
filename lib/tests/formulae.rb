@@ -615,6 +615,8 @@ module Homebrew
             test "brew", "test", "--verbose", formula_name
 
             steps.last.passed?
+          else
+            true
           end
 
           # Don't test dependents if the formula test failed.
