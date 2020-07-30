@@ -3,7 +3,7 @@
 module Homebrew
   module Tests
     class CleanupAfter < TestCleanup
-      def run!
+      def run!(args:)
         if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
           # don't need to do post-build cleanup unless testing test-bot itself.
           return if tap.to_s != "homebrew/test-bot"
@@ -11,13 +11,13 @@ module Homebrew
 
         test_header(:CleanupAfter)
 
-        pkill_if_needed
+        pkill_if_needed(args: args)
 
-        cleanup_shared
+        cleanup_shared(args: args)
 
         # Keep all "brew" invocations after cleanup_shared
         # (which cleans up Homebrew/brew)
-        if Homebrew.args.local?
+        if args.local?
           FileUtils.rm_rf ENV["HOMEBREW_HOME"]
           FileUtils.rm_rf ENV["HOMEBREW_LOGS"]
         end
@@ -25,13 +25,13 @@ module Homebrew
 
       private
 
-      def pkill_if_needed
+      def pkill_if_needed(args:)
         pgrep = ["pgrep", "-f", HOMEBREW_CELLAR.to_s]
         if quiet_system(*pgrep)
-          test "pkill", "-f", HOMEBREW_CELLAR.to_s
+          test "pkill", "-f", HOMEBREW_CELLAR.to_s, args: args
           if quiet_system(*pgrep)
             sleep 1
-            test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s if system(*pgrep)
+            test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s, args: args if system(*pgrep)
           end
         end
       end
