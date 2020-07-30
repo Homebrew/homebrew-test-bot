@@ -37,11 +37,11 @@ module Homebrew
           change_git!("#{HOMEBREW_PREFIX}/opt/git/bin/git")
         end
 
-        brew_version = Utils.popen_read(
+        brew_version = Utils.safe_popen_read(
           git, "-C", HOMEBREW_REPOSITORY.to_s,
                 "describe", "--tags", "--abbrev", "--dirty"
         ).strip
-        brew_commit_subject = Utils.popen_read(
+        brew_commit_subject = Utils.safe_popen_read(
           git, "-C", HOMEBREW_REPOSITORY.to_s,
                 "log", "-1", "--format=%s"
         ).strip

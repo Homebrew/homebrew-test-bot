@@ -42,7 +42,7 @@ module Homebrew
       end
 
       def rev_parse(ref)
-        Utils.popen_read(git, "-C", repository, "rev-parse", "--verify", ref).strip
+        Utils.safe_popen_read(git, "-C", repository, "rev-parse", "--verify", ref).strip
       end
 
       def current_sha1
@@ -52,7 +52,7 @@ module Homebrew
       def diff_formulae(start_revision, end_revision, path, filter)
         return unless tap
 
-        Utils.popen_read(
+        Utils.safe_popen_read(
           git, "-C", repository,
                 "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
                 start_revision, end_revision, "--", path
@@ -107,7 +107,7 @@ module Homebrew
 
         if diff_start_sha1.present? && diff_end_sha1.present?
           merge_base_sha1 =
-            Utils.popen_read(git, "-C", repository, "merge-base",
+            Utils.safe_popen_read(git, "-C", repository, "merge-base",
                                    diff_start_sha1, diff_end_sha1).strip
           diff_start_sha1 = merge_base_sha1 if merge_base_sha1.present?
         end
@@ -118,7 +118,7 @@ module Homebrew
         diff_start_sha1 = diff_end_sha1 if @formulae.present?
 
         if tap.to_s != CoreTap.instance.name
-          core_revision = Utils.popen_read(
+          core_revision = Utils.safe_popen_read(
             git, "-C", CoreTap.instance.path.to_s,
                   "log", "-1", "--format=%h (%s)"
           ).strip
@@ -126,11 +126,11 @@ module Homebrew
         end
 
         if tap
-          tap_origin_master_revision = Utils.popen_read(
+          tap_origin_master_revision = Utils.safe_popen_read(
             git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)", "origin/master"
           ).strip
-          tap_revision = Utils.popen_read(
+          tap_revision = Utils.safe_popen_read(
             git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)"
           ).strip
@@ -256,9 +256,9 @@ module Homebrew
           test "brew", "unlink", name, args: args
         end
 
-        installed = Utils.popen_read("brew", "list").split("\n")
+        installed = Utils.safe_popen_read("brew", "list").split("\n")
         dependencies =
-          Utils.popen_read("brew", "deps", "--include-build",
+          Utils.safe_popen_read("brew", "deps", "--include-build",
                                            "--include-test", formula_name)
                .split("\n")
         installed_dependencies = installed & dependencies
@@ -288,7 +288,7 @@ module Homebrew
         end
 
         runtime_or_test_dependencies =
-          Utils.popen_read("brew", "deps", "--include-test", formula_name)
+          Utils.safe_popen_read("brew", "deps", "--include-test", formula_name)
                .split("\n")
         build_dependencies = dependencies - runtime_or_test_dependencies
         @unchanged_build_dependencies = build_dependencies - @formulae
@@ -314,7 +314,7 @@ module Homebrew
         uses_args = []
         uses_args << "--recursive" unless args.skip_recursive_dependents?
         dependents =
-          Utils.popen_read("brew", "uses", "--include-build", "--include-test", *uses_args, formula_name)
+          Utils.safe_popen_read("brew", "uses", "--include-build", "--include-test", *uses_args, formula_name)
                .split("\n")
         dependents -= @formulae
         dependents = dependents.map { |d| Formulary.factory(d) }
@@ -668,7 +668,7 @@ module Homebrew
         return unless args.cleanup?
         return unless HOMEBREW_CACHE.exist?
 
-        used_percentage = Utils.popen_read("df", HOMEBREW_CACHE.to_s)
+        used_percentage = Utils.safe_popen_read("df", HOMEBREW_CACHE.to_s)
                                .lines[1] # HOMEBREW_CACHE
                                .split[4] # used %
                                .to_i
@@ -685,7 +685,7 @@ module Homebrew
         @formulae.each do |formula|
           begin
             formula_dependencies =
-              Utils.popen_read("brew", "deps", "--full-name",
+              Utils.safe_popen_read("brew", "deps", "--full-name",
                                                "--include-build",
                                                "--include-test", formula)
                    .split("\n")
