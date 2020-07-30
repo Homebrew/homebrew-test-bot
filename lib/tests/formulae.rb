@@ -645,7 +645,11 @@ module Homebrew
             @bottled_dependents.each do |dependent|
               install_bottled_dependent(dependent, args: args)
             end
+          else
+            ofail "#{formula.full_name} has failing tests!"
+            skip formula.name
           end
+
           cleanup_bottle_etc_var(formula) if args.cleanup?
         end
 
