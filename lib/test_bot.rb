@@ -23,12 +23,8 @@ module Homebrew
 
     HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}.freeze
 
-    def resolve_test_tap
-      if (tap = Homebrew.args.tap)
-        return Tap.fetch(tap)
-      end
-
-      return Tap.fetch(tap) if HOMEBREW_TAP_REGEX.match?(tap)
+    def resolve_test_tap(tap = nil)
+      return Tap.fetch(tap) if tap
 
       # Get tap from GitHub Actions GITHUB_REPOSITORY
       git_url = ENV["GITHUB_REPOSITORY"]
@@ -48,11 +44,11 @@ module Homebrew
       end
     end
 
-    def run!
+    def run!(args)
       $stdout.sync = true
       $stderr.sync = true
 
-      if Pathname.pwd == HOMEBREW_PREFIX && Homebrew.args.cleanup?
+      if Pathname.pwd == HOMEBREW_PREFIX && args.cleanup?
         odie "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
       end
 
@@ -63,7 +59,7 @@ module Homebrew
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
-      if Homebrew.args.local?
+      if args.local?
         ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
         ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
         FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
@@ -76,7 +72,7 @@ module Homebrew
       ).strip
       puts Formatter.headline("Using Homebrew/homebrew-test-bot #{test_bot_revision}", color: :cyan)
 
-      tap = resolve_test_tap
+      tap = resolve_test_tap(args.tag)
       # Tap repository if required, this is done before everything else
       # because Formula parsing and/or git commit hash lookup depends on it.
       # At the same time, make sure Tap is not a shallow clone.
@@ -89,16 +85,16 @@ module Homebrew
         end
       end
 
-      ENV["HOMEBREW_GIT_NAME"] = Homebrew.args.git_name || "BrewTestBot"
-      ENV["HOMEBREW_GIT_EMAIL"] = Homebrew.args.git_email ||
+      ENV["HOMEBREW_GIT_NAME"] = args.git_name || "BrewTestBot"
+      ENV["HOMEBREW_GIT_EMAIL"] = args.git_email ||
                                   "homebrew-test-bot@lists.sfconservancy.org"
 
-      return TestCiUpload.run!(tap) if Homebrew.args.ci_upload?
+      return TestCiUpload.run!(tap, args: args) if args.ci_upload?
 
-      Homebrew.failed = !TestRunner.run!(tap, git: GIT)
+      Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
     ensure
       if HOMEBREW_CACHE.exist?
-        if Homebrew.args.clean_cache?
+        if args.clean_cache?
           HOMEBREW_CACHE.children.each(&:rmtree)
         else
           Dir.glob("*.bottle*.tar.gz") do |bottle_file|

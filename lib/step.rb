@@ -46,9 +46,9 @@ module Homebrew
       @output.present?
     end
 
-    def run
+    def run(dry_run: false, fail_fast: false)
       puts_command
-      if Homebrew.args.dry_run?
+      if dry_run
         @status = :passed
         puts_result
         return
@@ -86,7 +86,7 @@ module Homebrew
         end
       end
 
-      exit 1 if Homebrew.args.fail_fast? && failed?
+      exit 1 if fail_fast && failed?
     end
   end
 end

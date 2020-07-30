@@ -68,12 +68,12 @@ module Homebrew
   def test_bot
     setup_argv_and_env
 
-    test_bot_args.parse
+    args = test_bot_args.parse
 
     # Keep this after the .parse to keep --help fast.
     require_relative "../lib/test_bot"
 
-    Homebrew::TestBot.run!
+    Homebrew::TestBot.run!(args)
   end
 
   def setup_argv_and_env

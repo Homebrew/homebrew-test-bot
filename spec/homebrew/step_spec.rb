@@ -3,10 +3,6 @@
 require "spec_helper"
 
 describe Homebrew::Step do
-  before do
-    allow(Homebrew).to receive(:args).and_return(OpenStruct.new)
-  end
-
   let(:command) { ["brew", "config"] }
   let(:env) { {} }
   let(:verbose) { false }

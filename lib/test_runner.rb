@@ -12,12 +12,12 @@ module Homebrew
   module TestRunner
     module_function
 
-    def run!(tap, git:)
+    def run!(tap, git:, args:)
       tests = []
-      skip_setup = Homebrew.args.skip_setup?
+      skip_setup = args.skip_setup?
       skip_cleanup_before = false
 
-      test_bot_args = Homebrew.args.named.dup
+      test_bot_args = args.named.dup
 
       # With no arguments just build the most recent commit.
       test_bot_args << "HEAD" if test_bot_args.empty?
@@ -28,11 +28,12 @@ module Homebrew
                                               git:                 git,
                                               skip_setup:          skip_setup,
                                               skip_cleanup_before: skip_cleanup_before,
-                                              skip_cleanup_after:  skip_cleanup_after)
+                                              skip_cleanup_after:  skip_cleanup_after,
+                                              args:                args)
         skip_setup = true
         skip_cleanup_before = true
         tests += current_tests.values
-        run_tests(current_tests)
+        run_tests(current_tests, args: args)
       end
 
       failed_steps = tests.map(&:failed_steps)
@@ -54,34 +55,32 @@ module Homebrew
       failed_steps.empty?
     end
 
-    def no_only_args?
-      any_only = Homebrew.args.only_cleanup_before? ||
-                 Homebrew.args.only_setup? ||
-                 Homebrew.args.only_tap_syntax? ||
-                 Homebrew.args.only_formulae? ||
-                 Homebrew.args.only_cleanup_after?
+    def no_only_args?(args)
+      any_only = args.only_cleanup_before? ||
+                 args.only_setup? ||
+                 args.only_tap_syntax? ||
+                 args.only_formulae? ||
+                 args.only_cleanup_after?
       !any_only
     end
 
-    def build_tests(argument, tap:, git:, skip_setup:, skip_cleanup_before:, skip_cleanup_after:)
+    def build_tests(argument, tap:, git:, skip_setup:, skip_cleanup_before:, skip_cleanup_after:, args:)
       tests = {}
 
-      tests[:setup] = Tests::Setup.new if !skip_setup && (no_only_args? || Homebrew.args.only_setup?)
+      no_only_args = no_only_args?(args)
 
-      if no_only_args? || Homebrew.args.only_tap_syntax?
-        tests[:tap_syntax] = Tests::TapSyntax.new(tap: tap || CoreTap.instance)
-      end
+      tests[:setup] = Tests::Setup.new if !skip_setup && (no_only_args || args.only_setup?)
 
-      if no_only_args? || Homebrew.args.only_formulae?
-        tests[:formulae] = Tests::Formulae.new(argument, tap: tap, git: git)
-      end
+      tests[:tap_syntax] = Tests::TapSyntax.new(tap: tap || CoreTap.instance) if no_only_args || args.only_tap_syntax?
 
-      if Homebrew.args.cleanup?
-        if !skip_cleanup_before && (no_only_args? || Homebrew.args.only_cleanup_before?)
+      tests[:formulae] = Tests::Formulae.new(argument, tap: tap, git: git) if no_only_args || args.only_formulae?
+
+      if args.cleanup?
+        if !skip_cleanup_before && (no_only_args || args.only_cleanup_before?)
           tests[:cleanup_before] = Tests::CleanupBefore.new(tap: tap, git: git)
         end
 
-        if !skip_cleanup_after &&  (no_only_args? || Homebrew.args.only_cleanup_after?)
+        if !skip_cleanup_after &&  (no_only_args || args.only_cleanup_after?)
           tests[:cleanup_after]  = Tests::CleanupAfter.new(tap: tap, git: git)
         end
       end
@@ -89,14 +88,14 @@ module Homebrew
       tests
     end
 
-    def run_tests(tests)
-      tests[:cleanup_before]&.run!
+    def run_tests(tests, args:)
+      tests[:cleanup_before]&.run!(args: args)
       begin
-        tests[:setup]&.run!
-        tests[:tap_syntax]&.run!
-        tests[:formulae]&.run!
+        tests[:setup]&.run!(args: args)
+        tests[:tap_syntax]&.run!(args: args)
+        tests[:formulae]&.run!(args: args)
       ensure
-        tests[:cleanup_after]&.run!
+        tests[:cleanup_after]&.run!(args: args)
       end
     end
   end

@@ -13,31 +13,31 @@ module Homebrew
                       secrets:      secrets
     end
 
-    def run!(tap)
+    def run!(tap, args:)
       # Don't trust formulae we're uploading
       ENV["HOMEBREW_DISABLE_LOAD_FORMULA"] = "1"
 
       bintray_user = ENV["HOMEBREW_BINTRAY_USER"]
       bintray_key = ENV["HOMEBREW_BINTRAY_KEY"]
       if !bintray_user || !bintray_key
-        raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!" unless Homebrew.args.dry_run?
+        raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!" unless args.dry_run?
       end
 
       # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
-      bintray_org = Homebrew.args.bintray_org || "homebrew"
+      bintray_org = args.bintray_org || "homebrew"
       ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"] = "1" if bintray_org == "homebrew" && !OS.mac?
 
       # Don't pass keys/cookies to subprocesses
       ENV.clear_sensitive_environment!
 
-      raise "No bottles found in #{Dir.pwd}!" if Dir["*.bottle*.*"].empty? && !Homebrew.args.dry_run?
+      raise "No bottles found in #{Dir.pwd}!" if Dir["*.bottle*.*"].empty? && !args.dry_run?
 
       json_files = Dir.glob("*.bottle.json")
       bottles_hash = json_files.reduce({}) do |hash, json_file|
         hash.deep_merge(JSON.parse(IO.read(json_file)))
       end
 
-      if Homebrew.args.dry_run?
+      if args.dry_run?
         bottles_hash = {
           "testbottest" => {
             "formula" => {
@@ -70,9 +70,9 @@ module Homebrew
       ENV["GIT_WORK_TREE"] = tap.path
       ENV["GIT_DIR"] = "#{ENV["GIT_WORK_TREE"]}/.git"
 
-      if Homebrew.args.keep_old?
+      if args.keep_old?
         system "brew", "bottle", "--merge", "--write", "--keep-old", *json_files
-      elsif !Homebrew.args.dry_run?
+      elsif !args.dry_run?
         system "brew", "bottle", "--merge", "--write", *json_files
       else
         puts "brew bottle --merge --write $JSON_FILES"
@@ -93,7 +93,7 @@ module Homebrew
           filename = Bottle::Filename.new(formula_name, version, tag, rebuild)
           bintray_url =
             "#{Homebrew::EnvConfig.bottle_domain}/#{bintray_repo}/#{filename.bintray}"
-          filename_already_published = if Homebrew.args.dry_run?
+          filename_already_published = if args.dry_run?
             puts "#{CURL} -I --output /dev/null #{bintray_url}"
             false
           else
@@ -112,7 +112,7 @@ module Homebrew
 
           unless formula_packaged[formula_name]
             package_url = "#{bintray_packages_url}/#{bintray_package}"
-            package_exists = if Homebrew.args.dry_run?
+            package_exists = if args.dry_run?
               puts "#{CURL} --output /dev/null #{package_url}"
               false
             else
@@ -125,7 +125,7 @@ module Homebrew
                 "public_download_numbers": true,
                 "public_stats": true}
               EOS
-              if Homebrew.args.dry_run?
+              if args.dry_run?
                 puts <<~EOS
                   #{CURL} --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                       --header Content-Type: application/json
@@ -146,7 +146,7 @@ module Homebrew
           content_url = "https://api.bintray.com/content/#{bintray_org}"
           content_url +=
             "/#{bintray_repo}/#{bintray_package}/#{version}/#{filename.bintray}"
-          if Homebrew.args.dry_run?
+          if args.dry_run?
             puts <<~EOS
               #{CURL} --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY
                   --upload-file #{filename}
@@ -160,12 +160,12 @@ module Homebrew
           end
         end
 
-        next unless Homebrew.args.publish?
+        next unless args.publish?
 
         publish_url = "https://api.bintray.com/content/#{bintray_org}"
         publish_url += "/#{bintray_repo}/#{bintray_package}/#{version}/publish"
 
-        if Homebrew.args.dry_run?
+        if args.dry_run?
           puts <<~EOS
             #{CURL} --user $HOMEBREW_BINTRAY_USER:$HOMEBREW_BINTRAY_KEY --request POST
                 #{publish_url}

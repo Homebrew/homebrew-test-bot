@@ -32,9 +32,9 @@ module Homebrew
       puts Formatter.headline("Running #{klass}##{method}", color: :magenta)
     end
 
-    def test(*args, env: {}, verbose: Homebrew.args.verbose?)
-      step = Step.new(args, env: env, verbose: verbose)
-      step.run
+    def test(*arguments, env: {}, args:, verbose: Homebrew.args.verbose?)
+      step = Step.new(arguments, env: env, verbose: verbose)
+      step.run(dry_run: args.dry_run?, fail_fast: args.fail_fast?)
       @steps << step
       step
     end
