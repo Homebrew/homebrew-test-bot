@@ -30,7 +30,7 @@ module Homebrew
              description: "use the `git` repository of the given tap. Defaults to the core tap for syntax checking."
       switch "--fail-fast",
              description: "immediately exit on a failing step."
-      switch :verbose,
+      switch "-v", "--verbose",
              description: "print test step output in real time. Has the side effect of " \
                           "passing output as raw bytes instead of re-encoding in UTF-8."
       switch "--test-default-formula",
@@ -61,7 +61,6 @@ module Homebrew
              description: "Only run the post-cleanup step. Needs `--cleanup`."
       conflicts "--only-cleanup-before", "--only-setup", "--only-tap-syntax",
                 "--only-formulae", "--only-cleanup-after"
-      switch :debug
     end
   end
 

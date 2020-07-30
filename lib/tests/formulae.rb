@@ -34,11 +34,11 @@ module Homebrew
         test "brew", "tap", e.tap.name, args: args
         retry unless steps.last.failed?
         onoe e
-        puts e.backtrace if Homebrew.args.debug?
+        puts e.backtrace if args.debug?
       rescue FormulaUnavailableError, TapFormulaAmbiguityError,
              TapFormulaWithOldnameAmbiguityError => e
         onoe e
-        puts e.backtrace if Homebrew.args.debug?
+        puts e.backtrace if args.debug?
       end
 
       def rev_parse(ref)
