@@ -408,7 +408,10 @@ module Homebrew
       end
 
       def bottle_reinstall_formula(formula, new_formula, args:)
-        return if formula.bottle_disabled?
+        if formula.bottle_disabled?
+          @bottle_filename = nil
+          return
+        end
 
         ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
         root_url = args.root_url
@@ -424,11 +427,11 @@ module Homebrew
         return unless bottle_step.passed?
         return unless bottle_step.output?
 
-        bottle_filename =
+        @bottle_filename =
           bottle_step.output
                      .gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
         bottle_json_filename =
-          bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
+          @bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
         bottle_merge_args =
           ["--merge", "--write", "--no-commit", bottle_json_filename]
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
@@ -443,7 +446,7 @@ module Homebrew
         download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
 
         HOMEBREW_CACHE.mkpath
-        FileUtils.ln bottle_filename, download_strategy.cached_location, force: true
+        FileUtils.ln @bottle_filename, download_strategy.cached_location, force: true
         FileUtils.ln_s download_strategy.cached_location.relative_path_from(download_strategy.symlink_location),
                        download_strategy.symlink_location,
                        force: true
@@ -455,8 +458,8 @@ module Homebrew
           @unchanged_dependencies -= @unchanged_build_dependencies
         end
 
-        test "brew", "install", "--only-dependencies", bottle_filename, args: args
-        test "brew", "install", bottle_filename, args: args
+        test "brew", "install", "--only-dependencies", @bottle_filename, args: args
+        test "brew", "install", @bottle_filename, args: args
       end
 
       def install_dependent_from_source(dependent, args:)
@@ -597,6 +600,7 @@ module Homebrew
         setup_formulae_deps_instances(formula, formula_name, args: args)
 
         test "brew", "fetch", "--retry", *fetch_args, args: args
+
         test "brew", "uninstall", "--force", formula_name, args: args if formula.latest_version_installed?
 
         install_args = ["--verbose"]
@@ -607,51 +611,52 @@ module Homebrew
         test "brew", "install", "--only-dependencies", *install_args,
               env:  { "HOMEBREW_DEVELOPER" => nil },
               args: args
+
         test "brew", "install", *install_args,
               env:  { "HOMEBREW_DEVELOPER" => nil },
               args: args
         install_passed = steps.last.passed?
 
         test "brew", "audit", *audit_args, args: args
+        return unless install_passed
 
-        if install_passed
-          bottle_reinstall_formula(formula, new_formula, args: args)
-          test "brew", "linkage", "--test", formula_name, args: args
+        bottle_reinstall_formula(formula, new_formula, args: args)
+        test "brew", "linkage", "--test", formula_name, args: args
+        failed_linkage_or_test = steps.last.failed?
 
-          test_passed_or_missing = if formula.test_defined?
-            test "brew", "install", "--only-dependencies", "--include-test",
-                                    formula_name,
-                                    args: args
-            # Intentionally not passing --retry here to avoid papering over
-            # flaky tests when a formula isn't being pulled in as a dependent.
-            test "brew", "test", "--verbose", formula_name, args: args
+        test "brew", "install", "--only-dependencies", "--include-test",
+                                formula_name,
+                                args: args
 
-            steps.last.passed?
-          else
-            true
-          end
-
-          # Don't test dependents if the formula test failed.
-          if test_passed_or_missing
-            @source_dependents.each do |dependent|
-              install_dependent_from_source(dependent, args: args)
-
-              bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-                dependent.bottled?
-              end
-              install_bottled_dependent(dependent, args: args) if bottled
-            end
-
-            @bottled_dependents.each do |dependent|
-              install_bottled_dependent(dependent, args: args)
-            end
-          end
-          cleanup_bottle_etc_var(formula) if args.cleanup?
+        if formula.test_defined?
+          # Intentionally not passing --retry here to avoid papering over
+          # flaky tests when a formula isn't being pulled in as a dependent.
+          test "brew", "test", "--verbose", formula_name, args: args
+          failed_linkage_or_test ||= steps.last.failed?
         end
 
-        return if @unchanged_dependencies.empty?
+        # Don't test dependents or keep bottle if the formula linkage or test failed.
+        if failed_linkage_or_test
+          FileUtils.rm_rf @bottle_filename if @bottle_filename
+          return
+        end
 
-        test "brew", "uninstall", "--force", *@unchanged_dependencies, args: args
+        @source_dependents.each do |dependent|
+          install_dependent_from_source(dependent, args: args)
+
+          bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
+            dependent.bottled?
+          end
+          install_bottled_dependent(dependent, args: args) if bottled
+        end
+
+        @bottled_dependents.each do |dependent|
+          install_bottled_dependent(dependent, args: args)
+        end
+      ensure
+        cleanup_bottle_etc_var(formula) if args.cleanup?
+
+        test "brew", "uninstall", "--force", *@unchanged_dependencies, args: args if @unchanged_dependencies.present?
       end
 
       def deleted_formula!(formula_name, args:)
