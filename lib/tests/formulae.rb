@@ -42,7 +42,7 @@ module Homebrew
       end
 
       def rev_parse(ref)
-        Utils.safe_popen_read(git, "-C", repository, "rev-parse", "--verify", ref).strip
+        Utils.popen_read(git, "-C", repository, "rev-parse", "--verify", ref).strip
       end
 
       def current_sha1
@@ -82,27 +82,31 @@ module Homebrew
             "#{@argument} is not detected from GitHub Actions or a formula name!"
         end
 
-        # Use GitHub Actions variables for pull request jobs.
-        if ENV["GITHUB_BASE_REF"].present? && ENV["GITHUB_SHA"].present?
-          diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
-          if diff_start_sha1.blank?
-            test git, "-C", repository, "fetch", "--depth=1",
-                 "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}",
-                 args: args
-            diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
-          end
-          diff_end_sha1 = ENV["GITHUB_SHA"]
-        # Use GitHub Actions variables for branch jobs.
-        elsif ENV["GITHUB_SHA"].present?
-          diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
-        # Otherwise just use the current SHA-1 (which may be overriden later)
-        else
-          if ENV["CI"] || ENV["GITHUB_ACTIONS"]
+        if ENV["GITHUB_REPOSITORY"].blank? || ENV["GITHUB_SHA"].blank?
+          if ENV["GITHUB_ACTIONS"]
+            odie <<~EOS
+              We cannot find the needed GitHub Actions environment variables! Check you have e.g. exported them to a Docker container.
+            EOS
+          elsif ENV["CI"]
             onoe <<~EOS
-              No known CI provider detected! If you are using GitHub Actions then we cannot find the expected  environment variables! Check you have e.g. exported them to a Docker container.
+              No known CI provider detected! If you are using GitHub Actions then we cannot find the expected environment variables! Check you have e.g. exported them to a Docker container.
             EOS
           end
-          diff_end_sha1 = diff_start_sha1 = current_sha1
+        elsif tap.present? && tap.full_name.casecmp(ENV["GITHUB_REPOSITORY"]).zero?
+          # Use GitHub Actions variables for pull request jobs.
+          if ENV["GITHUB_BASE_REF"].present?
+            diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
+            if diff_start_sha1.blank?
+              test git, "-C", repository, "fetch", "--depth=1",
+                   "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}",
+                   args: args
+              diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
+            end
+            diff_end_sha1 = ENV["GITHUB_SHA"]
+          # Use GitHub Actions variables for branch jobs.
+          else
+            diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
+          end
         end
 
         if diff_start_sha1.present? && diff_end_sha1.present?
