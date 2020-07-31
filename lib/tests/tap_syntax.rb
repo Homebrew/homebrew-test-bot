@@ -10,6 +10,7 @@ module Homebrew
         broken_xcode_rubygems = MacOS.version == :mojave &&
                                 MacOS.active_developer_dir == "/Applications/Xcode.app/Contents/Developer"
         test "brew", "style", tap.name, args: args unless broken_xcode_rubygems
+        test "brew", "audit", "--skip-style", args: args
       end
     end
   end

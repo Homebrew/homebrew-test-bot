@@ -19,7 +19,7 @@ jobs:
         if which brew &>/dev/null; then
           HOMEBREW_PREFIX="$(brew --prefix)"
           HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX/Homebrew"
-          brew update-reset "$HOMEBREW_REPOSITORY"
+          brew update-reset "$HOMEBREW_REPOSITORY" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-core"
           ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
         else
           HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew
@@ -44,7 +44,10 @@ jobs:
         GEMS_HASH=$(shasum -a 256 "$HOMEBREW_REPOSITORY/Library/Homebrew/Gemfile.lock" | cut -f1 -d' ')
         echo "::set-output name=gems-hash::$GEMS_HASH"
 
-        if [ "$RUNNER_OS" = "Linux" ]; then
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          # don't care about `brew audit` here.
+          brew untap mongodb/brew
+        else
           sudo chown -R "$USER" "$HOMEBREW_PREFIX"
         fi
 
