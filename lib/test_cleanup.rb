@@ -21,20 +21,16 @@ module Homebrew
       REQUIRED_LINUXBREW_TAPS
     end.freeze
 
-    def initialize(tap:, git:)
-      super(tap: tap, git: git)
-    end
-
-    def reset_if_needed(repository, args:)
+    def reset_if_needed(repository)
       return if system(git, "-C", repository, "diff", "--quiet", "origin/master")
 
-      test git, "-C", repository, "reset", "--hard", "origin/master", args: args
+      test git, "-C", repository, "reset", "--hard", "origin/master"
     end
 
-    def cleanup_shared(args:)
+    def cleanup_shared
       cleanup_git_meta(repository)
-      clean_if_needed(repository, args: args)
-      prune_if_needed(repository, args: args)
+      clean_if_needed(repository)
+      prune_if_needed(repository)
 
       paths_to_delete = []
 
@@ -69,9 +65,9 @@ module Homebrew
       FileUtils.rm_rf paths_to_delete
 
       if tap
-        checkout_branch_if_needed(HOMEBREW_REPOSITORY, args: args)
-        reset_if_needed(HOMEBREW_REPOSITORY, args: args)
-        clean_if_needed(HOMEBREW_REPOSITORY, args: args)
+        checkout_branch_if_needed(HOMEBREW_REPOSITORY)
+        reset_if_needed(HOMEBREW_REPOSITORY)
+        clean_if_needed(HOMEBREW_REPOSITORY)
       end
 
       # Keep all "brew" invocations after HOMEBREW_REPOSITORY operations
@@ -80,30 +76,30 @@ module Homebrew
         next if tap_name == tap&.name
         next if REQUIRED_TAPS.include?(tap_name)
 
-        test "brew", "untap", tap_name, args: args
+        test "brew", "untap", tap_name
       end
 
       Pathname.glob("#{HOMEBREW_LIBRARY}/Taps/*/*").each do |git_repo|
         cleanup_git_meta(git_repo)
         next if repository == git_repo
 
-        checkout_branch_if_needed(git_repo, args: args)
-        reset_if_needed(git_repo, args: args)
-        prune_if_needed(git_repo, args: args)
+        checkout_branch_if_needed(git_repo)
+        reset_if_needed(git_repo)
+        prune_if_needed(git_repo)
       end
 
-      test "brew", "cleanup", "--prune=3", args: args
+      test "brew", "cleanup", "--prune=3"
     end
 
     private
 
-    def checkout_branch_if_needed(repository, branch = "master", args:)
+    def checkout_branch_if_needed(repository, branch = "master")
       current_branch = Utils.safe_popen_read(
         git, "-C", repository, "symbolic-ref", "HEAD"
       ).strip
       return if branch == current_branch
 
-      test git, "-C", repository, "checkout", "-f", branch, args: args
+      test git, "-C", repository, "checkout", "-f", branch
     end
 
     def cleanup_git_meta(repository)
@@ -112,7 +108,7 @@ module Homebrew
       FileUtils.rm_f "#{repository}/.git/gc.log"
     end
 
-    def clean_if_needed(repository, args:)
+    def clean_if_needed(repository)
       return if repository == HOMEBREW_PREFIX
 
       clean_args = [
@@ -125,15 +121,15 @@ module Homebrew
         git, "-C", repository, "clean", "--dry-run", *clean_args
       ).strip.empty?
 
-      test git, "-C", repository, "clean", "-ff", *clean_args, args: args
+      test git, "-C", repository, "clean", "-ff", *clean_args
     end
 
-    def prune_if_needed(repository, args:)
+    def prune_if_needed(repository)
       return unless Utils.safe_popen_read(
         "#{git} -C '#{repository}' -c gc.autoDetach=false gc --auto 2>&1",
       ).include?("git prune")
 
-      test git, "-C", repository, "prune", args: args
+      test git, "-C", repository, "prune"
     end
   end
 end

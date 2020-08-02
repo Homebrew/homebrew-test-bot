@@ -6,12 +6,12 @@ module Homebrew
       def run!(args:)
         test_header(:Setup)
 
-        test "brew", "install-bundler-gems", args: args
+        test "brew", "install-bundler-gems"
 
         # Always output `brew config` output even when it doesn't fail.
-        test "brew", "config", verbose: true, args: args
+        test "brew", "config", verbose: true
 
-        test "brew", "doctor", args: args
+        test "brew", "doctor"
       end
     end
   end

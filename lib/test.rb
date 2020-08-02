@@ -10,9 +10,12 @@ module Homebrew
 
     attr_reader :tap, :git, :steps, :repository
 
-    def initialize(tap: nil, git: nil)
+    def initialize(tap: nil, git: nil, dry_run: false, fail_fast: false, verbose: false)
       @tap = tap
       @git = git
+      @dry_run = dry_run
+      @fail_fast = fail_fast
+      @verbose = verbose
 
       @steps = []
 
@@ -32,9 +35,9 @@ module Homebrew
       puts Formatter.headline("Running #{klass}##{method}", color: :magenta)
     end
 
-    def test(*arguments, env: {}, args:, verbose: args.verbose?)
+    def test(*arguments, env: {}, verbose: @verbose)
       step = Step.new(arguments, env: env, verbose: verbose)
-      step.run(dry_run: args.dry_run?, fail_fast: args.fail_fast?)
+      step.run(dry_run: @dry_run, fail_fast: @fail_fast)
       @steps << step
       step
     end

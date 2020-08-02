@@ -69,19 +69,42 @@ module Homebrew
 
       no_only_args = no_only_args?(args)
 
-      tests[:setup] = Tests::Setup.new if !skip_setup && (no_only_args || args.only_setup?)
+      if !skip_setup && (no_only_args || args.only_setup?)
+        tests[:setup] = Tests::Setup.new(dry_run:   args.dry_run?,
+                                         fail_fast: args.fail_fast?,
+                                         verbose:   args.verbose?)
+      end
 
-      tests[:tap_syntax] = Tests::TapSyntax.new(tap: tap || CoreTap.instance) if no_only_args || args.only_tap_syntax?
+      if no_only_args || args.only_tap_syntax?
+        tests[:tap_syntax] = Tests::TapSyntax.new(tap:       tap || CoreTap.instance,
+                                                  dry_run:   args.dry_run?,
+                                                  fail_fast: args.fail_fast?,
+                                                  verbose:   args.verbose?)
+      end
 
-      tests[:formulae] = Tests::Formulae.new(argument, tap: tap, git: git) if no_only_args || args.only_formulae?
+      if no_only_args || args.only_formulae?
+        tests[:formulae] = Tests::Formulae.new(argument, tap:       tap,
+                                                         git:       git,
+                                                         dry_run:   args.dry_run?,
+                                                         fail_fast: args.fail_fast?,
+                                                         verbose:   args.verbose?)
+      end
 
       if args.cleanup?
         if !skip_cleanup_before && (no_only_args || args.only_cleanup_before?)
-          tests[:cleanup_before] = Tests::CleanupBefore.new(tap: tap, git: git)
+          tests[:cleanup_before] = Tests::CleanupBefore.new(tap:       tap,
+                                                            git:       git,
+                                                            dry_run:   args.dry_run?,
+                                                            fail_fast: args.fail_fast?,
+                                                            verbose:   args.verbose?)
         end
 
-        if !skip_cleanup_after &&  (no_only_args || args.only_cleanup_after?)
-          tests[:cleanup_after]  = Tests::CleanupAfter.new(tap: tap, git: git)
+        if !skip_cleanup_after && (no_only_args || args.only_cleanup_after?)
+          tests[:cleanup_after] = Tests::CleanupAfter.new(tap:       tap,
+                                                          git:       git,
+                                                          dry_run:   args.dry_run?,
+                                                          fail_fast: args.fail_fast?,
+                                                          verbose:   args.verbose?)
         end
       end
 

@@ -9,13 +9,12 @@ module Homebrew
         if tap.to_s != CoreTap.instance.name
           core_path = CoreTap.instance.path
           if core_path.exist?
-            test git, "-C", core_path.to_s, "fetch", "--depth=1", "origin", args: args
-            reset_if_needed(core_path.to_s, args: args)
+            test git, "-C", core_path.to_s, "fetch", "--depth=1", "origin"
+            reset_if_needed(core_path.to_s)
           else
             test git, "clone", "--depth=1",
                   CoreTap.instance.default_remote,
-                  core_path.to_s,
-                  args: args
+                  core_path.to_s
           end
         end
 
@@ -23,16 +22,16 @@ module Homebrew
 
         # Keep all "brew" invocations after cleanup_shared
         # (which cleans up Homebrew/brew)
-        cleanup_shared(args: args)
+        cleanup_shared
 
         installed_taps = Tap.select(&:installed?).map(&:name)
         (REQUIRED_TAPS - installed_taps).each do |tap|
-          test "brew", "tap", tap, args: args
+          test "brew", "tap", tap
         end
 
         # install newer Git when needed
         if OS.mac? && MacOS.version < :sierra
-          test "brew", "install", "git", args: args
+          test "brew", "install", "git"
           ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
           change_git!("#{HOMEBREW_PREFIX}/opt/git/bin/git")
         end

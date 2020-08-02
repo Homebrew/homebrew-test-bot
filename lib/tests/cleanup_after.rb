@@ -11,9 +11,9 @@ module Homebrew
 
         test_header(:CleanupAfter)
 
-        pkill_if_needed(args: args)
+        pkill_if_needed
 
-        cleanup_shared(args: args)
+        cleanup_shared
 
         # Keep all "brew" invocations after cleanup_shared
         # (which cleans up Homebrew/brew)
@@ -25,13 +25,13 @@ module Homebrew
 
       private
 
-      def pkill_if_needed(args:)
+      def pkill_if_needed
         pgrep = ["pgrep", "-f", HOMEBREW_CELLAR.to_s]
         if quiet_system(*pgrep)
-          test "pkill", "-f", HOMEBREW_CELLAR.to_s, args: args
+          test "pkill", "-f", HOMEBREW_CELLAR.to_s
           if quiet_system(*pgrep)
             sleep 1
-            test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s, args: args if system(*pgrep)
+            test "pkill", "-9", "-f", HOMEBREW_CELLAR.to_s if system(*pgrep)
           end
         end
       end
