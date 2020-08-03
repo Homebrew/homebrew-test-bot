@@ -669,6 +669,7 @@ module Homebrew
 
         test_header(:Formulae, method: :cleanup_during!)
 
+        FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
         test "rm", "-rf", HOMEBREW_CACHE.to_s
       end
 
