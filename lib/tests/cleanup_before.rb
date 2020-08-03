@@ -46,7 +46,7 @@ module Homebrew
         ).strip
         puts
         verb = tap ? "Using" : "Testing"
-        puts Formatter.headline("#{verb} Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
+        info_header "#{verb} Homebrew/brew #{brew_version} (#{brew_commit_subject})"
       end
     end
   end
