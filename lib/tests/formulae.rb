@@ -125,7 +125,7 @@ module Homebrew
             git, "-C", CoreTap.instance.path.to_s,
                   "log", "-1", "--format=%h (%s)"
           ).strip
-          puts Formatter.headline("Using #{CoreTap.instance.full_name} #{core_revision}", color: :cyan)
+          info_header "Using #{CoreTap.instance.full_name} #{core_revision}"
         end
 
         if tap
@@ -137,7 +137,7 @@ module Homebrew
             git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)"
           ).strip
-          puts Formatter.headline("Testing #{tap.full_name} #{tap_revision}:", color: :cyan)
+          info_header "Testing #{tap.full_name} #{tap_revision}:"
         end
 
         puts <<-EOS
@@ -170,7 +170,7 @@ module Homebrew
 
         return if @added_formulae.blank? && modified_formulae.blank? && @deleted_formulae.blank?
 
-        puts Formatter.headline("Testing Formula changes:", color: :cyan)
+        info_header "Testing Formula changes:"
         puts <<-EOS
     added    #{@added_formulae.blank? ? "(empty)" : @added_formulae.join(" ")}
     modified #{modified_formulae.blank? ? "(empty)" : modified_formulae.join(" ")}
@@ -256,6 +256,7 @@ module Homebrew
           test "brew", "unlink", name
         end
 
+        info_header "Determining dependencies..."
         installed = Utils.safe_popen_read("brew", "list").split("\n")
         dependencies =
           Utils.safe_popen_read("brew", "deps", "--include-build",
@@ -296,6 +297,8 @@ module Homebrew
           @testable_dependents = @bottled_dependents = @source_dependents = []
           return
         end
+
+        info_header "Determining dependents..."
 
         build_dependents_from_source_whitelist = %w[
           cabal-install
@@ -591,6 +594,8 @@ module Homebrew
         install_mercurial_if_needed(deps, reqs)
         install_subversion_if_needed(deps, reqs)
         setup_formulae_deps_instances(formula, formula_name, args: args)
+
+        info_header "Starting build of #{formula_name}"
 
         test "brew", "fetch", "--retry", *fetch_args
 

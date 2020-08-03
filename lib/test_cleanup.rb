@@ -34,6 +34,7 @@ module Homebrew
 
       paths_to_delete = []
 
+      info_header "Determining #{HOMEBREW_PREFIX} files to purge..."
       Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
       Pathname.glob("#{HOMEBREW_PREFIX}/**/*", File::FNM_DOTMATCH).each do |path|
         next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
@@ -62,6 +63,7 @@ module Homebrew
       end
 
       # Do this in a second pass so that all children have their permissions fixed before we delete the parent.
+      info_header "Purging..."
       FileUtils.rm_rf paths_to_delete
 
       if tap

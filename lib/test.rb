@@ -35,6 +35,10 @@ module Homebrew
       puts Formatter.headline("Running #{klass}##{method}", color: :magenta)
     end
 
+    def info_header(text)
+      puts Formatter.headline(text, color: :cyan)
+    end
+
     def test(*arguments, env: {}, verbose: @verbose)
       step = Step.new(arguments, env: env, verbose: verbose)
       step.run(dry_run: @dry_run, fail_fast: @fail_fast)
