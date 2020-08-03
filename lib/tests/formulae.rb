@@ -3,8 +3,8 @@
 module Homebrew
   module Tests
     class Formulae < Test
-      def initialize(argument, tap:, git:)
-        super(tap: tap, git: git)
+      def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:)
+        super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
         @argument = argument
 
@@ -20,7 +20,7 @@ module Homebrew
           formula!(f, args: args)
         end
         @deleted_formulae.each do |f|
-          deleted_formula!(f, args: args)
+          deleted_formula!(f)
         end
       end
 
@@ -31,7 +31,7 @@ module Homebrew
       rescue TapFormulaUnavailableError => e
         raise if e.tap.installed?
 
-        test "brew", "tap", e.tap.name, args: args
+        test "brew", "tap", e.tap.name
         retry unless steps.last.failed?
         onoe e
         puts e.backtrace if args.debug?
@@ -98,8 +98,7 @@ module Homebrew
             diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
             if diff_start_sha1.blank?
               test git, "-C", repository, "fetch", "--depth=1",
-                   "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}",
-                   args: args
+                   "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
               diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
             end
             diff_end_sha1 = ENV["GITHUB_SHA"]
@@ -213,15 +212,14 @@ module Homebrew
         retry
       end
 
-      def install_gcc_if_needed(formula, deps, args:)
+      def install_gcc_if_needed(formula, deps)
         installed_gcc = false
         deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
         CompilerSelector.select_for(formula)
       rescue CompilerSelectionError => e
         unless installed_gcc
           test "brew", "install", "gcc",
-                env:  { "HOMEBREW_DEVELOPER" => nil },
-                args: args
+                env:  { "HOMEBREW_DEVELOPER" => nil }
           installed_gcc = true
           DevelopmentTools.clear_version_cache
           retry
@@ -230,19 +228,17 @@ module Homebrew
         puts e.message
       end
 
-      def install_mercurial_if_needed(deps, reqs, args:)
+      def install_mercurial_if_needed(deps, reqs)
         if (deps | reqs).any? { |d| d.name == "mercurial" && d.build? }
           test "brew", "install", "mercurial",
-               env:  { "HOMEBREW_DEVELOPER" => nil },
-               args: args
+               env:  { "HOMEBREW_DEVELOPER" => nil }
         end
       end
 
-      def install_subversion_if_needed(deps, reqs, args:)
+      def install_subversion_if_needed(deps, reqs)
         if (deps | reqs).any? { |d| d.name == "subversion" && d.build? }
           test "brew", "install", "subversion",
-               env:  { "HOMEBREW_DEVELOPER" => nil },
-               args: args
+               env:  { "HOMEBREW_DEVELOPER" => nil }
         end
       end
 
@@ -257,7 +253,7 @@ module Homebrew
           next unless unlink_formula.latest_version_installed?
           next unless unlink_formula.linked_keg.exist?
 
-          test "brew", "unlink", name, args: args
+          test "brew", "unlink", name
         end
 
         installed = Utils.safe_popen_read("brew", "list").split("\n")
@@ -271,24 +267,23 @@ module Homebrew
           next if link_formula.keg_only?
           next if link_formula.linked_keg.exist?
 
-          test "brew", "link", name, args: args
+          test "brew", "link", name
         end
 
         dependencies -= installed
         @unchanged_dependencies = dependencies - @formulae
-        test "brew", "fetch", "--retry", *@unchanged_dependencies, args: args unless @unchanged_dependencies.empty?
+        test "brew", "fetch", "--retry", *@unchanged_dependencies unless @unchanged_dependencies.empty?
 
         changed_dependencies = dependencies - @unchanged_dependencies
         unless changed_dependencies.empty?
           test "brew", "fetch", "--retry", "--build-from-source",
-                                *changed_dependencies,
-                                args: args
+                                *changed_dependencies
           # Install changed dependencies as new bottles so we don't have
           # checksum problems.
-          test "brew", "install", "--build-from-source", *changed_dependencies, args: args
+          test "brew", "install", "--build-from-source", *changed_dependencies
           # Run postinstall on them because the tested formula might depend on
           # this step
-          test "brew", "postinstall", *changed_dependencies, args: args
+          test "brew", "postinstall", *changed_dependencies
         end
 
         runtime_or_test_dependencies =
@@ -376,7 +371,7 @@ module Homebrew
         @testable_dependents += @bottled_dependents.select(&:test_defined?)
       end
 
-      def unlink_conflicts(formula, args:)
+      def unlink_conflicts(formula)
         return if formula.keg_only?
         return if formula.linked_keg.exist?
 
@@ -397,7 +392,7 @@ module Homebrew
           end.select(&:any_version_installed?)
         end
         conflicts.each do |conflict|
-          test "brew", "unlink", conflict.name, args: args
+          test "brew", "unlink", conflict.name
         end
       end
 
@@ -425,7 +420,7 @@ module Homebrew
         bottle_args << "--force-core-tap" if @test_default_formula
         bottle_args << "--root-url=#{root_url}" if root_url
         bottle_args << "--or-later" if args.or_later?
-        test "brew", "bottle", *bottle_args, args: args
+        test "brew", "bottle", *bottle_args
 
         bottle_step = steps.last
         return unless bottle_step.passed?
@@ -440,8 +435,8 @@ module Homebrew
           ["--merge", "--write", "--no-commit", bottle_json_filename]
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
 
-        test "brew", "bottle", *bottle_merge_args, args: args
-        test "brew", "uninstall", "--force", formula.name, args: args
+        test "brew", "bottle", *bottle_merge_args
+        test "brew", "uninstall", "--force", formula.name
 
         bottle_json = JSON.parse(File.read(bottle_json_filename))
         root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
@@ -458,12 +453,12 @@ module Homebrew
         @formulae.delete(formula.name)
 
         unless @unchanged_build_dependencies.empty?
-          test "brew", "uninstall", "--force", *@unchanged_build_dependencies, args: args
+          test "brew", "uninstall", "--force", *@unchanged_build_dependencies
           @unchanged_dependencies -= @unchanged_build_dependencies
         end
 
-        test "brew", "install", "--only-dependencies", @bottle_filename, args: args
-        test "brew", "install", @bottle_filename, args: args
+        test "brew", "install", "--only-dependencies", @bottle_filename
+        test "brew", "install", @bottle_filename
       end
 
       def install_dependent_from_source(dependent, args:)
@@ -479,35 +474,32 @@ module Homebrew
         cleanup_during!(args: args)
 
         unless dependent.latest_version_installed?
-          test "brew", "fetch", "--retry", dependent.full_name, args: args
+          test "brew", "fetch", "--retry", dependent.full_name
           return if steps.last.failed?
 
-          unlink_conflicts dependent, args: args
+          unlink_conflicts dependent
           test "brew", "install", "--build-from-source", "--only-dependencies", dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil },
-               args: args
+               env:  { "HOMEBREW_DEVELOPER" => nil }
           test "brew", "install", "--build-from-source", dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil },
-               args: args
+               env:  { "HOMEBREW_DEVELOPER" => nil }
           return if steps.last.failed?
         end
         return unless dependent.latest_version_installed?
 
         if !dependent.keg_only? && !dependent.linked_keg.exist?
-          unlink_conflicts dependent, args: args
-          test "brew", "link", dependent.full_name, args: args
+          unlink_conflicts dependent
+          test "brew", "link", dependent.full_name
         end
-        test "brew", "install", "--only-dependencies", dependent.full_name, args: args
-        test "brew", "linkage", "--test", dependent.full_name, args: args
+        test "brew", "install", "--only-dependencies", dependent.full_name
+        test "brew", "linkage", "--test", dependent.full_name
 
         if @testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test",
-                                  dependent.full_name,
-                                  args: args
-          test "brew", "test", "--retry", "--verbose", dependent.full_name, args: args
+                                  dependent.full_name
+          test "brew", "test", "--retry", "--verbose", dependent.full_name
         end
 
-        test "brew", "uninstall", "--force", dependent.full_name, args: args
+        test "brew", "uninstall", "--force", dependent.full_name
       end
 
       def install_bottled_dependent(dependent, args:)
@@ -523,41 +515,38 @@ module Homebrew
         cleanup_during!(args: args)
 
         unless dependent.latest_version_installed?
-          test "brew", "fetch", "--retry", dependent.full_name, args: args
+          test "brew", "fetch", "--retry", dependent.full_name
           return if steps.last.failed?
 
-          unlink_conflicts dependent, args: args
+          unlink_conflicts dependent
 
           test "brew", "install", "--only-dependencies", dependent.full_name,
-                env:  { "HOMEBREW_DEVELOPER" => nil },
-                args: args
+                env:  { "HOMEBREW_DEVELOPER" => nil }
           test "brew", "install", dependent.full_name,
-                env:  { "HOMEBREW_DEVELOPER" => nil },
-                args: args
+                env:  { "HOMEBREW_DEVELOPER" => nil }
           return if steps.last.failed?
         end
         return unless dependent.latest_version_installed?
 
         if !dependent.keg_only? && !dependent.linked_keg.exist?
-          unlink_conflicts dependent, args: args
-          test "brew", "link", dependent.full_name, args: args
+          unlink_conflicts dependent
+          test "brew", "link", dependent.full_name
         end
-        test "brew", "install", "--only-dependencies", dependent.full_name, args: args
-        test "brew", "linkage", "--test", dependent.full_name, args: args
+        test "brew", "install", "--only-dependencies", dependent.full_name
+        test "brew", "linkage", "--test", dependent.full_name
 
         if @testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test",
-                                  dependent.full_name,
-                                  args: args
-          test "brew", "test", "--retry", "--verbose", dependent.full_name, args: args
+                                  dependent.full_name
+          test "brew", "test", "--retry", "--verbose", dependent.full_name
         end
 
-        test "brew", "uninstall", "--force", dependent.full_name, args: args
+        test "brew", "uninstall", "--force", dependent.full_name
       end
 
-      def fetch_formula(fetch_args, audit_args, spec_args = [], args:)
-        test "brew", "fetch", "--retry", *spec_args, *fetch_args, args: args
-        test "brew", "audit", *audit_args, args: args
+      def fetch_formula(fetch_args, audit_args, spec_args = [])
+        test "brew", "fetch", "--retry", *spec_args, *fetch_args
+        test "brew", "audit", *audit_args
       end
 
       def formula!(formula_name, args:)
@@ -590,7 +579,7 @@ module Homebrew
         end
 
         unless satisfied_requirements?(formula, :stable)
-          fetch_formula(fetch_args, audit_args, args: args)
+          fetch_formula(fetch_args, audit_args)
           return
         end
 
@@ -598,14 +587,14 @@ module Homebrew
         reqs |= formula.requirements.to_a.reject(&:optional?)
 
         tap_needed_taps(deps)
-        install_gcc_if_needed(formula, deps, args: args)
-        install_mercurial_if_needed(deps, reqs, args: args)
-        install_subversion_if_needed(deps, reqs, args: args)
+        install_gcc_if_needed(formula, deps)
+        install_mercurial_if_needed(deps, reqs)
+        install_subversion_if_needed(deps, reqs)
         setup_formulae_deps_instances(formula, formula_name, args: args)
 
-        test "brew", "fetch", "--retry", *fetch_args, args: args
+        test "brew", "fetch", "--retry", *fetch_args
 
-        test "brew", "uninstall", "--force", formula_name, args: args if formula.latest_version_installed?
+        test "brew", "uninstall", "--force", formula_name if formula.latest_version_installed?
 
         install_args = ["--verbose"]
         install_args << "--build-bottle" unless formula.bottle_disabled?
@@ -613,29 +602,25 @@ module Homebrew
 
         # Don't care about e.g. bottle failures for dependencies.
         test "brew", "install", "--only-dependencies", *install_args,
-              env:  { "HOMEBREW_DEVELOPER" => nil },
-              args: args
+              env:  { "HOMEBREW_DEVELOPER" => nil }
 
         test "brew", "install", *install_args,
-              env:  { "HOMEBREW_DEVELOPER" => nil },
-              args: args
+              env:  { "HOMEBREW_DEVELOPER" => nil }
         install_passed = steps.last.passed?
 
-        test "brew", "audit", *audit_args, args: args
+        test "brew", "audit", *audit_args
         return unless install_passed
 
         bottle_reinstall_formula(formula, new_formula, args: args)
-        test "brew", "linkage", "--test", formula_name, args: args
+        test "brew", "linkage", "--test", formula_name
         failed_linkage_or_test = steps.last.failed?
 
-        test "brew", "install", "--only-dependencies", "--include-test",
-                                formula_name,
-                                args: args
+        test "brew", "install", "--only-dependencies", "--include-test", formula_name
 
         if formula.test_defined?
           # Intentionally not passing --retry here to avoid papering over
           # flaky tests when a formula isn't being pulled in as a dependent.
-          test "brew", "test", "--verbose", formula_name, args: args
+          test "brew", "test", "--verbose", formula_name
           failed_linkage_or_test ||= steps.last.failed?
         end
 
@@ -660,17 +645,16 @@ module Homebrew
       ensure
         cleanup_bottle_etc_var(formula) if args.cleanup?
 
-        test "brew", "uninstall", "--force", *@unchanged_dependencies, args: args if @unchanged_dependencies.present?
+        test "brew", "uninstall", "--force", *@unchanged_dependencies if @unchanged_dependencies.present?
       end
 
-      def deleted_formula!(formula_name, args:)
+      def deleted_formula!(formula_name)
         test_header(:Formulae, method: "deleted_formula!(#{formula_name})")
 
         test "brew", "uses", "--include-build",
                              "--include-optional",
                              "--include-test",
-                             formula_name,
-                             args: args
+                             formula_name
       end
 
       def cleanup_during!(args:)
