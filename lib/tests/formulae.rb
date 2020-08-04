@@ -613,7 +613,7 @@ module Homebrew
               env:  { "HOMEBREW_DEVELOPER" => nil }
         install_passed = steps.last.passed?
 
-        test "brew", "audit", *audit_args
+        test "brew", "audit", *audit_args unless formula.deprecated?
         return unless install_passed
 
         bottle_reinstall_formula(formula, new_formula, args: args)
