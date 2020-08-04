@@ -168,7 +168,7 @@ module Homebrew
 
         @formulae += @added_formulae + modified_formulae
 
-        return if @added_formulae.blank? && modified_formulae.blank? && @deleted_formulae.blank?
+        raise UsageError, "Did not find any formulae to test!" if @formulae.blank? && @deleted_formulae.blank?
 
         info_header "Testing Formula changes:"
         puts <<-EOS

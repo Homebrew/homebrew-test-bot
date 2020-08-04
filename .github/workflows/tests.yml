@@ -100,10 +100,14 @@ jobs:
         cat steps_output.txt
         rm steps_output.txt
 
-    - name: Run brew test-bot --dry-run tests
+    - name: Run brew test-bot --ci-upload --dry-run
       if: matrix.os == 'macOS-latest'
-      run: |
-        brew test-bot --ci-upload --dry-run
-        brew test-bot --only-setup --dry-run
-        brew test-bot testbottest --dry-run
-        brew test-bot HEAD --dry-run
+      run: brew test-bot --ci-upload --dry-run
+
+    - name: Run brew test-bot --only-setup --dry-run
+      if: matrix.os == 'macOS-latest'
+      run: brew test-bot --only-setup --dry-run
+
+    - name: Run brew test-bot testbottest --dry-run
+      if: matrix.os == 'macOS-latest'
+      run: brew test-bot testbottest --dry-run
