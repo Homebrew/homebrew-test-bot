@@ -49,7 +49,7 @@ module Homebrew
       $stderr.sync = true
 
       if Pathname.pwd == HOMEBREW_PREFIX && args.cleanup?
-        odie "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
+        raise UsageError, "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
       end
 
       ENV["HOMEBREW_DEVELOPER"] = "1"
