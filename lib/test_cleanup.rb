@@ -7,19 +7,28 @@ module Homebrew
   class TestCleanup < Test
     protected
 
-    REQUIRED_HOMEBREW_TAPS = ([CoreTap.instance.name] + %w[
+    REQUIRED_HOMEBREW_TAPS = %W[
+      #{CoreTap.instance.name}
       homebrew/test-bot
-    ]).freeze
+    ].freeze
 
-    REQUIRED_LINUXBREW_TAPS = (REQUIRED_HOMEBREW_TAPS + %w[
+    REQUIRED_LINUXBREW_TAPS = %W[
+      #{CoreTap.instance.name}
+      homebrew/test-bot
       linuxbrew/xorg
-    ]).freeze
+    ].freeze
 
     REQUIRED_TAPS = if OS.mac? || ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"]
       REQUIRED_HOMEBREW_TAPS
     else
       REQUIRED_LINUXBREW_TAPS
     end.freeze
+
+    ALLOWED_TAPS = (REQUIRED_TAPS + %w[
+      homebrew/bundle
+      homebrew/cask
+      homebrew/services
+    ]).freeze
 
     def reset_if_needed(repository)
       return if system(git, "-C", repository, "diff", "--quiet", "origin/master")
@@ -76,7 +85,7 @@ module Homebrew
       # (which cleans up Homebrew/brew)
       Tap.names.each do |tap_name|
         next if tap_name == tap&.name
-        next if REQUIRED_TAPS.include?(tap_name)
+        next if ALLOWED_TAPS.include?(tap_name)
 
         test "brew", "untap", tap_name
       end
