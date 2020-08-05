@@ -35,22 +35,20 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
       run: brew install-bundler-gems
 
-    - name: Run brew style
-      run: brew style homebrew/test-bot
+    - name: Run brew test-bot --only-cleanup-before
+      run: brew test-bot --only-cleanup-before
+
+    - name: Run brew test-bot --only-setup
+      run: brew test-bot --only-setup
+
+    - name: Run brew test-bot --only-tap-syntax
+      run: brew test-bot --only-tap-syntax
 
     - name: Install Bundler
+      if: matrix.os == 'ubuntu-latest'
       run: gem install bundler -v "~>1"
 
-    - name: Cache Homebrew/homebrew-test-bot RubyGems
-      id: cache-test-bot
-      uses: actions/cache@master
-      with:
-        path: vendor/ruby
-        key: ${{ runner.os }}-rubygems-test-bot-${{ hashFiles('Gemfile.lock') }}
-        restore-keys: ${{ runner.os }}-rubygems-test-bot
-
     - name: Install Homebrew/homebrew-test-bot RubyGems
-      if: steps.cache-test-bot.outputs.cache-hit != 'true'
       run: bundle install --jobs 4 --retry 3
 
     - name: Run Homebrew/homebrew-test-bot RSpec tests
@@ -60,7 +58,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: docker build -t brew .
 
-    - name: Run brew test-bot --test-default-formula
+    - name: Run brew test-bot --only-formulae --test-default-formula
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
           docker run \
@@ -76,6 +74,17 @@ jobs:
       run: |
         cat steps_output.txt
         rm steps_output.txt
+
+    - name: Run brew test-bot --only-cleanup-after
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          docker run \
+            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            --rm brew \
+            brew test-bot --only-cleanup-after
+        else
+          brew test-bot --only-cleanup-after
+        fi
 
     - name: Run brew test-bot --ci-upload --dry-run
       run: |
