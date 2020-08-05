@@ -20,6 +20,17 @@ module Homebrew
 
         Pathname.glob("*.bottle*.*").each(&:unlink)
 
+        if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
+          # minimally fix brew doctor failures (a full clean takes ~5m)
+          if OS.linux?
+            # brew doctor complains
+            FileUtils.rm_rf "/usr/local/include/node/"
+          else
+            # moving is much faster than deleting.
+            system "mv", "#{HOMEBREW_CELLAR}/*", "/tmp"
+          end
+        end
+
         # Keep all "brew" invocations after cleanup_shared
         # (which cleans up Homebrew/brew)
         cleanup_shared

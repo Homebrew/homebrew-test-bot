@@ -13,69 +13,45 @@ jobs:
     - name: Set up Git repository
       uses: actions/checkout@master
 
-    - name: Set up Homebrew
-      id: set-up-homebrew
-      run: |
-        if which brew &>/dev/null; then
-          HOMEBREW_PREFIX="$(brew --prefix)"
-          HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX/Homebrew"
-          brew update-reset "$HOMEBREW_REPOSITORY" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-core"
-          ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
-        else
-          HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew
-          HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX/Homebrew"
-          sudo mkdir -p $HOMEBREW_PREFIX
-          sudo git clone --depth=1 https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
-
-          sudo mkdir -p "$HOMEBREW_REPOSITORY/Library/Taps/homebrew"
-          sudo ln -s "$PWD" "$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-test-bot"
-
-          cd "$HOMEBREW_PREFIX"
-          sudo mkdir -p bin etc include lib opt sbin share var/homebrew/linked Cellar
-          sudo ln -sf ../Homebrew/bin/brew "$HOMEBREW_PREFIX/bin/"
-          cd -
-        fi
-
-        export PATH="$HOMEBREW_PREFIX/bin:$PATH"
-        echo "::add-path::$HOMEBREW_PREFIX/bin"
-
-        GEMS_PATH="$HOMEBREW_REPOSITORY/Library/Homebrew/vendor/bundle/ruby/"
-        echo "::set-output name=gems-path::$GEMS_PATH"
-        GEMS_HASH=$(shasum -a 256 "$HOMEBREW_REPOSITORY/Library/Homebrew/Gemfile.lock" | cut -f1 -d' ')
-        echo "::set-output name=gems-hash::$GEMS_HASH"
-
-        if [ "$RUNNER_OS" = "macOS" ]; then
-          # don't care about `brew audit` here.
-          brew untap mongodb/brew
-        else
-          sudo chown -R "$USER" "$HOMEBREW_PREFIX"
-        fi
-
     - name: Set up Ruby
       if: matrix.os == 'ubuntu-latest'
-      uses: actions/setup-ruby@v1
+      uses: actions/setup-ruby@master
       with:
         ruby-version: '2.6'
 
-    - name: Cache Bundler RubyGems
+    - name: Set up Homebrew
+      id: set-up-homebrew
+      uses: Homebrew/actions/setup-homebrew@master
+
+    - name: Cache Homebrew Bundler RubyGems
       id: cache
-      uses: actions/cache@v1
+      uses: actions/cache@master
       with:
         path: ${{ steps.set-up-homebrew.outputs.gems-path }}
         key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
         restore-keys: ${{ runner.os }}-rubygems-
 
-    - name: Install Bundler RubyGems
+    - name: Install Homebrew Bundler RubyGems
       if: steps.cache.outputs.cache-hit != 'true'
       run: brew install-bundler-gems
 
     - name: Run brew style
       run: brew style homebrew/test-bot
 
+    - name: Install Bundler
+      run: gem install bundler -v "~>1"
+
+    - name: Cache Homebrew/homebrew-test-bot RubyGems
+      id: cache-test-bot
+      uses: actions/cache@master
+      with:
+        path: vendor/ruby
+        key: ${{ runner.os }}-rubygems-test-bot-${{ hashFiles('Gemfile.lock') }}
+        restore-keys: ${{ runner.os }}-rubygems-test-bot
+
     - name: Install Homebrew/homebrew-test-bot RubyGems
-      run: |
-        gem install bundler -v "~>1"
-        bundle install --jobs 4 --retry 3
+      if: steps.cache-test-bot.outputs.cache-hit != 'true'
+      run: bundle install --jobs 4 --retry 3
 
     - name: Run Homebrew/homebrew-test-bot RSpec tests
       run: bundle exec rspec
@@ -89,7 +65,8 @@ jobs:
         if [ "$RUNNER_OS" = "Linux" ]; then
           docker run \
             -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-            --rm brew brew test-bot --test-default-formula
+            --rm brew \
+            brew test-bot --test-default-formula
         else
           brew test-bot --test-default-formula
         fi
@@ -101,13 +78,34 @@ jobs:
         rm steps_output.txt
 
     - name: Run brew test-bot --ci-upload --dry-run
-      if: matrix.os == 'macOS-latest'
-      run: brew test-bot --ci-upload --dry-run
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          docker run \
+            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            --rm brew \
+            brew test-bot --ci-upload --dry-run
+        else
+          brew test-bot --ci-upload --dry-run
+        fi
 
     - name: Run brew test-bot --only-setup --dry-run
-      if: matrix.os == 'macOS-latest'
-      run: brew test-bot --only-setup --dry-run
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          docker run \
+            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            --rm brew \
+            brew test-bot --only-setup --dry-run
+        else
+          brew test-bot --only-setup --dry-run
+        fi
 
     - name: Run brew test-bot testbottest --dry-run
-      if: matrix.os == 'macOS-latest'
-      run: brew test-bot testbottest --dry-run
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          docker run \
+            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            --rm brew \
+            brew test-bot testbottest --dry-run
+        else
+          brew test-bot testbottest --dry-run
+        fi
