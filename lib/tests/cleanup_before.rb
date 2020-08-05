@@ -24,10 +24,12 @@ module Homebrew
           # minimally fix brew doctor failures (a full clean takes ~5m)
           if OS.linux?
             # brew doctor complains
-            FileUtils.rm_rf "/usr/local/include/node/"
-          else
-            # moving is much faster than deleting.
-            system "mv", "#{HOMEBREW_CELLAR}/*", "/tmp"
+            test "sudo", "rm", "-rf", "/usr/local/include/node/"
+          elsif OS.mac?
+            if Dir.glob("#{HOMEBREW_CELLAR}/*").present?
+              # moving is much faster than deleting.
+              test "bash", "-c", "mv #{HOMEBREW_CELLAR}/* /tmp"
+            end
           end
         end
 
