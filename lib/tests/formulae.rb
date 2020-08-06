@@ -168,7 +168,9 @@ module Homebrew
 
         @formulae += @added_formulae + modified_formulae
 
-        raise UsageError, "Did not find any formulae to test!" if @formulae.blank? && @deleted_formulae.blank?
+        if @formulae.blank? && @deleted_formulae.blank? && diff_start_sha1 == diff_end_sha1
+          raise UsageError, "Did not find any formulae or commits to test!"
+        end
 
         info_header "Testing Formula changes:"
         puts <<-EOS
