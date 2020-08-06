@@ -129,7 +129,8 @@ module Homebrew
         end
 
         if tap
-          tap_origin_master_revision = Utils.safe_popen_read(
+          # Use popen_read as this is allowed to fail.
+          tap_origin_master_revision = Utils.popen_read(
             git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)", "origin/master"
           ).strip
