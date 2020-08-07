@@ -66,12 +66,6 @@ module Homebrew
         FileUtils.mkdir_p ENV["HOMEBREW_LOGS"]
       end
 
-      test_bot_revision = Utils.safe_popen_read(
-        GIT, "-C", Tap.fetch("homebrew/test-bot").path.to_s,
-             "log", "-1", "--format=%h (%s)"
-      ).strip
-      puts Formatter.headline("Using Homebrew/homebrew-test-bot #{test_bot_revision}", color: :cyan)
-
       tap = resolve_test_tap(args.tag)
       # Tap repository if required, this is done before everything else
       # because Formula parsing and/or git commit hash lookup depends on it.
@@ -83,6 +77,43 @@ module Homebrew
         elsif (tap.path/".git/shallow").exist?
           raise unless quiet_system GIT, "-C", tap.path, "fetch", "--unshallow"
         end
+      end
+
+      test_bot_tap = Tap.fetch("homebrew/test-bot")
+
+      if test_bot_tap != tap
+        test_bot_revision = Utils.safe_popen_read(
+          GIT, "-C", test_bot_tap.path.to_s,
+              "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts Formatter.headline("Using Homebrew/homebrew-test-bot #{test_bot_revision}", color: :cyan)
+      end
+
+      brew_version = Utils.safe_popen_read(
+        GIT, "-C", HOMEBREW_REPOSITORY.to_s,
+              "describe", "--tags", "--abbrev", "--dirty"
+      ).strip
+      brew_commit_subject = Utils.safe_popen_read(
+        GIT, "-C", HOMEBREW_REPOSITORY.to_s,
+              "log", "-1", "--format=%s"
+      ).strip
+      verb = tap ? "Using" : "Testing"
+      puts Formatter.headline("#{verb} Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
+
+      if tap.to_s != CoreTap.instance.name
+        core_revision = Utils.safe_popen_read(
+          GIT, "-C", CoreTap.instance.path.to_s,
+                "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts Formatter.headline("Using #{CoreTap.instance.full_name} #{core_revision}", color: :cyan)
+      end
+
+      if tap
+        tap_revision = Utils.safe_popen_read(
+          GIT, "-C", tap.path.to_s,
+                "log", "-1", "--format=%h (%s)"
+        ).strip
+        puts Formatter.headline("Testing #{tap.full_name} #{tap_revision}:", color: :cyan)
       end
 
       ENV["HOMEBREW_GIT_NAME"] = args.git_name || "BrewTestBot"

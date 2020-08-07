@@ -120,14 +120,6 @@ module Homebrew
 
         diff_start_sha1 = diff_end_sha1 if @formulae.present?
 
-        if tap.to_s != CoreTap.instance.name
-          core_revision = Utils.safe_popen_read(
-            git, "-C", CoreTap.instance.path.to_s,
-                  "log", "-1", "--format=%h (%s)"
-          ).strip
-          info_header "Using #{CoreTap.instance.full_name} #{core_revision}"
-        end
-
         if tap
           # Use popen_read as this is allowed to fail.
           tap_origin_master_revision = Utils.popen_read(
@@ -138,7 +130,6 @@ module Homebrew
             git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)"
           ).strip
-          info_header "Testing #{tap.full_name} #{tap_revision}:"
         end
 
         puts <<-EOS
