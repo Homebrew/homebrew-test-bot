@@ -108,9 +108,10 @@ module Homebrew
         end
 
         if diff_start_sha1.present? && diff_end_sha1.present?
+          # Allow this to fail on e.g. shallow clones.
           merge_base_sha1 =
-            Utils.safe_popen_read(git, "-C", repository, "merge-base",
-                                   diff_start_sha1, diff_end_sha1).strip
+            Utils.popen_read(git, "-C", repository, "merge-base",
+                             diff_start_sha1, diff_end_sha1).strip
           diff_start_sha1 = merge_base_sha1 if merge_base_sha1.present?
         end
 
