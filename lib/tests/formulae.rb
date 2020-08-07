@@ -96,7 +96,7 @@ module Homebrew
         elsif tap.present? && tap.full_name.casecmp(ENV["GITHUB_REPOSITORY"]).zero?
           # Use GitHub Actions variables for pull request jobs.
           if ENV["GITHUB_BASE_REF"].present?
-            test git, "-C", repository, "fetch", "--depth=1",
+            test git, "-C", repository, "fetch",
                   "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
             origin_ref = "origin/#{ENV["GITHUB_BASE_REF"]}"
             diff_start_sha1 = rev_parse(origin_ref)
