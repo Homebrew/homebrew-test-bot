@@ -68,6 +68,7 @@ module Homebrew
         test_header(:Formulae, method: :detect_formulae!)
 
         url = nil
+        origin_ref = "origin/master"
 
         if @argument == "HEAD"
           # Use GitHub Actions variables for pull request jobs.
@@ -95,12 +96,10 @@ module Homebrew
         elsif tap.present? && tap.full_name.casecmp(ENV["GITHUB_REPOSITORY"]).zero?
           # Use GitHub Actions variables for pull request jobs.
           if ENV["GITHUB_BASE_REF"].present?
-            diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
-            if diff_start_sha1.blank?
-              test git, "-C", repository, "fetch", "--depth=1",
-                   "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
-              diff_start_sha1 = rev_parse("origin/#{ENV["GITHUB_BASE_REF"]}")
-            end
+            test git, "-C", repository, "fetch", "--depth=1",
+                  "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
+            origin_ref = "origin/#{ENV["GITHUB_BASE_REF"]}"
+            diff_start_sha1 = rev_parse(origin_ref)
             diff_end_sha1 = ENV["GITHUB_SHA"]
           # Use GitHub Actions variables for branch jobs.
           else
@@ -121,11 +120,14 @@ module Homebrew
         diff_start_sha1 = diff_end_sha1 if @formulae.present?
 
         if tap
-          # Use popen_read as this is allowed to fail.
-          tap_origin_master_revision = Utils.popen_read(
-            git, "-C", tap.path.to_s,
-                  "log", "-1", "--format=%h (%s)", "origin/master"
-          ).strip
+          tap_origin_ref_revision_args =
+            [git, "-C", tap.path.to_s, "log", "-1", "--format=%h (%s)", origin_ref]
+          tap_origin_ref_revision = if args.dry_run?
+            # May fail on dry run as we've not fetched.
+            Utils.popen_read(*tap_origin_ref_revision_args).strip
+          else
+            Utils.safe_popen_read(*tap_origin_ref_revision_args)
+          end.strip
           tap_revision = Utils.safe_popen_read(
             git, "-C", tap.path.to_s,
                   "log", "-1", "--format=%h (%s)"
@@ -134,7 +136,7 @@ module Homebrew
 
         puts <<-EOS
     url             #{url.blank? ? "(undefined)" : url}
-    origin/master   #{tap_origin_master_revision.blank? ? "(undefined)" : tap_origin_master_revision}
+    #{origin_ref}   #{tap_origin_ref_revision.blank? ? "(undefined)" : tap_origin_ref_revision}
     HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
     diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
     diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
