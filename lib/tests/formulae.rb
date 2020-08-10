@@ -441,7 +441,7 @@ module Homebrew
         root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
         filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
 
-        download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.full_name, formula.version)
+        download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
 
         HOMEBREW_CACHE.mkpath
         FileUtils.ln @bottle_filename, download_strategy.cached_location, force: true
@@ -449,7 +449,7 @@ module Homebrew
                        download_strategy.symlink_location,
                        force: true
 
-        @formulae.delete(formula.full_name)
+        @formulae.delete(formula.name)
 
         unless @unchanged_build_dependencies.empty?
           test "brew", "uninstall", "--force", *@unchanged_build_dependencies
