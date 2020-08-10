@@ -225,14 +225,14 @@ module Homebrew
       end
 
       def install_mercurial_if_needed(deps, reqs)
-        if (deps | reqs).any? { |d| d.name == "mercurial" && d.build? }
+        if (deps | reqs).any? { |d| d.full_name == "mercurial" && d.build? }
           test "brew", "install", "mercurial",
                env:  { "HOMEBREW_DEVELOPER" => nil }
         end
       end
 
       def install_subversion_if_needed(deps, reqs)
-        if (deps | reqs).any? { |d| d.name == "subversion" && d.build? }
+        if (deps | reqs).any? { |d| d.full_name == "subversion" && d.build? }
           test "brew", "install", "subversion",
                env:  { "HOMEBREW_DEVELOPER" => nil }
         end
@@ -374,7 +374,7 @@ module Homebrew
         return if formula.keg_only?
         return if formula.linked_keg.exist?
 
-        conflicts = formula.conflicts.map { |c| Formulary.factory(c.name) }
+        conflicts = formula.conflicts.map { |c| Formulary.factory(c.full_name) }
                            .select(&:any_version_installed?)
         formula_recursive_dependencies = begin
           formula.recursive_dependencies
@@ -387,11 +387,11 @@ module Homebrew
         end
         formula_recursive_dependencies.each do |dependency|
           conflicts += dependency.to_formula.conflicts.map do |c|
-            Formulary.factory(c.name)
+            Formulary.factory(c.full_name)
           end.select(&:any_version_installed?)
         end
         conflicts.each do |conflict|
-          test "brew", "unlink", conflict.name
+          test "brew", "unlink", conflict.full_name
         end
       end
 
@@ -413,7 +413,7 @@ module Homebrew
 
         ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
         root_url = args.root_url
-        bottle_args = ["--verbose", "--json", formula.name]
+        bottle_args = ["--verbose", "--json", formula.full_name]
         bottle_args << "--keep-old" if args.keep_old? && !new_formula
         bottle_args << "--skip-relocation" if args.skip_relocation?
         bottle_args << "--force-core-tap" if @test_default_formula
@@ -435,13 +435,13 @@ module Homebrew
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
 
         test "brew", "bottle", *bottle_merge_args
-        test "brew", "uninstall", "--force", formula.name
+        test "brew", "uninstall", "--force", formula.full_name
 
         bottle_json = JSON.parse(File.read(bottle_json_filename))
         root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
         filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
 
-        download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
+        download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.full_name, formula.version)
 
         HOMEBREW_CACHE.mkpath
         FileUtils.ln @bottle_filename, download_strategy.cached_location, force: true
@@ -449,7 +449,7 @@ module Homebrew
                        download_strategy.symlink_location,
                        force: true
 
-        @formulae.delete(formula.name)
+        @formulae.delete(formula.full_name)
 
         unless @unchanged_build_dependencies.empty?
           test "brew", "uninstall", "--force", *@unchanged_build_dependencies
