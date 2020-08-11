@@ -31,9 +31,11 @@ module Homebrew
     ]).freeze
 
     def reset_if_needed(repository)
-      return if system(git, "-C", repository, "diff", "--quiet", "origin/master")
+      default_ref = default_origin_ref(repository)
 
-      test git, "-C", repository, "reset", "--hard", "origin/master"
+      return if system(git, "-C", repository, "diff", "--quiet", default_ref)
+
+      test git, "-C", repository, "reset", "--hard", default_ref
     end
 
     def cleanup_shared
@@ -104,11 +106,21 @@ module Homebrew
 
     private
 
-    def checkout_branch_if_needed(repository, branch = "master")
+    def default_origin_ref(repository)
+      default_branch = Utils.popen_read(
+        git, "-C", repository, "symbolic-ref", "refs/remotes/origin/HEAD", "--short"
+      ).strip.presence
+      default_branch ||= "origin/master"
+      default_branch
+    end
+
+    def checkout_branch_if_needed(repository)
+      # We limit this to two parts, because branch names can have slashes in
+      default_branch = default_origin_ref(repository).split("/", 2).last
       current_branch = Utils.safe_popen_read(
-        git, "-C", repository, "symbolic-ref", "HEAD"
+        git, "-C", repository, "symbolic-ref", "HEAD", "--short"
       ).strip
-      return if branch == current_branch
+      return if default_branch == current_branch
 
       test git, "-C", repository, "checkout", "-f", branch
     end
