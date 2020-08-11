@@ -122,7 +122,7 @@ module Homebrew
       ).strip
       return if default_branch == current_branch
 
-      test git, "-C", repository, "checkout", "-f", branch
+      test git, "-C", repository, "checkout", "-f", default_branch
     end
 
     def cleanup_git_meta(repository)
