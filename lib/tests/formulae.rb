@@ -415,7 +415,7 @@ module Homebrew
 
         ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
         root_url = args.root_url
-        bottle_args = ["--verbose", "--json", formula.name]
+        bottle_args = ["--verbose", "--json", formula.full_name]
         bottle_args << "--keep-old" if args.keep_old? && !new_formula
         bottle_args << "--skip-relocation" if args.skip_relocation?
         bottle_args << "--force-core-tap" if @test_default_formula
@@ -437,7 +437,7 @@ module Homebrew
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
 
         test "brew", "bottle", *bottle_merge_args
-        test "brew", "uninstall", "--force", formula.name
+        test "brew", "uninstall", "--force", formula.full_name
 
         bottle_json = JSON.parse(File.read(bottle_json_filename))
         root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
