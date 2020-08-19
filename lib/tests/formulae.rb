@@ -83,7 +83,7 @@ module Homebrew
             "#{@argument} is not detected from GitHub Actions or a formula name!"
         end
 
-        if ENV["GITHUB_REPOSITORY"].blank? || ENV["GITHUB_SHA"].blank?
+        if ENV["GITHUB_REPOSITORY"].blank? || ENV["GITHUB_SHA"].blank? || ENV["GITHUB_REF"].blank?
           if ENV["GITHUB_ACTIONS"]
             odie <<~EOS
               We cannot find the needed GitHub Actions environment variables! Check you have e.g. exported them to a Docker container.
@@ -103,6 +103,8 @@ module Homebrew
             diff_end_sha1 = ENV["GITHUB_SHA"]
           # Use GitHub Actions variables for branch jobs.
           else
+            test git, "-C", repository, "fetch", "origin", "+#{ENV["GITHUB_REF"]}"
+            origin_ref = "origin/#{ENV["GITHUB_REF"].gsub(%r{^refs/heads/}, "")}"
             diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
           end
         end
