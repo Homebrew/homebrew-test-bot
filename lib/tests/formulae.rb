@@ -291,7 +291,8 @@ module Homebrew
         build_dependencies = dependencies - runtime_or_test_dependencies
         @unchanged_build_dependencies = build_dependencies - @formulae
 
-        if args.keep_old?
+        # Test reverse dependencies for linux-only formulae in linuxbrew-core.
+        if args.keep_old? && !formula.requirements.include?(LinuxRequirement.new)
           @testable_dependents = @bottled_dependents = @source_dependents = []
           return
         end
