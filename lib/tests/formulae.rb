@@ -54,8 +54,8 @@ module Homebrew
 
         Utils.safe_popen_read(
           git, "-C", repository,
-                "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
-                start_revision, end_revision, "--", path
+          "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
+          start_revision, end_revision, "--", path
         ).lines.map do |line|
           file = Pathname.new line.chomp
           next unless tap.formula_file?(file)
@@ -80,7 +80,7 @@ module Homebrew
           @formulae = [canonical_formula_name]
         else
           raise UsageError,
-            "#{@argument} is not detected from GitHub Actions or a formula name!"
+                "#{@argument} is not detected from GitHub Actions or a formula name!"
         end
 
         if ENV["GITHUB_REPOSITORY"].blank? || ENV["GITHUB_SHA"].blank? || ENV["GITHUB_REF"].blank?
@@ -97,7 +97,7 @@ module Homebrew
           # Use GitHub Actions variables for pull request jobs.
           if ENV["GITHUB_BASE_REF"].present?
             test git, "-C", repository, "fetch",
-                  "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
+                 "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
             origin_ref = "origin/#{ENV["GITHUB_BASE_REF"]}"
             diff_start_sha1 = rev_parse(origin_ref)
             diff_end_sha1 = ENV["GITHUB_SHA"]
@@ -112,7 +112,7 @@ module Homebrew
         if diff_start_sha1.present? && diff_end_sha1.present?
           merge_base_sha1 =
             Utils.safe_popen_read(git, "-C", repository, "merge-base",
-                                   diff_start_sha1, diff_end_sha1).strip
+                                  diff_start_sha1, diff_end_sha1).strip
           diff_start_sha1 = merge_base_sha1 if merge_base_sha1.present?
         end
 
@@ -132,7 +132,7 @@ module Homebrew
           end.strip
           tap_revision = Utils.safe_popen_read(
             git, "-C", tap.path.to_s,
-                  "log", "-1", "--format=%h (%s)"
+            "log", "-1", "--format=%h (%s)"
           ).strip
         end
 
@@ -217,7 +217,7 @@ module Homebrew
       rescue CompilerSelectionError => e
         unless installed_gcc
           test "brew", "install", "gcc",
-                env:  { "HOMEBREW_DEVELOPER" => nil }
+               env:  { "HOMEBREW_DEVELOPER" => nil }
           installed_gcc = true
           DevelopmentTools.clear_version_cache
           retry
@@ -258,7 +258,7 @@ module Homebrew
         installed = Utils.safe_popen_read("brew", "list").split("\n")
         dependencies =
           Utils.safe_popen_read("brew", "deps", "--include-build",
-                                           "--include-test", formula_name)
+                                "--include-test", formula_name)
                .split("\n")
         installed_dependencies = installed & dependencies
         installed_dependencies.each do |name|
@@ -276,7 +276,7 @@ module Homebrew
         changed_dependencies = dependencies - @unchanged_dependencies
         unless changed_dependencies.empty?
           test "brew", "fetch", "--retry", "--build-from-source",
-                                *changed_dependencies
+               *changed_dependencies
           # Install changed dependencies as new bottles so we don't have
           # checksum problems.
           test "brew", "install", "--build-from-source", *changed_dependencies
@@ -497,7 +497,7 @@ module Homebrew
 
         if @testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test",
-                                  dependent.full_name
+               dependent.full_name
           test "brew", "test", "--retry", "--verbose", dependent.full_name
         end
 
@@ -523,9 +523,9 @@ module Homebrew
           unlink_conflicts dependent
 
           test "brew", "install", "--only-dependencies", dependent.full_name,
-                env:  { "HOMEBREW_DEVELOPER" => nil }
+               env:  { "HOMEBREW_DEVELOPER" => nil }
           test "brew", "install", dependent.full_name,
-                env:  { "HOMEBREW_DEVELOPER" => nil }
+               env:  { "HOMEBREW_DEVELOPER" => nil }
           return if steps.last.failed?
         end
         return unless dependent.latest_version_installed?
@@ -539,7 +539,7 @@ module Homebrew
 
         if @testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test",
-                                  dependent.full_name
+               dependent.full_name
           test "brew", "test", "--retry", "--verbose", dependent.full_name
         end
 
@@ -606,10 +606,10 @@ module Homebrew
 
         # Don't care about e.g. bottle failures for dependencies.
         test "brew", "install", "--only-dependencies", *install_args,
-              env:  { "HOMEBREW_DEVELOPER" => nil }
+             env:  { "HOMEBREW_DEVELOPER" => nil }
 
         test "brew", "install", *install_args,
-              env:  { "HOMEBREW_DEVELOPER" => nil }
+             env:  { "HOMEBREW_DEVELOPER" => nil }
         install_passed = steps.last.passed?
 
         test "brew", "audit", *audit_args unless formula.deprecated?
@@ -656,9 +656,9 @@ module Homebrew
         test_header(:Formulae, method: "deleted_formula!(#{formula_name})")
 
         test "brew", "uses", "--include-build",
-                             "--include-optional",
-                             "--include-test",
-                             formula_name
+             "--include-optional",
+             "--include-test",
+             formula_name
       end
 
       def cleanup_during!(args:)
@@ -684,8 +684,8 @@ module Homebrew
           begin
             formula_dependencies =
               Utils.popen_read("brew", "deps", "--full-name",
-                                               "--include-build",
-                                               "--include-test", formula)
+                               "--include-build",
+                               "--include-test", formula)
                    .split("\n")
             # deps can fail if deps are not tapped
             unless $CHILD_STATUS.success?

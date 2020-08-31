@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 def quiet_system(*) end
 
 def system_command(*)

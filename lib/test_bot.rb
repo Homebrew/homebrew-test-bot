@@ -84,18 +84,18 @@ module Homebrew
       if test_bot_tap != tap
         test_bot_revision = Utils.safe_popen_read(
           GIT, "-C", test_bot_tap.path.to_s,
-              "log", "-1", "--format=%h (%s)"
+          "log", "-1", "--format=%h (%s)"
         ).strip
         puts Formatter.headline("Using Homebrew/homebrew-test-bot #{test_bot_revision}", color: :cyan)
       end
 
       brew_version = Utils.safe_popen_read(
         GIT, "-C", HOMEBREW_REPOSITORY.to_s,
-              "describe", "--tags", "--abbrev", "--dirty"
+        "describe", "--tags", "--abbrev", "--dirty"
       ).strip
       brew_commit_subject = Utils.safe_popen_read(
         GIT, "-C", HOMEBREW_REPOSITORY.to_s,
-              "log", "-1", "--format=%s"
+        "log", "-1", "--format=%s"
       ).strip
       verb = tap ? "Using" : "Testing"
       puts Formatter.headline("#{verb} Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
@@ -103,7 +103,7 @@ module Homebrew
       if tap.to_s != CoreTap.instance.name
         core_revision = Utils.safe_popen_read(
           GIT, "-C", CoreTap.instance.path.to_s,
-                "log", "-1", "--format=%h (%s)"
+          "log", "-1", "--format=%h (%s)"
         ).strip
         puts Formatter.headline("Using #{CoreTap.instance.full_name} #{core_revision}", color: :cyan)
       end
@@ -111,7 +111,7 @@ module Homebrew
       if tap
         tap_revision = Utils.safe_popen_read(
           GIT, "-C", tap.path.to_s,
-                "log", "-1", "--format=%h (%s)"
+          "log", "-1", "--format=%h (%s)"
         ).strip
         puts Formatter.headline("Testing #{tap.full_name} #{tap_revision}:", color: :cyan)
       end

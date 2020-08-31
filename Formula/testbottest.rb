@@ -8,9 +8,9 @@ class Testbottest < Formula
   license "BSD-2-Clause"
   head "https://github.com/Homebrew/homebrew-test-bot.git"
 
-  depends_on :java => ["1.0+", :optional]
+  depends_on java: ["1.0+", :optional]
 
-  fails_with :gcc => "6"
+  fails_with gcc: "6"
 
   def install
     odie "whoops, shouldn't be using java!" if build.with?(:java)
