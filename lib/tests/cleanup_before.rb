@@ -13,8 +13,8 @@ module Homebrew
             reset_if_needed(core_path.to_s)
           else
             test git, "clone", "--depth=1",
-                  CoreTap.instance.default_remote,
-                  core_path.to_s
+                 CoreTap.instance.default_remote,
+                 core_path.to_s
           end
         end
 
