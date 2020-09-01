@@ -217,7 +217,7 @@ module Homebrew
       rescue CompilerSelectionError => e
         unless installed_gcc
           test "brew", "install", "gcc",
-               env:  { "HOMEBREW_DEVELOPER" => nil }
+               env: { "HOMEBREW_DEVELOPER" => nil }
           installed_gcc = true
           DevelopmentTools.clear_version_cache
           retry
@@ -227,17 +227,17 @@ module Homebrew
       end
 
       def install_mercurial_if_needed(deps, reqs)
-        if (deps | reqs).any? { |d| d.name == "mercurial" && d.build? }
-          test "brew", "install", "mercurial",
-               env:  { "HOMEBREW_DEVELOPER" => nil }
-        end
+        return if (deps | reqs).none? { |d| d.name == "mercurial" && d.build? }
+
+        test "brew", "install", "mercurial",
+             env:  { "HOMEBREW_DEVELOPER" => nil }
       end
 
       def install_subversion_if_needed(deps, reqs)
-        if (deps | reqs).any? { |d| d.name == "subversion" && d.build? }
-          test "brew", "install", "subversion",
-               env:  { "HOMEBREW_DEVELOPER" => nil }
-        end
+        return if (deps | reqs).none? { |d| d.name == "subversion" && d.build? }
+
+        test "brew", "install", "subversion",
+             env:  { "HOMEBREW_DEVELOPER" => nil }
       end
 
       def setup_formulae_deps_instances(formula, formula_name, args:)
