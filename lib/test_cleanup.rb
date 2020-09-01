@@ -62,11 +62,10 @@ module Homebrew
         next if path_string.start_with?(Dir.pwd.to_s)
 
         # allow deleting non-existent osxfuse symlinks.
-        if !path.symlink? || path.resolved_path_exists?
-          # don't try to delete other osxfuse files
-          next if path_string.match?(
-            "(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$",
-          )
+        if (!path.symlink? || path.resolved_path_exists?) &&
+           # don't try to delete other osxfuse files
+           path_string.match?("(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$")
+          next
         end
 
         FileUtils.chmod("u+rw", path) if path.owned? && (!path.readable? || !path.writable?)

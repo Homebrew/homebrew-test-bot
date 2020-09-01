@@ -19,8 +19,8 @@ module Homebrew
 
       bintray_user = ENV["HOMEBREW_BINTRAY_USER"]
       bintray_key = ENV["HOMEBREW_BINTRAY_KEY"]
-      if !bintray_user || !bintray_key
-        raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!" unless args.dry_run?
+      if (!bintray_user || !bintray_key) && !args.dry_run?
+        raise "Missing HOMEBREW_BINTRAY_USER or HOMEBREW_BINTRAY_KEY variables!"
       end
 
       # Ensure that uploading Homebrew bottles on Linux doesn't use Linuxbrew.
