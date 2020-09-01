@@ -299,7 +299,7 @@ module Homebrew
 
         info_header "Determining dependents..."
 
-        build_dependents_from_source_whitelist = %w[
+        build_dependents_from_source_allowlist = %w[
           cabal-install
           docbook-xsl
           erlang
@@ -344,13 +344,13 @@ module Homebrew
         end
 
         # Split into dependents that we could potentially be building from source and those
-        # we should not. The criteria is that it depends on a formula in the whitelist and
+        # we should not. The criteria is that it depends on a formula in the allowlist and
         # that formula has been, or will be, built in this test run.
         @source_dependents, dependents = dependents.partition do |_, deps|
           deps.any? do |d|
             full_name = d.to_formula.full_name
 
-            next false unless build_dependents_from_source_whitelist.include?(full_name)
+            next false unless build_dependents_from_source_allowlist.include?(full_name)
 
             @formulae.include?(full_name)
           end
