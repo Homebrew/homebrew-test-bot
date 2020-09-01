@@ -44,11 +44,11 @@ module Homebrew
         end
 
         # install newer Git when needed
-        if OS.mac? && MacOS.version < :sierra
-          test "brew", "install", "git"
-          ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
-          change_git!("#{HOMEBREW_PREFIX}/opt/git/bin/git")
-        end
+        return unless OS.mac? && MacOS.version < :sierra
+
+        test "brew", "install", "git"
+        ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
+        change_git!("#{HOMEBREW_PREFIX}/opt/git/bin/git")
       end
     end
   end
