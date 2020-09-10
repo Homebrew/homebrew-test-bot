@@ -616,7 +616,7 @@ module Homebrew
              env:  { "HOMEBREW_DEVELOPER" => nil }
         install_passed = steps.last.passed?
 
-        test "brew", "livecheck", *livecheck_args unless formula.livecheck.skip?
+        test "brew", "livecheck", *livecheck_args if formula.livecheckable? && !formula.livecheck.skip?
 
         test "brew", "audit", *audit_args unless formula.deprecated?
         return unless install_passed
