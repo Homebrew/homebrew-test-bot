@@ -37,6 +37,14 @@ module Homebrew
         hash.deep_merge(JSON.parse(IO.read(json_file)))
       end
 
+      bottles_hash.each do |_, bottle_hash|
+        root_url = bottle_hash["bottle"]["root_url"]
+
+        next unless root_url.match HOMEBREW_RELEASES_URL_REGEX
+
+        odie "Refusing to upload to GitHub Releases, use `brew pr-upload`."
+      end
+
       if args.dry_run?
         bottles_hash = {
           "testbottest" => {

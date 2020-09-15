@@ -414,8 +414,14 @@ module Homebrew
           return
         end
 
-        ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
         root_url = args.root_url
+
+        # GitHub Releases url
+        if !root_url && !tap.core_tap? && !args.bintray_org && !@test_default_formula
+          root_url = "#{tap.default_remote}/releases/download/#{formula.name}-#{formula.pkg_version}"
+        end
+
+        ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
         bottle_args = ["--verbose", "--json", formula.full_name]
         bottle_args << "--keep-old" if args.keep_old? && !new_formula
         bottle_args << "--skip-relocation" if args.skip_relocation?
