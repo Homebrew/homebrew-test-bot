@@ -417,8 +417,8 @@ module Homebrew
         root_url = args.root_url
 
         # GitHub Releases url
-        if !root_url && !tap.core_tap? && !args.bintray_org && !@test_default_formula
-          root_url = "#{tap.default_remote}/releases/download/#{formula.name}-#{formula.pkg_version}"
+        root_url ||= if tap.present? && !tap.core_tap? && !args.bintray_org && !@test_default_formula
+          "#{tap.default_remote}/releases/download/#{formula.name}-#{formula.pkg_version}"
         end
 
         ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
