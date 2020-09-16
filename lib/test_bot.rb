@@ -66,7 +66,7 @@ module Homebrew
         FileUtils.mkdir_p ENV["HOMEBREW_LOGS"]
       end
 
-      tap = resolve_test_tap(args.tag)
+      tap = resolve_test_tap(args.tap)
       # Tap repository if required, this is done before everything else
       # because Formula parsing and/or git commit hash lookup depends on it.
       # At the same time, make sure Tap is not a shallow clone.
