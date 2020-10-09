@@ -9,10 +9,10 @@ module Homebrew
         if tap.to_s != CoreTap.instance.name
           core_path = CoreTap.instance.path
           if core_path.exist?
-            test git, "-C", core_path.to_s, "fetch", "--depth=1", "origin"
+            test git, "-C", core_path.to_s, "fetch", "origin"
             reset_if_needed(core_path.to_s)
           else
-            test git, "clone", "--depth=1",
+            test git, "clone",
                  CoreTap.instance.default_remote,
                  core_path.to_s
           end
