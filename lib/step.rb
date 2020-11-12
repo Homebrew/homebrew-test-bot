@@ -7,7 +7,7 @@ module Homebrew
     attr_reader :command, :output
 
     # Instantiates a Step object.
-    # @param command [Array<String>] Command to execute and arguments
+    # @param command [Array<String>] Command to execute and arguments.
     # @param env [Hash] Environment variables to set when running command.
     def initialize(command, env:, verbose:)
       @command = command
