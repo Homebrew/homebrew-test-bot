@@ -49,6 +49,8 @@ module Homebrew
              description: "publish the uploaded bottles."
       switch "--skip-recursive-dependents",
              description: "only test the direct dependents."
+      switch "--skip-dependents",
+             description: "do not test dependents."
       switch "--only-cleanup-before",
              description: "Only run the pre-cleanup step. Needs `--cleanup`."
       switch "--only-setup",
