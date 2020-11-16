@@ -314,9 +314,10 @@ module Homebrew
 
         uses_args = []
         uses_args << "--recursive" unless args.skip_recursive_dependents?
-        dependents =
+        dependents = with_env(HOMEBREW_STDERR: "1") do
           Utils.safe_popen_read("brew", "uses", "--include-build", "--include-test", *uses_args, formula_name)
                .split("\n")
+        end
         dependents -= @formulae
         dependents = dependents.map { |d| Formulary.factory(d) }
 
