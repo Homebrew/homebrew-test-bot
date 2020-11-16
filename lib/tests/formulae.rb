@@ -486,6 +486,7 @@ module Homebrew
           return if steps.last.failed?
 
           unlink_conflicts dependent
+
           test "brew", "install", "--build-from-source", "--only-dependencies", dependent.full_name,
                env:  { "HOMEBREW_DEVELOPER" => nil }
           test "brew", "install", "--build-from-source", dependent.full_name,
