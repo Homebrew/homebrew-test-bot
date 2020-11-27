@@ -430,7 +430,7 @@ module Homebrew
         bottle_args << "--root-url=#{root_url}" if root_url
         bottle_args << "--or-later" if args.or_later?
         env = {}
-        env["HOMEBREW_NO_PATCHELF_RB_WRITE"] = "1" unless ENV["HOMEBREW_PATCHELF_RB_WRITE"].present?
+        env["HOMEBREW_NO_PATCHELF_RB_WRITE"] = "1" if ENV["HOMEBREW_PATCHELF_RB_WRITE"].blank?
         test "brew", "bottle", *bottle_args, env: env
 
         bottle_step = steps.last
