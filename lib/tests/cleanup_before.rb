@@ -25,11 +25,7 @@ module Homebrew
             # brew doctor complains
             test "sudo", "rm", "-rf", "/usr/local/include/node/"
           elsif OS.mac?
-            if Dir.glob("#{HOMEBREW_CELLAR}/*").present?
-              FileUtils.mkdir_p "/tmp/test-bot-cleanup"
-              # moving is much faster than deleting.
-              test "bash", "-c", "mv #{HOMEBREW_CELLAR}/* /tmp/test-bot-cleanup"
-            end
+            delete_or_move Pathname.glob(HOMEBREW_CELLAR/"*")
           end
         end
 
