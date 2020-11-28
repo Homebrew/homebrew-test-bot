@@ -27,6 +27,7 @@ module Homebrew
     ALLOWED_TAPS = (REQUIRED_TAPS + %w[
       homebrew/bundle
       homebrew/cask
+      homebrew/cask-versions
       homebrew/services
     ]).freeze
 
