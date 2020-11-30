@@ -42,9 +42,7 @@ module Homebrew
     # Moving files is faster than removing them,
     # so move them if the current runner is ephemeral.
     def delete_or_move(paths)
-      paths = Array(paths)
-
-      return if paths.empty?
+      return if paths.blank?
 
       symlinks, paths = paths.partition(&:symlink?)
 
