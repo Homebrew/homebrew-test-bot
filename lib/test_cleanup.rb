@@ -39,6 +39,22 @@ module Homebrew
       test git, "-C", repository, "reset", "--hard", default_ref
     end
 
+    # Moving files is faster than removing them,
+    # so move them if the current runner is ephemeral.
+    def delete_or_move(paths)
+      return if paths.blank?
+
+      symlinks, paths = paths.partition(&:symlink?)
+
+      FileUtils.rm_f symlinks
+
+      if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
+        FileUtils.mv paths, Dir.mktmpdir, force: true
+      else
+        FileUtils.rm_rf paths
+      end
+    end
+
     def cleanup_shared
       cleanup_git_meta(repository)
       clean_if_needed(repository)
@@ -75,7 +91,7 @@ module Homebrew
 
       # Do this in a second pass so that all children have their permissions fixed before we delete the parent.
       info_header "Purging..."
-      FileUtils.rm_rf paths_to_delete
+      delete_or_move paths_to_delete
 
       if tap
         checkout_branch_if_needed(HOMEBREW_REPOSITORY)
