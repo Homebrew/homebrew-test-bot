@@ -137,11 +137,11 @@ module Homebrew
         end
 
         puts <<-EOS
-    url             #{url.blank? ? "(undefined)" : url}
-    #{origin_ref}   #{tap_origin_ref_revision.blank? ? "(undefined)" : tap_origin_ref_revision}
-    HEAD            #{tap_revision.blank? ? "(undefined)" : tap_revision}
-    diff_start_sha1 #{diff_start_sha1.blank? ? "(undefined)" : diff_start_sha1}
-    diff_end_sha1   #{diff_end_sha1.blank? ? "(undefined)" : diff_end_sha1}
+    url             #{url.presence || "(undefined)"}
+    #{origin_ref}   #{tap_origin_ref_revision.presence || "(undefined)"}
+    HEAD            #{tap_revision.presence || "(undefined)"}
+    diff_start_sha1 #{diff_start_sha1.presence || "(undefined)"}
+    diff_end_sha1   #{diff_end_sha1.presence || "(undefined)"}
         EOS
 
         modified_formulae = []
@@ -292,7 +292,7 @@ module Homebrew
         @unchanged_build_dependencies = build_dependencies - @formulae
 
         # Test reverse dependencies for linux-only formulae in linuxbrew-core.
-        if args.keep_old? && !formula.requirements.include?(LinuxRequirement.new)
+        if args.keep_old? && formula.requirements.exclude?(LinuxRequirement.new)
           @testable_dependents = @bottled_dependents = @source_dependents = []
           return
         end

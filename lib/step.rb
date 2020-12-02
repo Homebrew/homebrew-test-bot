@@ -54,7 +54,7 @@ module Homebrew
         return
       end
 
-      raise "git should always be called with -C!" if command[0] == "git" && !%w[-C clone].include?(command[1])
+      raise "git should always be called with -C!" if command[0] == "git" && %w[-C clone].exclude?(command[1])
 
       executable, *args = command
 
