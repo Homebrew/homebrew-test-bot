@@ -37,13 +37,6 @@ module Homebrew
         (REQUIRED_TAPS - installed_taps).each do |tap|
           test "brew", "tap", tap
         end
-
-        # install newer Git when needed
-        return unless OS.mac? && MacOS.version < :sierra
-
-        test "brew", "install", "git"
-        ENV["HOMEBREW_FORCE_BREWED_GIT"] = "1"
-        change_git!("#{HOMEBREW_PREFIX}/opt/git/bin/git")
       end
     end
   end
