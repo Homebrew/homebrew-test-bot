@@ -33,7 +33,7 @@ module Homebrew
 
     def reset_if_needed(repository)
       default_ref = default_origin_ref(repository)
-      puts "#{repository}: diffing #{default_ref}"
+
       return if system(git, "-C", repository, "diff", "--quiet", default_ref)
 
       test git, "-C", repository, "reset", "--hard", default_ref
@@ -60,40 +60,38 @@ module Homebrew
       clean_if_needed(repository)
       prune_if_needed(repository)
 
-      if HOMEBREW_REPOSITORY != HOMEBREW_PREFIX
-        paths_to_delete = []
+      paths_to_delete = []
 
-        info_header "Determining #{HOMEBREW_PREFIX} files to purge..."
-        Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
-        Pathname.glob("#{HOMEBREW_PREFIX}/**/*", File::FNM_DOTMATCH).each do |path|
-          next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
-          next if path == HOMEBREW_PREFIX/"bin/brew"
-          next if path == HOMEBREW_PREFIX/"var"
-          next if path == HOMEBREW_PREFIX/"var/homebrew"
+      info_header "Determining #{HOMEBREW_PREFIX} files to purge..."
+      Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
+      Pathname.glob("#{HOMEBREW_PREFIX}/**/*", File::FNM_DOTMATCH).each do |path|
+        next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
+        next if path == HOMEBREW_PREFIX/"bin/brew"
+        next if path == HOMEBREW_PREFIX/"var"
+        next if path == HOMEBREW_PREFIX/"var/homebrew"
 
-          basename = path.basename.to_s
-          next if basename == "."
-          next if basename == ".keepme"
+        basename = path.basename.to_s
+        next if basename == "."
+        next if basename == ".keepme"
 
-          path_string = path.to_s
-          next if path_string.start_with?(HOMEBREW_REPOSITORY.to_s)
-          next if path_string.start_with?(Dir.pwd.to_s)
+        path_string = path.to_s
+        next if path_string.start_with?(HOMEBREW_REPOSITORY.to_s)
+        next if path_string.start_with?(Dir.pwd.to_s)
 
-          # allow deleting non-existent osxfuse symlinks.
-          if (!path.symlink? || path.resolved_path_exists?) &&
-             # don't try to delete other osxfuse files
-             path_string.match?("(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$")
-            next
-          end
-
-          FileUtils.chmod("u+rw", path) if path.owned? && (!path.readable? || !path.writable?)
-          paths_to_delete << path
+        # allow deleting non-existent osxfuse symlinks.
+        if (!path.symlink? || path.resolved_path_exists?) &&
+           # don't try to delete other osxfuse files
+           path_string.match?("(include|lib)/(lib|osxfuse/|pkgconfig/)?(osx|mac)?fuse(.*\.(dylib|h|la|pc))?$")
+          next
         end
 
-        # Do this in a second pass so that all children have their permissions fixed before we delete the parent.
-        info_header "Purging..."
-        delete_or_move paths_to_delete
+        FileUtils.chmod("u+rw", path) if path.owned? && (!path.readable? || !path.writable?)
+        paths_to_delete << path
       end
+
+      # Do this in a second pass so that all children have their permissions fixed before we delete the parent.
+      info_header "Purging..."
+      delete_or_move paths_to_delete
 
       if tap
         checkout_branch_if_needed(HOMEBREW_REPOSITORY)
@@ -138,7 +136,6 @@ module Homebrew
       current_branch = Utils.safe_popen_read(
         git, "-C", repository, "symbolic-ref", "HEAD", "--short"
       ).strip
-      puts "#{repository}: checking if #{default_branch} == #{current_branch}"
       return if default_branch == current_branch
 
       test git, "-C", repository, "checkout", "-f", default_branch
@@ -151,7 +148,7 @@ module Homebrew
     end
 
     def clean_if_needed(repository)
-      return if repository == HOMEBREW_PREFIX && HOMEBREW_PREFIX != HOMEBREW_REPOSITORY
+      return if repository == HOMEBREW_PREFIX
 
       clean_args = [
         "-dx",
@@ -159,7 +156,6 @@ module Homebrew
         "--exclude=Library/Taps",
         "--exclude=Library/Homebrew/vendor",
       ]
-      puts "#{repository}: checking if clean"
       return if Utils.safe_popen_read(
         git, "-C", repository, "clean", "--dry-run", *clean_args
       ).strip.empty?

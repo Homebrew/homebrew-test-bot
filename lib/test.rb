@@ -26,10 +26,6 @@ module Homebrew
       end
     end
 
-    def change_git!(git)
-      @git = git
-    end
-
     def test_header(klass, method: "run!")
       puts
       puts Formatter.headline("Running #{klass}##{method}", color: :magenta)
