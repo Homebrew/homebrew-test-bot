@@ -410,7 +410,7 @@ module Homebrew
       end
 
       def bottle_reinstall_formula(formula, new_formula, args:)
-        if formula.bottle_disabled?
+        if formula.bottle_disabled? || args.build_from_source?
           @bottle_filename = nil
           return
         end
@@ -579,7 +579,7 @@ module Homebrew
         reqs = []
 
         fetch_args = [formula_name]
-        fetch_args << "--build-bottle" unless formula.bottle_disabled?
+        fetch_args << "--build-bottle" if !formula.bottle_disabled? && !args.build_from_source?
         fetch_args << "--force" if args.cleanup?
 
         livecheck_args = [formula_name]
@@ -615,7 +615,7 @@ module Homebrew
         test "brew", "uninstall", "--force", formula_name if formula.latest_version_installed?
 
         install_args = ["--verbose"]
-        install_args << "--build-bottle" unless formula.bottle_disabled?
+        install_args << "--build-bottle" if !formula.bottle_disabled? && !args.build_from_source?
         install_args << formula_name
 
         # Don't care about e.g. bottle failures for dependencies.
