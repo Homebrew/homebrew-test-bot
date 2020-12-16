@@ -7,6 +7,7 @@ module MacOS
     :catalina
   end
 end
+
 module OS
   module_function
 

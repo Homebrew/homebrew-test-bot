@@ -8,6 +8,7 @@ def system_command(*)
     merged_output: "",
   )
 end
+
 module Formatter
   module_function
 
