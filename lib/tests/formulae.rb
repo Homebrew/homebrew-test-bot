@@ -575,6 +575,15 @@ module Homebrew
           return
         end
 
+        if Hardware::CPU.arm? &&
+           ENV["HOMEBREW_REQUIRE_BOTTLED_ARM"] &&
+           !formula.bottled? &&
+           !formula.bottle_unneeded?
+          opoo "#{formula.full_name} has not yet been bottled on ARM!"
+          skip formula.name
+          return
+        end
+
         deps = []
         reqs = []
 
