@@ -42,7 +42,7 @@ module Homebrew
       steps_output = if failed_steps.empty?
         "All steps passed!"
       else
-        failed_steps_output = ["Error: #{failed_steps.length} failed steps!"]
+        failed_steps_output = ["Error: #{failed_steps.count} failed #{"step".pluralize(failed_steps.count)}!"]
         failed_steps_output += failed_steps.map(&:command_trimmed)
         failed_steps_output.join("\n")
       end
