@@ -440,16 +440,16 @@ module Homebrew
         @bottle_filename =
           bottle_step.output
                      .gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
-        bottle_json_filename =
+        @bottle_json_filename =
           @bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
         bottle_merge_args =
-          ["--merge", "--write", "--no-commit", bottle_json_filename]
+          ["--merge", "--write", "--no-commit", @bottle_json_filename]
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
 
         test "brew", "bottle", *bottle_merge_args
         test "brew", "uninstall", "--force", formula.full_name
 
-        bottle_json = JSON.parse(File.read(bottle_json_filename))
+        bottle_json = JSON.parse(File.read(@bottle_json_filename))
         root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
         filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
 
@@ -653,9 +653,13 @@ module Homebrew
           failed_linkage_or_test ||= steps.last.failed?
         end
 
-        # Don't test dependents or keep bottle if the formula linkage or test failed.
+        # Move bottle and don't test dependents if the formula linkage or test failed.
         if failed_linkage_or_test
-          FileUtils.rm_rf @bottle_filename if @bottle_filename
+          if @bottle_filename
+            failed_dir = "#{File.dirname(@bottle_filename)}/failed"
+            FileUtils.mkdir failed_dir
+            FileUtils.mv [@bottle_filename, @bottle_json_filename], failed_dir
+          end
           return
         end
 
