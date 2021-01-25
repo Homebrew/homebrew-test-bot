@@ -574,11 +574,13 @@ module Homebrew
           skip formula.name
           return
         end
+        new_formula = @added_formulae.include?(formula_name)
 
         if Hardware::CPU.arm? &&
            ENV["HOMEBREW_REQUIRE_BOTTLED_ARM"] &&
            !formula.bottled? &&
-           !formula.bottle_unneeded?
+           !formula.bottle_unneeded? &&
+           !new_formula
           opoo "#{formula.full_name} has not yet been bottled on ARM!"
           skip formula.name
           return
@@ -595,7 +597,6 @@ module Homebrew
         livecheck_args << "--full-name"
         livecheck_args << "--debug"
 
-        new_formula = @added_formulae.include?(formula_name)
         audit_args = [formula_name, "--online"]
         if new_formula
           audit_args << "--new-formula"
