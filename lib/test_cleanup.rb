@@ -103,12 +103,13 @@ module Homebrew
 
       # Keep all "brew" invocations after HOMEBREW_REPOSITORY operations
       # (which cleans up Homebrew/brew)
-      Tap.names.each do |tap_name|
-        next if tap_name == tap&.name
-        next if ALLOWED_TAPS.include?(tap_name)
+      taps_to_remove = Tap.map do |t|
+        next if t.name == tap&.name
+        next if ALLOWED_TAPS.include?(t.name)
 
-        test "brew", "untap", tap_name
-      end
+        t.path
+      end.uniq.compact
+      delete_or_move taps_to_remove
 
       Pathname.glob("#{HOMEBREW_LIBRARY}/Taps/*/*").each do |git_repo|
         cleanup_git_meta(git_repo)
@@ -118,6 +119,9 @@ module Homebrew
         reset_if_needed(git_repo)
         prune_if_needed(git_repo)
       end
+
+      # don't need to do `brew cleanup` unless we're self-hosted.
+      return if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
 
       test "brew", "cleanup", "--prune=3"
     end
