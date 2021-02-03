@@ -656,7 +656,7 @@ module Homebrew
         if failed_linkage_or_test
           if @bottle_filename
             failed_dir = "#{File.dirname(@bottle_filename)}/failed"
-            FileUtils.mkdir failed_dir
+            FileUtils.mkdir failed_dir unless File.directory? failed_dir
             FileUtils.mv [@bottle_filename, @bottle_json_filename], failed_dir
           end
           return
