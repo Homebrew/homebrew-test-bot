@@ -7,22 +7,10 @@ module Homebrew
   class TestCleanup < Test
     protected
 
-    REQUIRED_HOMEBREW_TAPS = %W[
+    REQUIRED_TAPS = %W[
       #{CoreTap.instance.name}
       homebrew/test-bot
     ].freeze
-
-    REQUIRED_LINUXBREW_TAPS = %W[
-      #{CoreTap.instance.name}
-      homebrew/test-bot
-      linuxbrew/xorg
-    ].freeze
-
-    REQUIRED_TAPS = if OS.mac? || ENV["HOMEBREW_FORCE_HOMEBREW_ON_LINUX"]
-      REQUIRED_HOMEBREW_TAPS
-    else
-      REQUIRED_LINUXBREW_TAPS
-    end.freeze
 
     ALLOWED_TAPS = (REQUIRED_TAPS + %w[
       homebrew/bundle
