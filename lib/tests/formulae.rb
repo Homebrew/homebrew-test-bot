@@ -212,18 +212,20 @@ module Homebrew
 
       def install_gcc_if_needed(formula, deps)
         installed_gcc = false
-        deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
-        CompilerSelector.select_for(formula)
-      rescue CompilerSelectionError => e
-        unless installed_gcc
-          test "brew", "install", "gcc",
-               env: { "HOMEBREW_DEVELOPER" => nil }
-          installed_gcc = true
-          DevelopmentTools.clear_version_cache
-          retry
+        begin
+          deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
+          CompilerSelector.select_for(formula)
+        rescue CompilerSelectionError => e
+          unless installed_gcc
+            test "brew", "install", "gcc",
+                 env: { "HOMEBREW_DEVELOPER" => nil }
+            installed_gcc = true
+            DevelopmentTools.clear_version_cache
+            retry
+          end
+          skip formula.name
+          puts e.message
         end
-        skip formula.name
-        puts e.message
       end
 
       def install_mercurial_if_needed(deps, reqs)
