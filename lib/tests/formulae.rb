@@ -587,6 +587,7 @@ module Homebrew
         end
 
         if OS.linux? &&
+           tap.present? &&
            tap.full_name == "Homebrew/homebrew-core" &&
            ENV["HOMEBREW_REQUIRE_BOTTLED_LINUX"] &&
            !formula.bottled? &&
