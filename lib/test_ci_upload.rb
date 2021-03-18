@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "github_releases"
+
 module Homebrew
   module TestCiUpload
     module_function
@@ -40,7 +42,7 @@ module Homebrew
       bottles_hash.each do |_, bottle_hash|
         root_url = bottle_hash["bottle"]["root_url"]
 
-        next unless root_url.match HOMEBREW_RELEASES_URL_REGEX
+        next unless root_url.match GitHubReleases::URL_REGEX
 
         odie "Refusing to upload to GitHub Releases, use `brew pr-upload`."
       end
