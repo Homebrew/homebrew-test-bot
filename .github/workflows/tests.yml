@@ -80,17 +80,6 @@ jobs:
             brew test-bot --only-cleanup-after
           fi
 
-      - name: Run brew test-bot --ci-upload --dry-run
-        run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            docker run \
-              -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-              --rm brew \
-              brew test-bot --ci-upload --dry-run
-          else
-            brew test-bot --ci-upload --dry-run
-          fi
-
       - name: Run brew test-bot --only-setup --dry-run
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
