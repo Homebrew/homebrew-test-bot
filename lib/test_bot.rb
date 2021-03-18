@@ -127,12 +127,8 @@ module Homebrew
       Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
     ensure
       if HOMEBREW_CACHE.exist?
-        if args.clean_cache?
-          HOMEBREW_CACHE.children.each(&:rmtree)
-        else
-          Dir.glob("*.bottle*.tar.gz") do |bottle_file|
-            FileUtils.rm_f HOMEBREW_CACHE/bottle_file
-          end
+        Dir.glob("*.bottle*.tar.gz") do |bottle_file|
+          FileUtils.rm_f HOMEBREW_CACHE/bottle_file
         end
       end
     end
