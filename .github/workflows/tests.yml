@@ -10,105 +10,94 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
     steps:
-    - name: Set up Homebrew
-      id: set-up-homebrew
-      uses: Homebrew/actions/setup-homebrew@master
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
 
-    - name: Cache Homebrew Bundler RubyGems
-      id: cache
-      uses: actions/cache@v1
-      with:
-        path: ${{ steps.set-up-homebrew.outputs.gems-path }}
-        key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
-        restore-keys: ${{ runner.os }}-rubygems-
+      - name: Cache Homebrew Bundler RubyGems
+        id: cache
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ runner.os }}-rubygems-
 
-    - name: Install Homebrew Bundler RubyGems
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: brew install-bundler-gems
+      - name: Install Homebrew Bundler RubyGems
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: brew install-bundler-gems
 
-    - run: brew test-bot --only-cleanup-before
+      - run: brew test-bot --only-cleanup-before
 
-    - run: brew test-bot --only-setup
+      - run: brew test-bot --only-setup
 
-    - run: brew test-bot --only-tap-syntax
+      - run: brew test-bot --only-tap-syntax
 
-    - name: Set up Ruby
-      if: matrix.os == 'ubuntu-latest'
-      uses: actions/setup-ruby@master
-      with:
-        ruby-version: '2.6'
+      - name: Set up Ruby
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/setup-ruby@master
+        with:
+          ruby-version: "2.6"
 
-    - name: Install Bundler
-      if: matrix.os == 'ubuntu-latest'
-      run: gem install bundler -v "~>1"
+      - name: Install Bundler
+        if: matrix.os == 'ubuntu-latest'
+        run: gem install bundler -v "~>1"
 
-    - name: Install Homebrew/homebrew-test-bot RubyGems
-      run: bundle install --jobs 4 --retry 3
+      - name: Install Homebrew/homebrew-test-bot RubyGems
+        run: bundle install --jobs 4 --retry 3
 
-    - name: Run Homebrew/homebrew-test-bot RSpec tests
-      run: bundle exec rspec
+      - name: Run Homebrew/homebrew-test-bot RSpec tests
+        run: bundle exec rspec
 
-    - name: Build Docker image
-      if: matrix.os == 'ubuntu-latest'
-      run: docker build -t brew .
+      - name: Build Docker image
+        if: matrix.os == 'ubuntu-latest'
+        run: docker build -t brew .
 
-    - name: Run brew test-bot --only-formulae --test-default-formula
-      run: |
-        if [ "$RUNNER_OS" = "Linux" ]; then
-          docker run \
-            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-            --rm brew \
+      - name: Run brew test-bot --only-formulae --test-default-formula
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            docker run \
+              -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+              --rm brew \
+              brew test-bot --test-default-formula
+          else
             brew test-bot --test-default-formula
-        else
-          brew test-bot --test-default-formula
-        fi
+          fi
 
-    - name: Output brew test-bot failures
-      if: matrix.os == 'macOS-latest'
-      run: |
-        cat steps_output.txt
-        rm steps_output.txt
+      - name: Output brew test-bot failures
+        if: matrix.os == 'macOS-latest'
+        run: |
+          cat steps_output.txt
+          rm steps_output.txt
 
-    - name: Run brew test-bot --only-cleanup-after
-      run: |
-        if [ "$RUNNER_OS" = "Linux" ]; then
-          docker run \
-            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-            --rm brew \
+      - name: Run brew test-bot --only-cleanup-after
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            docker run \
+              -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+              --rm brew \
+              brew test-bot --only-cleanup-after
+          else
             brew test-bot --only-cleanup-after
-        else
-          brew test-bot --only-cleanup-after
-        fi
+          fi
 
-    - name: Run brew test-bot --ci-upload --dry-run
-      run: |
-        if [ "$RUNNER_OS" = "Linux" ]; then
-          docker run \
-            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-            --rm brew \
-            brew test-bot --ci-upload --dry-run
-        else
-          brew test-bot --ci-upload --dry-run
-        fi
-
-    - name: Run brew test-bot --only-setup --dry-run
-      run: |
-        if [ "$RUNNER_OS" = "Linux" ]; then
-          docker run \
-            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-            --rm brew \
+      - name: Run brew test-bot --only-setup --dry-run
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            docker run \
+              -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+              --rm brew \
+              brew test-bot --only-setup --dry-run
+          else
             brew test-bot --only-setup --dry-run
-        else
-          brew test-bot --only-setup --dry-run
-        fi
+          fi
 
-    - name: Run brew test-bot testbottest --only-formulae --dry-run
-      run: |
-        if [ "$RUNNER_OS" = "Linux" ]; then
-          docker run \
-            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
-            --rm brew \
+      - name: Run brew test-bot testbottest --only-formulae --dry-run
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            docker run \
+              -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+              --rm brew \
+              brew test-bot testbottest --only-formulae --dry-run
+          else
             brew test-bot testbottest --only-formulae --dry-run
-        else
-          brew test-bot testbottest --only-formulae --dry-run
-        fi
+          fi

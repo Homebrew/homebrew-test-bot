@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative "step"
-require_relative "test_ci_upload"
 require_relative "test_runner"
 
 require "date"
@@ -122,7 +121,11 @@ module Homebrew
       ENV["HOMEBREW_GIT_EMAIL"] = args.git_email ||
                                   "homebrew-test-bot@lists.sfconservancy.org"
 
-      return TestCiUpload.run!(tap, args: args) if args.ci_upload?
+      if args.ci_upload?
+        odeprecated "brew test-bot --ci-upload", "brew pr-upload"
+        require_relative "test_ci_upload"
+        return TestCiUpload.run!(tap, args: args)
+      end
 
       Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
     ensure
