@@ -107,10 +107,8 @@ module Homebrew
             puts "#{CURL} -I --output /dev/null #{bintray_url}"
             false
           else
-            begin
-              system CURL, *curl_args("-I", "--output", "/dev/null",
-                                      bintray_url)
-            end
+            system CURL, *curl_args("-I", "--output", "/dev/null",
+                                    bintray_url)
           end
 
           if filename_already_published
