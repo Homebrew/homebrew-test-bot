@@ -438,7 +438,7 @@ module Homebrew
 
         @bottle_filename =
           bottle_step.output
-                     .gsub(%r{.*(\./\S+#{Utils::Bottles.native_regex}).*}m, '\1')
+                     .gsub(%r{.*(\./\S+#{HOMEBREW_BOTTLES_EXTNAME_REGEX}).*}om, '\1')
         @bottle_json_filename =
           @bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
         bottle_merge_args =
