@@ -23,8 +23,12 @@ module Homebrew
           # minimally fix brew doctor failures (a full clean takes ~5m)
           if OS.linux?
             # brew doctor complains
-            node = Pathname("/usr/local/include/node/")
-            test "sudo", "mv", node.to_s, "/tmp" if node.exist?
+            %w[
+              /usr/local/include/node/
+              /opt/pipx_bin/ansible-config
+            ].each do |path|
+              test "sudo", "mv", path, "/tmp" if File.exist?(path)
+            end
           elsif OS.mac?
             delete_or_move Pathname.glob(HOMEBREW_CELLAR/"*")
           end
