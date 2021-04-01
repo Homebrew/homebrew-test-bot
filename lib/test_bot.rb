@@ -119,7 +119,7 @@ module Homebrew
 
       ENV["HOMEBREW_GIT_NAME"] = args.git_name || "BrewTestBot"
       ENV["HOMEBREW_GIT_EMAIL"] = args.git_email ||
-                                  "homebrew-test-bot@lists.sfconservancy.org"
+                                  "1589480+BrewTestBot@users.noreply.github.com"
 
       if args.ci_upload?
         odeprecated "brew test-bot --ci-upload", "brew pr-upload"
