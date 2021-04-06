@@ -709,7 +709,7 @@ module Homebrew
                        .lines[1] # HOMEBREW_CACHE
                        .split[3] # free GB
                        .to_i
-        return if free_gb < 10
+        return if free_gb > 10
 
         test_header(:Formulae, method: :cleanup_during!)
 
