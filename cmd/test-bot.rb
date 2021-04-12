@@ -26,6 +26,8 @@ module Homebrew
              description: "Run `brew bottle --keep-old` to build new bottles for a single platform."
       switch "--skip-relocation",
              description: "Run `brew bottle --skip-relocation` to build new bottles that don't require relocation."
+      switch "--only-json-tab",
+             description: "Run `brew bottle --only-json-tab` to build new bottles that do not contain a tab."
       switch "--local",
              description: "Ask Homebrew to write verbose logs under `./logs/` and set `$HOME` to `./home/`"
       flag   "--tap=",
