@@ -122,9 +122,8 @@ module Homebrew
                                   "1589480+BrewTestBot@users.noreply.github.com"
 
       if args.ci_upload?
-        odeprecated "brew test-bot --ci-upload", "brew pr-upload"
-        require_relative "test_ci_upload"
-        return TestCiUpload.run!(tap, args: args)
+        odisabled "brew test-bot --ci-upload (Bintray will be shut down on 1st May 2021)"
+        return
       end
 
       Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
