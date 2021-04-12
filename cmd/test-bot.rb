@@ -86,6 +86,5 @@ module Homebrew
     end
 
     ARGV << "--local" if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
-    ARGV << "--verbose" if ARGV.include?("--ci-upload")
   end
 end
