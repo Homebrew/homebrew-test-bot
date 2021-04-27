@@ -424,7 +424,10 @@ module Homebrew
           "#{tap.default_remote}/releases/download/#{formula.name}-#{formula.pkg_version}"
         end
 
-        ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina
+        # This is needed where sparse files may be handled (bsdtar >=3.0).
+        # We use gnu-tar with sparse files disabled when --only-json-tab is passed.
+        ENV["HOMEBREW_BOTTLE_SUDO_PURGE"] = "1" if MacOS.version >= :catalina && !args.only_json_tab?
+
         bottle_args = ["--verbose", "--json", formula.full_name]
         bottle_args << "--keep-old" if args.keep_old? && !new_formula
         bottle_args << "--skip-relocation" if args.skip_relocation?
