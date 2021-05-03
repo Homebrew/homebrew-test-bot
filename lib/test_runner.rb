@@ -17,6 +17,15 @@ module Homebrew
       skip_setup = args.skip_setup?
       skip_cleanup_before = false
 
+      bottle_output_path = Pathname("bottle_output.txt")
+      if no_only_args?(args) || args.only_formulae?
+        if bottle_output_path.exist?
+          bottle_output_path.truncate(0)
+        else
+          FileUtils.touch(bottle_output_path)
+        end
+      end
+
       test_bot_args = args.named.dup
 
       # With no arguments just build the most recent commit.
@@ -26,6 +35,7 @@ module Homebrew
         skip_cleanup_after = argument != test_bot_args.last
         current_tests = build_tests(argument, tap:                 tap,
                                               git:                 git,
+                                              bottle_output_path:  bottle_output_path,
                                               skip_setup:          skip_setup,
                                               skip_cleanup_before: skip_cleanup_before,
                                               skip_cleanup_after:  skip_cleanup_after,
@@ -64,7 +74,8 @@ module Homebrew
       !any_only
     end
 
-    def build_tests(argument, tap:, git:, skip_setup:, skip_cleanup_before:, skip_cleanup_after:, args:)
+    def build_tests(argument, tap:, git:, bottle_output_path:, skip_setup:,
+                    skip_cleanup_before:, skip_cleanup_after:, args:)
       tests = {}
 
       no_only_args = no_only_args?(args)
@@ -83,11 +94,12 @@ module Homebrew
       end
 
       if no_only_args || args.only_formulae?
-        tests[:formulae] = Tests::Formulae.new(argument, tap:       tap,
-                                                         git:       git,
-                                                         dry_run:   args.dry_run?,
-                                                         fail_fast: args.fail_fast?,
-                                                         verbose:   args.verbose?)
+        tests[:formulae] = Tests::Formulae.new(argument, tap:                tap,
+                                                         git:                git,
+                                                         dry_run:            args.dry_run?,
+                                                         fail_fast:          args.fail_fast?,
+                                                         verbose:            args.verbose?,
+                                                         bottle_output_path: bottle_output_path)
       end
 
       if args.cleanup?

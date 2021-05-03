@@ -3,10 +3,11 @@
 module Homebrew
   module Tests
     class Formulae < Test
-      def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:)
+      def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:, bottle_output_path:)
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
         @argument = argument
+        @bottle_output_path = bottle_output_path
 
         @formulae = []
         @added_formulae = []
@@ -439,6 +440,8 @@ module Homebrew
         bottle_step = steps.last
         return unless bottle_step.passed?
         return unless bottle_step.output?
+
+        @bottle_output_path.write(bottle_step.output, mode: "a")
 
         @bottle_filename =
           bottle_step.output
