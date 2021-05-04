@@ -58,9 +58,9 @@ jobs:
             docker run \
               -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
               --rm brew \
-              brew test-bot --test-default-formula
+              brew test-bot --only-formulae --test-default-formula
           else
-            brew test-bot --test-default-formula
+            brew test-bot --only-formulae --test-default-formula
           fi
 
       - name: Output brew test-bot failures
@@ -68,6 +68,12 @@ jobs:
         run: |
           cat steps_output.txt
           rm steps_output.txt
+
+      - name: Output brew bottle output
+        if: matrix.os == 'macOS-latest'
+        run: |
+          cat bottle_output.txt
+          rm bottle_output.txt
 
       - name: Run brew test-bot --only-cleanup-after
         run: |
