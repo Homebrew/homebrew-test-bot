@@ -305,6 +305,7 @@ module Homebrew
         build_dependents_from_source_allowlist = %w[
           cabal-install
           docbook-xsl
+          emscripten
           erlang
           ghc
           go
