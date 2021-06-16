@@ -422,7 +422,7 @@ module Homebrew
         root_url = args.root_url
 
         # GitHub Releases url
-        root_url ||= if tap.present? && !tap.core_tap? && !args.bintray_org && !@test_default_formula
+        root_url ||= if tap.present? && !tap.core_tap? && !@test_default_formula
           "#{tap.default_remote}/releases/download/#{formula.name}-#{formula.pkg_version}"
         end
 

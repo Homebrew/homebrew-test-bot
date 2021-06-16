@@ -39,16 +39,12 @@ module Homebrew
                           "passing output as raw bytes instead of re-encoding in UTF-8."
       switch "--test-default-formula",
              description: "Use a default testing formula when not building a tap and no other formulae are specified."
-      flag   "--bintray-org=",
-             description: "Upload bottles to the given Bintray organisation."
       flag   "--root-url=",
              description: "Use the specified <URL> as the root of the bottle's URL instead of Homebrew's default."
       flag   "--git-name=",
              description: "Set the Git author/committer names to the given name."
       flag   "--git-email=",
              description: "Set the Git author/committer email to the given email."
-      switch "--ci-upload",
-             description: "Use the Homebrew CI bottle upload options."
       switch "--publish",
              description: "Publish the uploaded bottles."
       switch "--skip-recursive-dependents",
