@@ -121,11 +121,6 @@ module Homebrew
       ENV["HOMEBREW_GIT_EMAIL"] = args.git_email ||
                                   "1589480+BrewTestBot@users.noreply.github.com"
 
-      if args.ci_upload?
-        odisabled "brew test-bot --ci-upload (Bintray will be shut down on 1st May 2021)"
-        return
-      end
-
       Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
     ensure
       if HOMEBREW_CACHE.exist?
