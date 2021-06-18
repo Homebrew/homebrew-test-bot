@@ -583,8 +583,10 @@ module Homebrew
         end
         new_formula = @added_formulae.include?(formula_name)
 
+        # TODO: Remove ENV["HOMEBREW_REQUIRE_BOTTLED_ARM"] from the condition
+        # below once it's no longer used.
         if Hardware::CPU.arm? &&
-           ENV["HOMEBREW_REQUIRE_BOTTLED_ARM"] &&
+           (ENV["HOMEBREW_SKIP_UNBOTTLED_ARM_TESTS"] || ENV["HOMEBREW_REQUIRE_BOTTLED_ARM"]) &&
            !formula.bottled? &&
            !formula.bottle_unneeded? &&
            !new_formula
@@ -596,7 +598,7 @@ module Homebrew
         if OS.linux? &&
            tap.present? &&
            tap.full_name == "Homebrew/homebrew-core" &&
-           ENV["HOMEBREW_REQUIRE_BOTTLED_LINUX"] &&
+           ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"] &&
            !formula.bottled? &&
            !formula.bottle_unneeded?
           opoo "#{formula.full_name} has not yet been bottled on Linux!"
