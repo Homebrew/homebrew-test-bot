@@ -598,7 +598,7 @@ module Homebrew
         if OS.linux? &&
            tap.present? &&
            tap.full_name == "Homebrew/homebrew-core" &&
-           ENV["HOMEBREW_REQUIRE_BOTTLED_LINUX"] &&
+           ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"] &&
            !formula.bottled? &&
            !formula.bottle_unneeded?
           opoo "#{formula.full_name} has not yet been bottled on Linux!"
