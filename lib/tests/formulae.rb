@@ -583,10 +583,8 @@ module Homebrew
         end
         new_formula = @added_formulae.include?(formula_name)
 
-        # TODO: Remove ENV["HOMEBREW_REQUIRE_BOTTLED_ARM"] from the condition
-        # below once it's no longer used.
         if Hardware::CPU.arm? &&
-           (ENV["HOMEBREW_SKIP_UNBOTTLED_ARM_TESTS"] || ENV["HOMEBREW_REQUIRE_BOTTLED_ARM"]) &&
+           ENV["HOMEBREW_SKIP_UNBOTTLED_ARM_TESTS"] &&
            !formula.bottled? &&
            !formula.bottle_unneeded? &&
            !new_formula
