@@ -22,6 +22,8 @@ module Homebrew
              description: "Don't check if the local system is set up correctly."
       switch "--build-from-source",
              description: "Build from source rather than building bottles."
+      switch "--junit",
+             description: "generate a JUnit XML test results file."
       switch "--keep-old",
              description: "Run `brew bottle --keep-old` to build new bottles for a single platform."
       switch "--skip-relocation",

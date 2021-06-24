@@ -6,9 +6,11 @@ module Homebrew
       @steps.select(&:failed?)
     end
 
-    protected
+    attr_reader :steps
 
-    attr_reader :tap, :git, :steps, :repository
+    private
+
+    attr_reader :tap, :git, :repository
 
     def initialize(tap: nil, git: nil, dry_run: false, fail_fast: false, verbose: false)
       @tap = tap

@@ -4,7 +4,7 @@ module Homebrew
   # Wraps command invocations. Instantiated by Test#test.
   # Handles logging and pretty-printing.
   class Step
-    attr_reader :command, :output
+    attr_reader :command, :name, :status, :output, :start_time, :end_time
 
     # Instantiates a Step object.
     # @param command [Array<String>] Command to execute and arguments.
@@ -14,6 +14,7 @@ module Homebrew
       @env = env
       @verbose = verbose
 
+      @name = command[1].delete("-")
       @status = :running
       @output = nil
     end
@@ -24,6 +25,25 @@ module Homebrew
              .delete_prefix("#{HOMEBREW_LIBRARY}/Taps/")
              .delete_prefix("#{HOMEBREW_PREFIX}/")
              .delete_prefix("/usr/bin/")
+    end
+
+    def command_short
+      (@command - %W[
+        brew
+        -C
+        #{HOMEBREW_PREFIX}
+        #{HOMEBREW_REPOSITORY}
+        #{@repository}
+        #{Dir.pwd}
+        --force
+        --retry
+        --verbose
+        --json
+      ].freeze).join(" ")
+        .gsub(HOMEBREW_PREFIX.to_s, "")
+        .gsub(HOMEBREW_REPOSITORY.to_s, "")
+        .gsub(@repository.to_s, "")
+        .gsub(Dir.pwd, "")
     end
 
     def passed?
@@ -46,7 +66,16 @@ module Homebrew
       @output.present?
     end
 
+    # The execution time of the task.
+    # Precondition: Step#run has been called.
+    # @return [Float] execution time in seconds
+    def time
+      end_time - start_time
+    end
+
     def run(dry_run: false, fail_fast: false)
+      @start_time = Time.now
+
       puts_command
       if dry_run
         @status = :passed
@@ -63,6 +92,7 @@ module Homebrew
                                           print_stderr: @verbose,
                                           env:          @env
 
+      @end_time = Time.now
       @status = result.success? ? :passed : :failed
       puts_result
 

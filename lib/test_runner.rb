@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "junit"
 require_relative "test"
 require_relative "test_cleanup"
 require_relative "tests/cleanup_after"
@@ -61,6 +62,13 @@ module Homebrew
       steps_output_path = Pathname("steps_output.txt")
       steps_output_path.unlink if steps_output_path.exist?
       steps_output_path.write(steps_output)
+
+      if args.junit?
+        junit_filters = %w[audit test]
+        junit = ::Homebrew::Junit.new(tests)
+        junit.build(filters: junit_filters)
+        junit.write("brew-test-bot.xml")
+      end
 
       failed_steps.empty?
     end
