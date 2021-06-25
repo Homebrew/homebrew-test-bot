@@ -83,9 +83,6 @@ module Homebrew
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
     end
 
-    # TODO: can be removed when GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED is no longer used in Homebrew/homebrew-core.
-    ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"] = "1" if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
-
     ARGV << "--local" if ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"].present?
   end
 end
