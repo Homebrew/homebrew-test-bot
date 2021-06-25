@@ -36,7 +36,7 @@ module Homebrew
 
       FileUtils.rm_f symlinks
 
-      if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
+      if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"]
         FileUtils.mv paths, Dir.mktmpdir, force: true
       else
         FileUtils.rm_rf paths
@@ -109,7 +109,7 @@ module Homebrew
       end
 
       # don't need to do `brew cleanup` unless we're self-hosted.
-      return if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
+      return if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"]
 
       test "brew", "cleanup", "--prune=3"
     end
