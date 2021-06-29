@@ -5,10 +5,9 @@ require "rexml/xmldecl"
 require "rexml/cdata"
 
 module Homebrew
+  # Creates Junit report with only required by BuildPulse attributes
+  # See https://github.com/Homebrew/homebrew-test-bot/pull/621#discussion_r658712640
   class Junit
-    BYTES_IN_1_MEGABYTE = 1024*1024
-    MAX_STEP_OUTPUT_SIZE = (BYTES_IN_1_MEGABYTE - (200*1024)).freeze # margin of safety
-
     def initialize(tests)
       @tests = tests
     end
@@ -23,8 +22,6 @@ module Homebrew
       @tests.each do |test|
         testsuite = testsuites.add_element "testsuite"
         testsuite.add_attribute "name", "brew-test-bot.#{Utils::Bottles.tag}"
-        testsuite.add_attribute "tests", test.steps.count(&:passed?)
-        testsuite.add_attribute "failures", test.steps.count(&:failed?)
         testsuite.add_attribute "timestamp", test.steps.first.start_time.iso8601
 
         test.steps.each do |step|
@@ -36,20 +33,10 @@ module Homebrew
           testcase.add_attribute "time", step.time
           testcase.add_attribute "timestamp", step.start_time.iso8601
 
-          next unless step.output?
+          next if step.passed?
 
-          output = sanitize_output_for_xml(step.output)
-          cdata = REXML::CData.new output
-
-          if step.passed?
-            elem = testcase.add_element "system-out"
-          else
-            elem = testcase.add_element "failure"
-            elem.add_attribute "message",
-                               "#{step.status}: #{step.command.join(" ")}"
-          end
-
-          elem << cdata
+          elem = testcase.add_element "failure"
+          elem.add_attribute "message", "#{step.status}: #{step.command.join(" ")}"
         end
       end
     end
@@ -61,26 +48,6 @@ module Homebrew
         pretty_print_indent = 2
         @xml_document.write(xml_file, pretty_print_indent)
       end
-    end
-
-    private
-
-    def sanitize_output_for_xml(output)
-      return output if output.blank?
-
-      # Remove invalid XML CData characters from step output.
-      invalid_xml_pat =
-        /[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/
-      output.gsub!(invalid_xml_pat, "\uFFFD")
-
-      return output if output.bytesize <= MAX_STEP_OUTPUT_SIZE
-
-      # Truncate to 1MB to avoid hitting CI limits
-      output =
-        truncate_text_to_approximate_size(
-          output, MAX_STEP_OUTPUT_SIZE, front_weight: 0.0
-        )
-      "truncated output to 1MB:\n#{output}"
     end
   end
 end
