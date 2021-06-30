@@ -295,7 +295,8 @@ module Homebrew
         @unchanged_build_dependencies = build_dependencies - @formulae
 
         # Test reverse dependencies for linux-only formulae in linuxbrew-core.
-        if tap.full_name == "Homebrew/linuxbrew-core" &&
+        if tap.present? &&
+           tap.full_name == "Homebrew/linuxbrew-core" &&
            args.keep_old? &&
            formula.requirements.exclude?(LinuxRequirement.new)
           @testable_dependents = @bottled_dependents = @source_dependents = []
