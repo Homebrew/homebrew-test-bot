@@ -379,6 +379,15 @@ module Homebrew
           dependents.select(&:bottled?)
         end
         @testable_dependents += @bottled_dependents.select(&:test_defined?)
+
+        info_header "Source dependents:"
+        puts @source_dependents
+
+        info_header "Bottled dependents:"
+        puts @bottled_dependents
+
+        info_header "Testable dependents:"
+        puts @testable_dependents
       end
 
       def unlink_conflicts(formula)
