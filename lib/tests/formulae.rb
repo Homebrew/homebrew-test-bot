@@ -379,13 +379,13 @@ module Homebrew
         end
         @testable_dependents += @bottled_dependents.select(&:test_defined?)
 
-        info_header "Source dependents"
+        info_header "Source dependents:"
         puts @source_dependents
 
-        info_header "Bottled dependents"
+        info_header "Bottled dependents:"
         puts @bottled_dependents
 
-        info_header "Testable dependents"
+        info_header "Testable dependents:"
         puts @testable_dependents
       end
 
