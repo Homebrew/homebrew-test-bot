@@ -613,6 +613,8 @@ module Homebrew
         end
 
         if OS.linux? &&
+           tap.present? &&
+           tap.full_name == "Homebrew/homebrew-core" &&
            ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"] &&
            (
              (
