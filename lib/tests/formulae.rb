@@ -376,10 +376,7 @@ module Homebrew
 
         @testable_dependents = @source_dependents.select(&:test_defined?)
         @bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-          if OS.linux? &&
-             tap.present? &&
-             tap.full_name == "Homebrew/homebrew-core" &&
-             ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"]
+          if OS.linux? && ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"]
             # :all bottles are considered as Linux bottles, but as we did not bottle
             # everything (yet) in homebrew-core, we do not want to test formulae
             # with :all bottles for the time being.
@@ -616,11 +613,14 @@ module Homebrew
         end
 
         if OS.linux? &&
-           tap.present? &&
-           tap.full_name == "Homebrew/homebrew-core" &&
            ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"] &&
-           !formula.bottled? &&
-           !formula.bottle_unneeded?
+           (
+             (
+               !formula.bottled? &&
+               !formula.bottle_unneeded? &&
+               !new_formula
+             ) || formula.bottle_specification.tag?(:all)
+           )
           opoo "#{formula.full_name} has not yet been bottled on Linux!"
           skip formula.name
           return
