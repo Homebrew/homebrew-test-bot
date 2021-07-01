@@ -376,7 +376,7 @@ module Homebrew
 
         @testable_dependents = @source_dependents.select(&:test_defined?)
         @bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-          if OS.linux? && ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"]
+          if OS.linux?
             # :all bottles are considered as Linux bottles, but as we did not bottle
             # everything (yet) in homebrew-core, we do not want to test formulae
             # with :all bottles for the time being.
