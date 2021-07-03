@@ -615,17 +615,25 @@ module Homebrew
         if OS.linux? &&
            tap.present? &&
            tap.full_name == "Homebrew/homebrew-core" &&
-           ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"] &&
-           (
-             (
-               !formula.bottled? &&
-               !formula.bottle_unneeded? &&
-               !new_formula
-             ) || formula.bottle_specification.tag?(:all)
-           )
-          opoo "#{formula.full_name} has not yet been bottled on Linux!"
-          skip formula.name
-          return
+           ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"]
+
+          if new_formula
+            opoo "Skip new formula on Linux!"
+            skip formula.name
+            return
+          end
+
+          if formula.bottle_specification.tag?(:all)
+            opoo "Skip all: formula on Linux!"
+            skip formula.name
+            return
+          end
+
+          if !formula.bottled? && !formula.bottle_unneeded?
+            opoo "#{formula.full_name} has not yet been bottled on Linux!"
+            skip formula.name
+            return
+          end
         end
 
         deps = []
