@@ -121,6 +121,11 @@ module Homebrew
       ENV["HOMEBREW_GIT_EMAIL"] = args.git_email ||
                                   "1589480+BrewTestBot@users.noreply.github.com"
 
+      puts Formatter.headline("Tap configuration:", color: :cyan)
+      puts "GITHUB_REPOSITORY: #{ENV["GITHUB_REPOSITORY"]}"
+      puts "Core Tap: #{CoreTap.instance}"
+      puts "Found tap: #{tap}"
+
       Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
     ensure
       if HOMEBREW_CACHE.exist?
