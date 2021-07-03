@@ -319,6 +319,10 @@ module Homebrew
           rust
         ]
 
+        if OS.linux? && tap.present? && tap.full_name == "Homebrew/homebrew-core"
+          build_dependents_from_source_allowlist = []
+        end
+
         uses_args = %w[--formula --include-build --include-test]
         uses_args << "--recursive" unless args.skip_recursive_dependents?
         dependents = with_env(HOMEBREW_STDERR: "1") do
@@ -376,7 +380,9 @@ module Homebrew
 
         @testable_dependents = @source_dependents.select(&:test_defined?)
         @bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-          if OS.linux?
+          if OS.linux? &&
+             tap.present? &&
+             tap.full_name == "Homebrew/homebrew-core"
             # :all bottles are considered as Linux bottles, but as we did not bottle
             # everything (yet) in homebrew-core, we do not want to test formulae
             # with :all bottles for the time being.
