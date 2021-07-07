@@ -5,6 +5,7 @@ require_relative "test"
 require_relative "test_cleanup"
 require_relative "tests/cleanup_after"
 require_relative "tests/cleanup_before"
+require_relative "tests/formulae_detect"
 require_relative "tests/formulae"
 require_relative "tests/setup"
 require_relative "tests/tap_syntax"
@@ -78,6 +79,7 @@ module Homebrew
                  args.only_setup? ||
                  args.only_tap_syntax? ||
                  args.only_formulae? ||
+                 args.only_formulae_detect? ||
                  args.only_cleanup_after?
       !any_only
     end
@@ -99,6 +101,14 @@ module Homebrew
                                                   dry_run:   args.dry_run?,
                                                   fail_fast: args.fail_fast?,
                                                   verbose:   args.verbose?)
+      end
+
+      if no_only_args || args.only_formulae? || args.only_formulae_detect?
+        tests[:formulae_detect] = Tests::FormulaeDetect.new(argument, tap:       tap,
+                                                                      git:       git,
+                                                                      dry_run:   args.dry_run?,
+                                                                      fail_fast: args.fail_fast?,
+                                                                      verbose:   args.verbose?)
       end
 
       if no_only_args || args.only_formulae?
@@ -136,7 +146,32 @@ module Homebrew
       begin
         tests[:setup]&.run!(args: args)
         tests[:tap_syntax]&.run!(args: args)
-        tests[:formulae]&.run!(args: args)
+
+        formulae = []
+        added_formulae = []
+        deleted_formulae = []
+        skipped_or_failed_formulae = []
+
+        if (detect_test = tests[:formulae_detect])
+          detect_test.run!(args: args)
+
+          formulae = detect_test.formulae
+          added_formulae = detect_test.added_formulae
+          deleted_formulae = detect_test.deleted_formulae
+          skipped_or_failed_formulae = []
+        end
+
+        if (formulae_test = tests[:formulae])
+          formulae_test.formulae = formulae
+          formulae_test.added_formulae = added_formulae
+          formulae_test.deleted_formulae = deleted_formulae
+          formulae_test.skipped_or_failed_formulae = skipped_or_failed_formulae
+
+          formulae_test.run!(args: args)
+
+          # TODO: set this when needed for other steps.
+          # skipped_or_failed_formulae = formulae_test.skipped_or_failed_formulae
+        end
       ensure
         tests[:cleanup_after]&.run!(args: args)
       end
