@@ -98,8 +98,7 @@ module Homebrew
         GIT, "-C", HOMEBREW_REPOSITORY.to_s,
         "log", "-1", "--format=%s"
       ).strip
-      verb = tap ? "Using" : "Testing"
-      puts Formatter.headline("#{verb} Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
+      puts Formatter.headline("Using Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
 
       if tap.to_s != CoreTap.instance.name
         core_revision = Utils.safe_popen_read(
@@ -110,21 +109,17 @@ module Homebrew
       end
 
       if tap
+        tap_github = " #{ENV["GITHUB_REPOSITORY"]}"
         tap_revision = Utils.safe_popen_read(
           GIT, "-C", tap.path.to_s,
           "log", "-1", "--format=%h (%s)"
         ).strip
-        puts Formatter.headline("Testing #{tap.full_name} #{tap_revision}:", color: :cyan)
+        puts Formatter.headline("Testing #{tap.full_name}#{tap_github} #{tap_revision}:", color: :cyan)
       end
 
       ENV["HOMEBREW_GIT_NAME"] = args.git_name || "BrewTestBot"
       ENV["HOMEBREW_GIT_EMAIL"] = args.git_email ||
                                   "1589480+BrewTestBot@users.noreply.github.com"
-
-      puts Formatter.headline("Tap configuration:", color: :cyan)
-      puts "GITHUB_REPOSITORY: #{ENV["GITHUB_REPOSITORY"]}"
-      puts "Core Tap: #{CoreTap.instance}"
-      puts "Found tap: #{tap}"
 
       Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
     ensure
