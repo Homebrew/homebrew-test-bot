@@ -15,6 +15,12 @@ module Homebrew
 
       def run!(args:)
         detect_formulae!(args: args)
+
+        return unless ENV["GITHUB_ACTIONS"]
+
+        puts "::set-output name=testing_formulae::#{@testing_formulae.join(",")}"
+        puts "::set-output name=added_formulae::#{@added_formulae.join(",")}"
+        puts "::set-output name=deleted_formulae::#{@deleted_formulae.join(",")}"
       end
 
       private

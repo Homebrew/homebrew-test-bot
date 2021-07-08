@@ -22,6 +22,8 @@ module Homebrew
              description: "Don't check if the local system is set up correctly."
       switch "--build-from-source",
              description: "Build from source rather than building bottles."
+      switch "--build-dependents-from-source",
+             description: "Build dependents from source rather than testing bottles."
       switch "--junit",
              description: "generate a JUnit XML test results file."
       switch "--keep-old",
@@ -49,6 +51,8 @@ module Homebrew
              description: "Set the Git author/committer email to the given email."
       switch "--publish",
              description: "Publish the uploaded bottles."
+      switch "--skip-dependents",
+             description: "Don't test any dependents."
       switch "--skip-recursive-dependents",
              description: "Only test the direct dependents."
       switch "--only-cleanup-before",
@@ -65,9 +69,20 @@ module Homebrew
              description: "Only run the formulae dependents steps."
       switch "--only-cleanup-after",
              description: "Only run the post-cleanup step. Needs `--cleanup`."
+      flag   "--testing-formulae=",
+             description: "Use these testing formulae rather than running the formulae detection steps."
+      flag   "--added-formulae=",
+             description: "Use these added formulae rather than running the formulae detection steps."
+      flag   "--deleted-formulae=",
+             description: "Use these deleted formulae rather than running the formulae detection steps."
+      flag   "--skipped-or-failed-formulae=",
+             depends_on:  "--only-formulae-dependents",
+             description: "Use these skipped or failed formulae from formulae steps for a formulae dependents step."
       conflicts "--only-cleanup-before", "--only-setup", "--only-tap-syntax",
-                "--only-formulae", "--only-formulae-detect",
+                "--only-formulae", "--only-formulae-detect", "--only-formulae-dependents",
                 "--only-cleanup-after"
+      conflicts "--only-formulae-detect", "--testing-formulae", "--added-formulae", "--deleted-formulae"
+      conflicts "--skip-dependents", "--only-formulae-dependents"
     end
   end
 

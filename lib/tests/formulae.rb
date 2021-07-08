@@ -15,9 +15,14 @@ module Homebrew
         sorted_formulae.each do |f|
           formula!(f, args: args)
         end
+
         @deleted_formulae.each do |f|
           deleted_formula!(f)
         end
+
+        return unless ENV["GITHUB_ACTIONS"]
+
+        puts "::set-output name=skipped_or_failed_formulae::#{@skipped_or_failed_formulae.join(",")}"
       end
 
       private
