@@ -2,21 +2,17 @@
 
 module Homebrew
   module Tests
-    class Formulae < Test
-      attr_writer :formulae, :added_formulae, :deleted_formulae
-      attr_accessor :skipped_or_failed_formulae
+    class Formulae < TestFormulae
+      attr_writer :testing_formulae, :added_formulae, :deleted_formulae
 
-      def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:, bottle_output_path:)
+      def initialize(tap:, git:, dry_run:, fail_fast:, verbose:, bottle_output_path:)
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
-        @argument = argument
         @bottle_output_path = bottle_output_path
-
-        @built_formulae = []
       end
 
       def run!(args:)
-        formulae.each do |f|
+        sorted_formulae.each do |f|
           formula!(f, args: args)
         end
         @deleted_formulae.each do |f|
@@ -25,32 +21,6 @@ module Homebrew
       end
 
       private
-
-      def skip(formula_name, extra_info: nil)
-        @skipped_or_failed_formulae << formula_name
-
-        text = "#{Formatter.warning("SKIPPED")} #{Formatter.identifier(formula_name)}"
-        text += " (#{extra_info})" if extra_info.present?
-        puts Formatter.headline(text, color: :yellow)
-      end
-
-      def satisfied_requirements?(formula, spec, dependency = nil)
-        f = Formulary.factory(formula.full_name, spec)
-        fi = FormulaInstaller.new(f)
-        stable_spec = spec == :stable
-        fi.build_bottle = stable_spec
-
-        unsatisfied_requirements, = fi.expand_requirements
-        return true if unsatisfied_requirements.empty?
-
-        name = formula.full_name
-        extra_info = []
-        extra_info << spec.to_s unless stable_spec
-        extra_info << "#{dependency} dependency" if dependency
-        skip name, extra_info: extra_info.join(", ")
-        puts unsatisfied_requirements.values.flatten.map(&:message)
-        false
-      end
 
       def tap_needed_taps(deps)
         deps.each { |d| d.to_formula.recursive_dependencies }
@@ -75,8 +45,7 @@ module Homebrew
             DevelopmentTools.clear_version_cache
             retry
           end
-          skip formula.name
-          puts e.message
+          skipped formula_name, e.message
         end
       end
 
@@ -124,7 +93,7 @@ module Homebrew
         end
 
         dependencies -= installed
-        @unchanged_dependencies = dependencies - @formulae
+        @unchanged_dependencies = dependencies - @testing_formulae
         test "brew", "fetch", "--retry", *@unchanged_dependencies unless @unchanged_dependencies.empty?
 
         changed_dependencies = dependencies - @unchanged_dependencies
@@ -143,140 +112,7 @@ module Homebrew
           Utils.safe_popen_read("brew", "deps", "--include-test", formula_name)
                .split("\n")
         build_dependencies = dependencies - runtime_or_test_dependencies
-        @unchanged_build_dependencies = build_dependencies - @formulae
-
-        # Test reverse dependencies for linux-only formulae in linuxbrew-core.
-        if tap.present? &&
-           tap.full_name == "Homebrew/linuxbrew-core" &&
-           args.keep_old? &&
-           formula.requirements.exclude?(LinuxRequirement.new)
-          @testable_dependents = @bottled_dependents = @source_dependents = []
-          return
-        end
-
-        info_header "Determining dependents..."
-
-        build_dependents_from_source_allowlist = %w[
-          cabal-install
-          docbook-xsl
-          emscripten
-          erlang
-          ghc
-          go
-          ocaml
-          ocaml-findlib
-          ocaml-num
-          openjdk
-          rust
-        ]
-
-        if OS.linux? && tap.present? && tap.full_name == "Homebrew/homebrew-core"
-          build_dependents_from_source_allowlist = []
-        end
-
-        uses_args = %w[--formula --include-build --include-test]
-        uses_args << "--recursive" unless args.skip_recursive_dependents?
-        dependents = with_env(HOMEBREW_STDERR: "1") do
-          Utils.safe_popen_read("brew", "uses", *uses_args, formula_name)
-               .split("\n")
-        end
-        dependents -= @formulae
-        dependents = dependents.map { |d| Formulary.factory(d) }
-
-        dependents = dependents.zip(dependents.map do |f|
-          if args.skip_recursive_dependents?
-            f.deps
-          else
-            begin
-              f.recursive_dependencies
-            rescue TapFormulaUnavailableError => e
-              raise if e.tap.installed?
-
-              e.tap.clear_cache
-              safe_system "brew", "tap", e.tap.name
-              retry
-            end
-          end.reject(&:optional?)
-        end)
-
-        # Defer formulae which could be tested later
-        # i.e. formulae that also depend on something else yet to be built in this test run.
-        dependents.select! do |_, deps|
-          still_to_test = @formulae - @built_formulae
-          (deps.map { |d| d.to_formula.full_name } & still_to_test).empty?
-        end
-
-        # Split into dependents that we could potentially be building from source and those
-        # we should not. The criteria is that it depends on a formula in the allowlist and
-        # that formula has been, or will be, built in this test run.
-        @source_dependents, dependents = dependents.partition do |_, deps|
-          deps.any? do |d|
-            full_name = d.to_formula.full_name
-
-            next false unless build_dependents_from_source_allowlist.include?(full_name)
-
-            @formulae.include?(full_name)
-          end
-        end
-
-        # From the non-source list, get rid of any dependents we are only a build dependency to
-        dependents.select! do |_, deps|
-          deps.reject { |d| d.build? && !d.test? }
-              .map(&:to_formula)
-              .include?(formula)
-        end
-
-        dependents = dependents.transpose.first.to_a
-        @source_dependents = @source_dependents.transpose.first.to_a
-
-        @testable_dependents = @source_dependents.select(&:test_defined?)
-        @bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-          if OS.linux? &&
-             tap.present? &&
-             tap.full_name == "Homebrew/homebrew-core"
-            # :all bottles are considered as Linux bottles, but as we did not bottle
-            # everything (yet) in homebrew-core, we do not want to test formulae
-            # with :all bottles for the time being.
-            dependents.select { |dep| dep.bottled? && !dep.bottle_specification.tag?(:all) }
-          else
-            dependents.select(&:bottled?)
-          end
-        end
-        @testable_dependents += @bottled_dependents.select(&:test_defined?)
-
-        info_header "Source dependents:"
-        puts @source_dependents
-
-        info_header "Bottled dependents:"
-        puts @bottled_dependents
-
-        info_header "Testable dependents:"
-        puts @testable_dependents
-      end
-
-      def unlink_conflicts(formula)
-        return if formula.keg_only?
-        return if formula.linked_keg.exist?
-
-        conflicts = formula.conflicts.map { |c| Formulary.factory(c.name) }
-                           .select(&:any_version_installed?)
-        formula_recursive_dependencies = begin
-          formula.recursive_dependencies
-        rescue TapFormulaUnavailableError => e
-          raise if e.tap.installed?
-
-          e.tap.clear_cache
-          safe_system "brew", "tap", e.tap.name
-          retry
-        end
-        formula_recursive_dependencies.each do |dependency|
-          conflicts += dependency.to_formula.conflicts.map do |c|
-            Formulary.factory(c.name)
-          end.select(&:any_version_installed?)
-        end
-        conflicts.each do |conflict|
-          test "brew", "unlink", conflict.name
-        end
+        @unchanged_build_dependencies = build_dependencies - @testing_formulae
       end
 
       def cleanup_bottle_etc_var(formula)
@@ -344,7 +180,7 @@ module Homebrew
                        download_strategy.symlink_location,
                        force: true
 
-        @formulae.delete(formula.name)
+        @testing_formulae.delete(formula.name)
 
         unless @unchanged_build_dependencies.empty?
           test "brew", "uninstall", "--force", *@unchanged_build_dependencies
@@ -355,106 +191,14 @@ module Homebrew
         test "brew", "install", @bottle_filename
       end
 
-      def install_dependent_from_source(dependent, args:)
-        return unless satisfied_requirements?(dependent, :stable)
-
-        if dependent.deprecated? || dependent.disabled?
-          verb = dependent.deprecated? ? :deprecated : :disabled
-          puts "#{dependent.full_name} has been #{verb}!"
-          skip dependent.name
-          return
-        end
-
-        cleanup_during!(args: args)
-
-        unless dependent.latest_version_installed?
-          test "brew", "fetch", "--retry", dependent.full_name
-          return if steps.last.failed?
-
-          unlink_conflicts dependent
-
-          test "brew", "install", "--build-from-source", "--only-dependencies", dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil }
-          test "brew", "install", "--build-from-source", dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil }
-          return if steps.last.failed?
-        end
-        return unless dependent.latest_version_installed?
-
-        if !dependent.keg_only? && !dependent.linked_keg.exist?
-          unlink_conflicts dependent
-          test "brew", "link", dependent.full_name
-        end
-        test "brew", "install", "--only-dependencies", dependent.full_name
-        test "brew", "linkage", "--test", dependent.full_name
-
-        if @testable_dependents.include? dependent
-          test "brew", "install", "--only-dependencies", "--include-test",
-               dependent.full_name
-          test "brew", "test", "--retry", "--verbose", dependent.full_name
-        end
-
-        test "brew", "uninstall", "--force", dependent.full_name
-      end
-
-      def install_bottled_dependent(dependent, args:)
-        return unless satisfied_requirements?(dependent, :stable)
-
-        if dependent.deprecated? || dependent.disabled?
-          verb = dependent.deprecated? ? :deprecated : :disabled
-          puts "#{dependent.full_name} has been #{verb}!"
-          skip dependent.name
-          return
-        end
-
-        cleanup_during!(args: args)
-
-        unless dependent.latest_version_installed?
-          test "brew", "fetch", "--retry", dependent.full_name
-          return if steps.last.failed?
-
-          unlink_conflicts dependent
-
-          test "brew", "install", "--only-dependencies", dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil }
-          test "brew", "install", dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil }
-          return if steps.last.failed?
-        end
-        return unless dependent.latest_version_installed?
-
-        if !dependent.keg_only? && !dependent.linked_keg.exist?
-          unlink_conflicts dependent
-          test "brew", "link", dependent.full_name
-        end
-        test "brew", "install", "--only-dependencies", dependent.full_name
-        test "brew", "linkage", "--test", dependent.full_name
-
-        if @testable_dependents.include? dependent
-          test "brew", "install", "--only-dependencies", "--include-test",
-               dependent.full_name
-          test "brew", "test", "--retry", "--verbose", dependent.full_name
-        end
-
-        test "brew", "uninstall", "--force", dependent.full_name
-      end
-
-      def fetch_formula(fetch_args, audit_args, spec_args = [])
-        test "brew", "fetch", "--retry", *spec_args, *fetch_args
-        test "brew", "audit", *audit_args
-      end
-
       def formula!(formula_name, args:)
         cleanup_during!(args: args)
 
         test_header(:Formulae, method: "formula!(#{formula_name})")
 
-        @built_formulae << formula_name
-
         formula = Formulary.factory(formula_name)
         if formula.disabled?
-          ofail "#{formula.full_name} has been disabled!"
-          skip formula.name
+          skipped formula_name, "#{formula.full_name} has been disabled!"
           return
         end
         new_formula = @added_formulae.include?(formula_name)
@@ -464,8 +208,7 @@ module Homebrew
            !formula.bottled? &&
            !formula.bottle_unneeded? &&
            !new_formula
-          opoo "#{formula.full_name} has not yet been bottled on ARM!"
-          skip formula.name
+          skipped formula_name, "#{formula.full_name} has not yet been bottled on ARM!"
           return
         end
 
@@ -475,20 +218,17 @@ module Homebrew
            ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"]
 
           if new_formula
-            opoo "Skip new formula on Linux!"
-            skip formula.name
+            skipped formula_name, "New formula are (currently) skipped on Linux!"
             return
           end
 
           if formula.bottle_specification.tag?(:all)
-            opoo "Skip all: formula on Linux!"
-            skip formula.name
+            skipped formula_name, "all: bottles are (currently) skipped on Linux!"
             return
           end
 
           if !formula.bottled? && !formula.bottle_unneeded?
-            opoo "#{formula.full_name} has not yet been bottled on Linux!"
-            skip formula.name
+            skipped formula_name, "#{formula.full_name} has not (yet) been bottled on Linux!"
             return
           end
         end
@@ -511,8 +251,11 @@ module Homebrew
           audit_args << "--git" << "--skip-style"
         end
 
-        unless satisfied_requirements?(formula, :stable)
-          fetch_formula(fetch_args, audit_args)
+        if (messages = unsatisfied_requirements_messages(formula))
+          test "brew", "fetch", "--retry", *fetch_args
+          test "brew", "audit", *audit_args
+
+          skipped formula_name, messages
           return
         end
 
@@ -546,11 +289,15 @@ module Homebrew
         test "brew", "livecheck", *livecheck_args if formula.livecheckable? && !formula.livecheck.skip?
 
         test "brew", "audit", *audit_args unless formula.deprecated?
-        return unless install_passed
+        unless install_passed
+          failed formula_name, "install failed"
+          return
+        end
 
         bottle_reinstall_formula(formula, new_formula, args: args)
         test "brew", "linkage", "--test", formula_name
-        failed_linkage_or_test = steps.last.failed?
+        failed_linkage_or_test_messages ||= []
+        failed_linkage_or_test_messages << "linkage failed" if steps.last.failed?
 
         test "brew", "install", "--only-dependencies", "--include-test", formula_name
 
@@ -558,30 +305,18 @@ module Homebrew
           # Intentionally not passing --retry here to avoid papering over
           # flaky tests when a formula isn't being pulled in as a dependent.
           test "brew", "test", "--verbose", formula_name
-          failed_linkage_or_test ||= steps.last.failed?
+          failed_linkage_or_test_messages << "test failed" if steps.last.failed?
         end
 
         # Move bottle and don't test dependents if the formula linkage or test failed.
-        if failed_linkage_or_test
+        if failed_linkage_or_test_messages.present?
           if @bottle_filename
             failed_dir = "#{File.dirname(@bottle_filename)}/failed"
             FileUtils.mkdir failed_dir unless File.directory? failed_dir
             FileUtils.mv [@bottle_filename, @bottle_json_filename], failed_dir
           end
-          return
-        end
 
-        @source_dependents.each do |dependent|
-          install_dependent_from_source(dependent, args: args)
-
-          bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-            dependent.bottled?
-          end
-          install_bottled_dependent(dependent, args: args) if bottled
-        end
-
-        @bottled_dependents.each do |dependent|
-          install_bottled_dependent(dependent, args: args)
+          failed formula_name, failed_linkage_or_test_messages.join(", ")
         end
       ensure
         cleanup_bottle_etc_var(formula) if args.cleanup?
@@ -598,26 +333,10 @@ module Homebrew
              formula_name
       end
 
-      def cleanup_during!(args:)
-        return unless args.cleanup?
-        return unless HOMEBREW_CACHE.exist?
-
-        free_gb = Utils.safe_popen_read({ "BLOCKSIZE" => (1000 ** 3).to_s }, "df", HOMEBREW_CACHE.to_s)
-                       .lines[1] # HOMEBREW_CACHE
-                       .split[3] # free GB
-                       .to_i
-        return if free_gb > 10
-
-        test_header(:Formulae, method: :cleanup_during!)
-
-        FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
-        test "rm", "-rf", HOMEBREW_CACHE.to_s
-      end
-
-      def formulae
+      def sorted_formulae
         changed_formulae_dependents = {}
 
-        @formulae.each do |formula|
+        @testing_formulae.each do |formula|
           begin
             formula_dependencies =
               Utils.popen_read("brew", "deps", "--full-name",
@@ -638,7 +357,7 @@ module Homebrew
             retry
           end
 
-          unchanged_dependencies = formula_dependencies - @formulae
+          unchanged_dependencies = formula_dependencies - @testing_formulae
           changed_dependencies = formula_dependencies - unchanged_dependencies
           changed_dependencies.each do |changed_formula|
             changed_formulae_dependents[changed_formula] ||= 0
@@ -650,7 +369,7 @@ module Homebrew
           a2[1].to_i <=> a1[1].to_i
         end
         changed_formulae.map!(&:first)
-        unchanged_formulae = @formulae - changed_formulae
+        unchanged_formulae = @testing_formulae - changed_formulae
         changed_formulae + unchanged_formulae
       end
     end
