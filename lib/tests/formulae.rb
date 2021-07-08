@@ -50,7 +50,7 @@ module Homebrew
             DevelopmentTools.clear_version_cache
             retry
           end
-          skipped formula_name, e.message
+          skipped formula.name, e.message
         end
       end
 
