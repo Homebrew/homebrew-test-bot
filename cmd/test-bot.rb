@@ -82,11 +82,13 @@ module Homebrew
       flag   "--skipped-or-failed-formulae=",
              depends_on:  "--only-formulae-dependents",
              description: "Use these skipped or failed formulae from formulae steps for a formulae dependents step."
+      conflicts "--only-formulae-detect", "--testing-formulae"
+      conflicts "--only-formulae-detect", "--added-formulae"
+      conflicts "--only-formulae-detect", "--deleted-formulae"
+      conflicts "--skip-dependents", "--only-formulae-dependents"
       conflicts "--only-cleanup-before", "--only-setup", "--only-tap-syntax",
                 "--only-formulae", "--only-formulae-detect", "--only-formulae-dependents",
-                "--only-cleanup-after"
-      conflicts "--only-formulae-detect", "--testing-formulae", "--added-formulae", "--deleted-formulae"
-      conflicts "--skip-dependents", "--only-formulae-dependents"
+                "--only-cleanup-after", "--skip-setup"
     end
   end
 
