@@ -106,9 +106,9 @@ module Homebrew
                                                   verbose:   args.verbose?)
       end
 
-      no_formulae_flags = (args.testing_formulae.to_s.split(",") +
-                           args.added_formulae.to_s.split(",") +
-                           args.deleted_formulae.to_s.split(",")).blank?
+      no_formulae_flags = args.testing_formulae.nil? &&
+                          args.added_formulae.nil? &&
+                          args.deleted_formulae.nil?
       if no_formulae_flags && (no_only_args || args.only_formulae? || args.only_formulae_detect?)
         tests[:formulae_detect] = Tests::FormulaeDetect.new(argument, tap:       tap,
                                                                       git:       git,
