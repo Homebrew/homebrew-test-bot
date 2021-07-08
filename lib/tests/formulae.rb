@@ -208,9 +208,8 @@ module Homebrew
         end
         new_formula = @added_formulae.include?(formula_name)
 
-        # TODO: remove HOMEBREW_SKIP_UNBOTTLED_ARM_TESTS
         if Hardware::CPU.arm? &&
-           (ENV["HOMEBREW_SKIP_UNBOTTLED_ARM_TESTS"] || args.skip_unbottled_arm?) &&
+           args.skip_unbottled_arm? &&
            !formula.bottled? &&
            !formula.bottle_unneeded? &&
            !new_formula
@@ -218,9 +217,8 @@ module Homebrew
           return
         end
 
-        # TODO: remove HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS
         if OS.linux? &&
-           (ENV["HOMEBREW_SKIP_UNBOTTLED_LINUX_TESTS"] || args.skip_unbottled_linux?) &&
+           args.skip_unbottled_linux? &&
            tap.present? &&
            tap.full_name == "Homebrew/homebrew-core"
 
