@@ -20,6 +20,8 @@ module Homebrew
       testsuites = @xml_document.add_element "testsuites"
 
       @tests.each do |test|
+        next if test.steps.empty?
+
         testsuite = testsuites.add_element "testsuite"
         testsuite.add_attribute "name", "brew-test-bot.#{Utils::Bottles.tag}"
         testsuite.add_attribute "timestamp", test.steps.first.start_time.iso8601
