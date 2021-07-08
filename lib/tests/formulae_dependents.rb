@@ -40,8 +40,7 @@ module Homebrew
       def dependents_for_formula(formula, formula_name, args:)
         info_header "Determining dependents..."
 
-        # Test reverse dependencies for linux-only formulae in linuxbrew-core.
-        # TODO: move this logic to a label
+        # Only test reverse dependencies for linux-only formulae in linuxbrew-core.
         if tap.present? &&
            tap.full_name == "Homebrew/linuxbrew-core" &&
            args.keep_old? &&
@@ -49,25 +48,7 @@ module Homebrew
           return [[], [], []]
         end
 
-        # TODO: move this to a JSON file in homebrew/core or GitHub label
-        build_dependents_from_source_allowlist = %w[
-          cabal-install
-          docbook-xsl
-          emscripten
-          erlang
-          ghc
-          go
-          ocaml
-          ocaml-findlib
-          ocaml-num
-          openjdk
-          rust
-        ]
-
-        # TODO: move this logic to a label
-        if OS.linux? && tap.present? && tap.full_name == "Homebrew/homebrew-core"
-          build_dependents_from_source_allowlist = []
-        end
+        build_dependents_from_source_disabled = OS.linux? && tap.present? && tap.full_name == "Homebrew/homebrew-core"
 
         uses_args = %w[--formula --include-build --include-test]
         uses_args << "--recursive" unless args.skip_recursive_dependents?
@@ -101,9 +82,7 @@ module Homebrew
           deps.any? do |d|
             full_name = d.to_formula.full_name
 
-            if args.build_dependents_from_source? || build_dependents_from_source_allowlist.include?(full_name)
-              next false
-            end
+            next false if args.build_dependents_from_source? && !build_dependents_from_source_disabled
 
             @testing_formulae.include?(full_name)
           end
