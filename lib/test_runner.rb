@@ -3,9 +3,11 @@
 require_relative "junit"
 require_relative "test"
 require_relative "test_cleanup"
+require_relative "test_formulae"
 require_relative "tests/cleanup_after"
 require_relative "tests/cleanup_before"
 require_relative "tests/formulae_detect"
+require_relative "tests/formulae_dependents"
 require_relative "tests/formulae"
 require_relative "tests/setup"
 require_relative "tests/tap_syntax"
@@ -112,12 +114,20 @@ module Homebrew
       end
 
       if no_only_args || args.only_formulae?
-        tests[:formulae] = Tests::Formulae.new(argument, tap:                tap,
-                                                         git:                git,
-                                                         dry_run:            args.dry_run?,
-                                                         fail_fast:          args.fail_fast?,
-                                                         verbose:            args.verbose?,
-                                                         bottle_output_path: bottle_output_path)
+        tests[:formulae] = Tests::Formulae.new(tap:                tap,
+                                               git:                git,
+                                               dry_run:            args.dry_run?,
+                                               fail_fast:          args.fail_fast?,
+                                               verbose:            args.verbose?,
+                                               bottle_output_path: bottle_output_path)
+      end
+
+      if no_only_args || args.only_formulae? || args.only_formulae_dependents?
+        tests[:formulae_dependents] = Tests::FormulaeDependents.new(tap:       tap,
+                                                                    git:       git,
+                                                                    dry_run:   args.dry_run?,
+                                                                    fail_fast: args.fail_fast?,
+                                                                    verbose:   args.verbose?)
       end
 
       if args.cleanup?
@@ -147,30 +157,35 @@ module Homebrew
         tests[:setup]&.run!(args: args)
         tests[:tap_syntax]&.run!(args: args)
 
-        formulae = []
+        testing_formulae = []
         added_formulae = []
         deleted_formulae = []
         skipped_or_failed_formulae = []
 
+        # TODO: allow output and passing in values through args
         if (detect_test = tests[:formulae_detect])
           detect_test.run!(args: args)
 
-          formulae = detect_test.formulae
+          testing_formulae = detect_test.testing_formulae
           added_formulae = detect_test.added_formulae
           deleted_formulae = detect_test.deleted_formulae
-          skipped_or_failed_formulae = []
         end
 
         if (formulae_test = tests[:formulae])
-          formulae_test.formulae = formulae
+          formulae_test.testing_formulae = testing_formulae
           formulae_test.added_formulae = added_formulae
           formulae_test.deleted_formulae = deleted_formulae
-          formulae_test.skipped_or_failed_formulae = skipped_or_failed_formulae
 
           formulae_test.run!(args: args)
 
-          # TODO: set this when needed for other steps.
-          # skipped_or_failed_formulae = formulae_test.skipped_or_failed_formulae
+          skipped_or_failed_formulae = formulae_test.skipped_or_failed_formulae
+        end
+
+        if (dependents_test = tests[:formulae_dependents])
+          dependents_test.testing_formulae = testing_formulae
+          dependents_test.skipped_or_failed_formulae = skipped_or_failed_formulae
+
+          dependents_test.run!(args: args)
         end
       ensure
         tests[:cleanup_after]&.run!(args: args)

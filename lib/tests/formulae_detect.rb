@@ -3,16 +3,14 @@
 module Homebrew
   module Tests
     class FormulaeDetect < Test
-      attr_reader :formulae, :added_formulae, :deleted_formulae
+      attr_reader :testing_formulae, :added_formulae, :deleted_formulae
 
       def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:)
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
         @argument = argument
-
         @added_formulae = []
         @deleted_formulae = []
-        @built_formulae = []
       end
 
       def run!(args:)
@@ -22,20 +20,20 @@ module Homebrew
       private
 
       def detect_formulae!(args:)
-        test_header(:Formulae, method: :detect_formulae!)
+        test_header(:FormulaeDetect, method: :detect_formulae!)
 
         url = nil
         origin_ref = "origin/master"
 
         if @argument == "HEAD"
-          @formulae = []
+          @testing_formulae = []
           # Use GitHub Actions variables for pull request jobs.
           if ENV["GITHUB_REF"].present? && ENV["GITHUB_REPOSITORY"].present? &&
              %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
             url = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
           end
         elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args: args))
-          @formulae = [canonical_formula_name]
+          @testing_formulae = [canonical_formula_name]
         else
           raise UsageError,
                 "#{@argument} is not detected from GitHub Actions or a formula name!"
@@ -77,7 +75,7 @@ module Homebrew
         diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
         diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
-        diff_start_sha1 = diff_end_sha1 if @formulae.present?
+        diff_start_sha1 = diff_end_sha1 if @testing_formulae.present?
 
         if tap
           tap_origin_ref_revision_args =
@@ -95,11 +93,11 @@ module Homebrew
         end
 
         puts <<-EOS
-    url             #{url.presence                     || "(blank)"}
-    #{origin_ref}   #{tap_origin_ref_revision.presence || "(blank)"}
-    HEAD            #{tap_revision.presence            || "(blank)"}
-    diff_start_sha1 #{diff_start_sha1.presence         || "(blank)"}
-    diff_end_sha1   #{diff_end_sha1.presence           || "(blank)"}
+    url               #{url.presence                     || "(blank)"}
+    tap #{origin_ref} #{tap_origin_ref_revision.presence || "(blank)"}
+    HEAD              #{tap_revision.presence            || "(blank)"}
+    diff_start_sha1   #{diff_start_sha1.presence         || "(blank)"}
+    diff_end_sha1     #{diff_end_sha1.presence           || "(blank)"}
         EOS
 
         modified_formulae = []
@@ -120,18 +118,18 @@ module Homebrew
           modified_formulae << "testbottest"
         end
 
-        @formulae += @added_formulae + modified_formulae
+        @testing_formulae += @added_formulae + modified_formulae
 
-        if @formulae.blank? && @deleted_formulae.blank? && diff_start_sha1 == diff_end_sha1
+        if @testing_formulae.blank? && @deleted_formulae.blank? && diff_start_sha1 == diff_end_sha1
           raise UsageError, "Did not find any formulae or commits to test!"
         end
 
-        info_header "Testing Formula changes:"
         puts <<-EOS
-    formulae  #{@formulae.blank?         ? "(blank)" : @formulae.join(" ")}
-    added     #{@added_formulae.blank?   ? "(blank)" : @added_formulae.join(" ")}
-    modified  #{modified_formulae.blank? ? "(blank)" : modified_formulae.join(" ")}
-    deleted   #{@deleted_formulae.blank? ? "(blank)" : @deleted_formulae.join(" ")}
+
+    testing_formulae  #{@testing_formulae.join(" ").presence || "(none)"}
+    added_formulae    #{@added_formulae.join(" ").presence   || "(none)"}
+    modified_formulae #{modified_formulae.join(" ").presence || "(none)"}
+    deleted_formulae  #{@deleted_formulae.join(" ").presence || "(none)"}
         EOS
       end
 
