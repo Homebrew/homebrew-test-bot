@@ -41,7 +41,7 @@ module Homebrew
         unsatisfied_requirements, = fi.expand_requirements
         return if unsatisfied_requirements.blank?
 
-        unsatisfied_requirements.values.flatten.map(&:message).presence
+        unsatisfied_requirements.values.flatten.map(&:message).join("\n").presence
       end
 
       def cleanup_during!(args:)

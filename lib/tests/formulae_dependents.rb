@@ -41,6 +41,7 @@ module Homebrew
         info_header "Determining dependents..."
 
         # Test reverse dependencies for linux-only formulae in linuxbrew-core.
+        # TODO: move this logic to a label
         if tap.present? &&
            tap.full_name == "Homebrew/linuxbrew-core" &&
            args.keep_old? &&
@@ -63,6 +64,7 @@ module Homebrew
           rust
         ]
 
+        # TODO: move this logic to a label
         if OS.linux? && tap.present? && tap.full_name == "Homebrew/homebrew-core"
           build_dependents_from_source_allowlist = []
         end
@@ -99,7 +101,9 @@ module Homebrew
           deps.any? do |d|
             full_name = d.to_formula.full_name
 
-            next false unless build_dependents_from_source_allowlist.include?(full_name)
+            if args.build_dependents_from_source? || build_dependents_from_source_allowlist.include?(full_name)
+              next false
+            end
 
             @testing_formulae.include?(full_name)
           end

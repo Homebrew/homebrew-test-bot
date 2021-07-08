@@ -109,7 +109,7 @@ module Homebrew
       end
 
       if tap
-        tap_github = " #{ENV["GITHUB_REPOSITORY"]}"
+        tap_github = " (#{ENV["GITHUB_REPOSITORY"]}" if tap.full_name != ENV["GITHUB_REPOSITORY"]
         tap_revision = Utils.safe_popen_read(
           GIT, "-C", tap.path.to_s,
           "log", "-1", "--format=%h (%s)"

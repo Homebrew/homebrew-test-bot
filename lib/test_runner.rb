@@ -82,6 +82,7 @@ module Homebrew
                  args.only_tap_syntax? ||
                  args.only_formulae? ||
                  args.only_formulae_detect? ||
+                 args.only_formulae_dependents? ||
                  args.only_cleanup_after?
       !any_only
     end
@@ -105,7 +106,10 @@ module Homebrew
                                                   verbose:   args.verbose?)
       end
 
-      if no_only_args || args.only_formulae? || args.only_formulae_detect?
+      no_formulae_flags = (args.testing_formulae.to_s.split(",") +
+                           args.added_formulae.to_s.split(",") +
+                           args.deleted_formulae.to_s.split(",")).blank?
+      if no_formulae_flags && (no_only_args || args.only_formulae? || args.only_formulae_detect?)
         tests[:formulae_detect] = Tests::FormulaeDetect.new(argument, tap:       tap,
                                                                       git:       git,
                                                                       dry_run:   args.dry_run?,
@@ -122,7 +126,7 @@ module Homebrew
                                                bottle_output_path: bottle_output_path)
       end
 
-      if no_only_args || args.only_formulae? || args.only_formulae_dependents?
+      if !args.skip_dependents? && (no_only_args || args.only_formulae? || args.only_formulae_dependents?)
         tests[:formulae_dependents] = Tests::FormulaeDependents.new(tap:       tap,
                                                                     git:       git,
                                                                     dry_run:   args.dry_run?,
@@ -157,28 +161,32 @@ module Homebrew
         tests[:setup]&.run!(args: args)
         tests[:tap_syntax]&.run!(args: args)
 
-        testing_formulae = []
-        added_formulae = []
-        deleted_formulae = []
-        skipped_or_failed_formulae = []
-
-        # TODO: allow output and passing in values through args
-        if (detect_test = tests[:formulae_detect])
+        testing_formulae, added_formulae, deleted_formulae = if (detect_test = tests[:formulae_detect])
           detect_test.run!(args: args)
 
-          testing_formulae = detect_test.testing_formulae
-          added_formulae = detect_test.added_formulae
-          deleted_formulae = detect_test.deleted_formulae
+          [
+            detect_test.testing_formulae,
+            detect_test.added_formulae,
+            detect_test.deleted_formulae,
+          ]
+        else
+          [
+            args.testing_formulae.to_s.split(","),
+            args.added_formulae.to_s.split(","),
+            args.deleted_formulae.to_s.split(","),
+          ]
         end
 
-        if (formulae_test = tests[:formulae])
+        skipped_or_failed_formulae = if (formulae_test = tests[:formulae])
           formulae_test.testing_formulae = testing_formulae
           formulae_test.added_formulae = added_formulae
           formulae_test.deleted_formulae = deleted_formulae
 
           formulae_test.run!(args: args)
 
-          skipped_or_failed_formulae = formulae_test.skipped_or_failed_formulae
+          formulae_test.skipped_or_failed_formulae
+        else
+          args.skipped_or_failed_formulae.to_s.split(",")
         end
 
         if (dependents_test = tests[:formulae_dependents])
