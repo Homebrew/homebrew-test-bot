@@ -82,7 +82,7 @@ module Homebrew
           deps.any? do |d|
             full_name = d.to_formula.full_name
 
-            next false if args.build_dependents_from_source? && !build_dependents_from_source_disabled
+            next false if !args.build_dependents_from_source? || build_dependents_from_source_disabled
 
             @testing_formulae.include?(full_name)
           end
