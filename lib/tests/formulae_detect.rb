@@ -67,7 +67,7 @@ module Homebrew
             diff_end_sha1 = ENV["GITHUB_SHA"]
           # Use GitHub Actions variables for branch jobs.
           else
-            test git, "-C", repository, "fetch", "origin", "+#{ENV["GITHUB_REF"]}"
+            test git, "-C", repository, "fetch", "origin", "+#{ENV["GITHUB_REF"]}" unless tap.official?
             origin_ref = "origin/#{ENV["GITHUB_REF"].gsub(%r{^refs/heads/}, "")}"
             diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
           end
