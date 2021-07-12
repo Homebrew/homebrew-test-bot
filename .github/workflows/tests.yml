@@ -52,15 +52,30 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: docker build -t brew .
 
-      - name: Run brew test-bot --only-formulae --test-default-formula
+      - run: brew test-bot --only-formulae-detect --test-default-formula
+        id: formulae-detect
+
+      - name: Run brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
+        id: brew-test-bot-formulae
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
             docker run \
               -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
               --rm brew \
-              brew test-bot --only-formulae --test-default-formula
+              brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
           else
-            brew test-bot --only-formulae --test-default-formula
+            brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
+          fi
+
+      - name: Run brew test-bot --only-formulae-dependents --junit --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            docker run \
+              -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+              --rm brew \
+              brew test-bot --only-formulae-dependents --junit --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}}
+          else
+            brew test-bot --only-formulae-dependents --junit --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
           fi
 
       - name: Output brew test-bot failures

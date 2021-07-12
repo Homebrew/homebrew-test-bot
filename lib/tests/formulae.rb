@@ -178,8 +178,7 @@ module Homebrew
         filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
 
         download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
-
-        HOMEBREW_CACHE.mkpath
+        download_strategy.cached_location.parent.mkpath
         FileUtils.ln @bottle_filename, download_strategy.cached_location, force: true
         FileUtils.ln_s download_strategy.cached_location.relative_path_from(download_strategy.symlink_location),
                        download_strategy.symlink_location,
