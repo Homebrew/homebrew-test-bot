@@ -73,15 +73,15 @@ module Homebrew
              description: "Only run the formulae dependents steps."
       switch "--only-cleanup-after",
              description: "Only run the post-cleanup step. Needs `--cleanup`."
-      flag   "--testing-formulae=",
-             description: "Use these testing formulae rather than running the formulae detection steps."
-      flag   "--added-formulae=",
-             description: "Use these added formulae rather than running the formulae detection steps."
-      flag   "--deleted-formulae=",
-             description: "Use these deleted formulae rather than running the formulae detection steps."
-      flag   "--skipped-or-failed-formulae=",
-             depends_on:  "--only-formulae-dependents",
-             description: "Use these skipped or failed formulae from formulae steps for a formulae dependents step."
+      comma_array "--testing-formulae=",
+                  description: "Use these testing formulae rather than running the formulae detection steps."
+      comma_array "--added-formulae=",
+                  description: "Use these added formulae rather than running the formulae detection steps."
+      comma_array "--deleted-formulae=",
+                  description: "Use these deleted formulae rather than running the formulae detection steps."
+      comma_array "--skipped-or-failed-formulae=",
+                  description: "Use these skipped or failed formulae from formulae steps for a " \
+                               "formulae dependents step."
       conflicts "--only-formulae-detect", "--testing-formulae"
       conflicts "--only-formulae-detect", "--added-formulae"
       conflicts "--only-formulae-detect", "--deleted-formulae"

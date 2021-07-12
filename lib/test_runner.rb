@@ -171,9 +171,9 @@ module Homebrew
           ]
         else
           [
-            args.testing_formulae.to_s.split(","),
-            args.added_formulae.to_s.split(","),
-            args.deleted_formulae.to_s.split(","),
+            Array(args.testing_formulae),
+            Array(args.added_formulae),
+            Array(args.deleted_formulae),
           ]
         end
 
@@ -186,7 +186,7 @@ module Homebrew
 
           formulae_test.skipped_or_failed_formulae
         else
-          args.skipped_or_failed_formulae.to_s.split(",")
+          Array(args.skipped_or_failed_formulae)
         end
 
         if (dependents_test = tests[:formulae_dependents])
