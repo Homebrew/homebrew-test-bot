@@ -18,7 +18,7 @@ module Homebrew
         return unless ENV["HOMEBREW_ON_DEBIAN7"]
 
         test "brew", "install", "glibc",
-             env:  { "HOMEBREW_DEVELOPER" => nil }
+             env: { "HOMEBREW_DEVELOPER" => nil }
       end
 
       def dependent_formulae!(formula_name, args:)
