@@ -13,10 +13,20 @@ module Homebrew
 
       private
 
+      def install_glibc_if_needed
+        return unless OS.linux?
+        return unless ENV["HOMEBREW_ON_DEBIAN7"]
+
+        test "brew", "install", "glibc",
+             env: { "HOMEBREW_DEVELOPER" => nil }
+      end
+
       def dependent_formulae!(formula_name, args:)
         cleanup_during!(args: args)
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
+
+        install_glibc_if_needed
 
         formula = Formulary.factory(formula_name)
 
