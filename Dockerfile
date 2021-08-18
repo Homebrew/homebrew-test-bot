@@ -1,3 +1,3 @@
 FROM homebrew/ubuntu16.04:master
 
-ADD . /home/linuxbrew/.linuxbrew/Homebrew/Library/Taps/homebrew/homebrew-test-bot
+COPY --chown=linuxbrew:linuxbrew . /home/linuxbrew/.linuxbrew/Homebrew/Library/Taps/homebrew/homebrew-test-bot
