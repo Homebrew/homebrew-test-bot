@@ -37,6 +37,20 @@ module Homebrew
         retry
       end
 
+      def install_curl_if_needed(formula)
+        %w[Stable HEAD].each do |name|
+          spec_name = name.downcase.to_sym
+          next unless (spec = formula.send(spec_name))
+
+          next unless spec.using == :homebrew_curl
+
+          test "brew", "install", "curl",
+               env: { "HOMEBREW_DEVELOPER" => nil }
+
+          break
+        end
+      end
+
       def install_gcc_if_needed(formula, deps)
         installed_gcc = false
         begin
@@ -267,6 +281,7 @@ module Homebrew
         reqs |= formula.requirements.to_a.reject(&:optional?)
 
         tap_needed_taps(deps)
+        install_curl_if_needed(formula)
         install_gcc_if_needed(formula, deps)
         install_mercurial_if_needed(deps, reqs)
         install_subversion_if_needed(deps, reqs)
