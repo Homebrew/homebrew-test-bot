@@ -235,11 +235,6 @@ module Homebrew
            tap.present? &&
            tap.full_name == "Homebrew/homebrew-core"
 
-          if new_formula
-            skipped formula_name, "New formula are (currently) skipped on Linux!"
-            return
-          end
-
           if formula.bottle_specification.tag?(:all)
             skipped formula_name, "all: bottles are (currently) skipped on Linux!"
             return
