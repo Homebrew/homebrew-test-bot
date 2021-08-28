@@ -240,7 +240,7 @@ module Homebrew
             return
           end
 
-          if !formula.bottled? && !formula.bottle_unneeded?
+          if !formula.bottled? && !formula.bottle_unneeded? && !new_formula
             skipped formula_name, "#{formula.full_name} has not (yet) been bottled on Linux!"
             return
           end
