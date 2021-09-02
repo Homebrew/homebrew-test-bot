@@ -169,8 +169,19 @@ module Homebrew
         test "brew", "linkage", "--test", dependent.full_name
 
         if testable_dependents.include? dependent
-          test "brew", "install", "--only-dependencies", "--include-test",
-               dependent.full_name
+          test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
+
+          dependent.deps.each do |dependency|
+            next if dependency.build?
+
+            dependency_f = dependency.to_formula
+            next if dependency_f.keg_only?
+            next if dependency_f.linked_keg.exist?
+
+            unlink_conflicts dependency_f
+            test "brew", "link", dependency_f.full_name
+          end
+
           test "brew", "test", "--retry", "--verbose", dependent.full_name
         end
 
