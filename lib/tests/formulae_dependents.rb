@@ -166,6 +166,23 @@ module Homebrew
           test "brew", "link", dependent.full_name
         end
         test "brew", "install", "--only-dependencies", dependent.full_name
+
+        dependent.deps.each do |dependency|
+          dependency_f = dependency.to_formula
+
+          # Uninstall build- or test-only dependencies to avoid `brew linkage --test`
+          # mistakenly succeeding. Homebrew/homebrew-test-bot#611. Link them otherwise
+          # to avoid spurious CI failures.
+          subcommand = if (dependency.build? || dependency.test?) && dependency_f.any_version_installed?
+            ["uninstall", "--ignore-dependencies"]
+          elsif !dependency_f.keg_only? && !dependency_f.linked_keg.exist?
+            unlink_conflicts dependency_f
+            ["link"]
+          end
+
+          test "brew", *subcommand, dependency_f.full_name if subcommand
+        end
+
         test "brew", "linkage", "--test", dependent.full_name
 
         if testable_dependents.include? dependent
