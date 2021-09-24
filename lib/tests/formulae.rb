@@ -294,10 +294,14 @@ module Homebrew
 
         # Don't care about e.g. bottle failures for dependencies.
         test "brew", "install", "--only-dependencies", *install_args,
-             env:  { "HOMEBREW_DEVELOPER" => nil }
+             env: { "HOMEBREW_DEVELOPER" => nil }
 
+        env = {}
+        env["HOMEBREW_GIT_PATH"] = nil if deps.any? do |d|
+          d.name == "git" && (!d.test? || d.build?)
+        end
         test "brew", "install", *install_args,
-             env:  { "HOMEBREW_DEVELOPER" => nil }
+             env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
         install_passed = steps.last.passed?
 
         test "brew", "livecheck", *livecheck_args if formula.livecheckable? && !formula.livecheck.skip?
@@ -316,9 +320,14 @@ module Homebrew
         test "brew", "install", "--only-dependencies", "--include-test", formula_name
 
         if formula.test_defined?
+          env = {}
+          env["HOMEBREW_GIT_PATH"] = nil if deps.any? do |d|
+            d.name == "git" && (!d.build? || d.test?)
+          end
+
           # Intentionally not passing --retry here to avoid papering over
           # flaky tests when a formula isn't being pulled in as a dependent.
-          test "brew", "test", "--verbose", formula_name
+          test "brew", "test", "--verbose", formula_name, env: env
           failed_linkage_or_test_messages << "test failed" if steps.last.failed?
         end
 
