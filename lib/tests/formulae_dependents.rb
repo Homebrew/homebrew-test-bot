@@ -144,6 +144,8 @@ module Homebrew
 
         cleanup_during!(args: args)
 
+        required_dependent_deps = dependent.deps.reject(&:optional?)
+
         unless dependent.latest_version_installed?
           build_args = []
           build_args << "--build-from-source" if build_from_source
@@ -154,9 +156,14 @@ module Homebrew
           unlink_conflicts dependent
 
           test "brew", "install", *build_args, "--only-dependencies", dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil }
+               env: { "HOMEBREW_DEVELOPER" => nil }
+
+          env = {}
+          env["HOMEBREW_GIT_PATH"] = nil if build_from_source && required_dependent_deps.any? do |d|
+            d.name == "git" && (!d.test? || d.build?)
+          end
           test "brew", "install", *build_args, dependent.full_name,
-               env:  { "HOMEBREW_DEVELOPER" => nil }
+               env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
           return if steps.last.failed?
         end
         return unless dependent.latest_version_installed?
@@ -182,7 +189,11 @@ module Homebrew
             test "brew", "link", dependency_f.full_name
           end
 
-          test "brew", "test", "--retry", "--verbose", dependent.full_name
+          env = {}
+          env["HOMEBREW_GIT_PATH"] = nil if required_dependent_deps.any? do |d|
+            d.name == "git" && (!d.build? || d.test?)
+          end
+          test "brew", "test", "--retry", "--verbose", dependent.full_name, env: env
         end
 
         test "brew", "uninstall", "--force", dependent.full_name
