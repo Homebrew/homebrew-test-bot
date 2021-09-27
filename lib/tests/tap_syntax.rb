@@ -13,6 +13,13 @@ module Homebrew
         test "brew", "style", tap.name unless broken_xcode_rubygems
 
         test "brew", "audit", "--tap=#{tap.name}", "--except=version"
+
+        return if OS.mac?
+
+        with_env(HOMEBREW_SIMULATE_MACOS_ON_LINUX: "1") do
+          # Follow macOS dependency graph too.
+          test "brew", "audit", "--tap=#{tap.name}", "--only=deps"
+        end
       end
     end
   end
