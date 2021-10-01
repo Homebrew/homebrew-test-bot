@@ -42,7 +42,7 @@ module Homebrew
           spec_name = name.downcase.to_sym
           next unless (spec = formula.send(spec_name))
 
-          next unless spec.using == :homebrew_curl
+          next if spec.using != :homebrew_curl && ENV["HOMEBREW_FORCE_BREWED_CURL"].blank?
 
           test "brew", "install", "curl",
                env: { "HOMEBREW_DEVELOPER" => nil }
