@@ -61,6 +61,10 @@ module Homebrew
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
 
+      # Temporary workaround for https://github.com/Homebrew/brew/issues/12161
+      # TODO: Remove me when there is a better fix.
+      ENV["HOMEBREW_FORCE_BREWED_CURL"] = "1" if OS.mac? && MacOS.version <= :mojave
+
       if args.local?
         ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
         ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
