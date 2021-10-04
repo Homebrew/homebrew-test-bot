@@ -37,6 +37,13 @@ module Homebrew
         retry
       end
 
+      def install_ca_certificates_if_needed
+        return if ENV["HOMEBREW_FORCE_BREWED_CA_CERTIFICATES"].blank?
+
+        test "brew", "install", "ca-certificates",
+             env: { "HOMEBREW_DEVELOPER" => nil }
+      end
+
       def install_curl_if_needed(formula)
         %w[Stable HEAD].each do |name|
           spec_name = name.downcase.to_sym
@@ -276,6 +283,7 @@ module Homebrew
         reqs |= formula.requirements.to_a.reject(&:optional?)
 
         tap_needed_taps(deps)
+        install_ca_certificates_if_needed
         install_curl_if_needed(formula)
         install_gcc_if_needed(formula, deps)
         install_mercurial_if_needed(deps, reqs)
