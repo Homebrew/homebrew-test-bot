@@ -57,6 +57,7 @@ module Homebrew
       ENV["HOMEBREW_NO_EMOJI"] = "1"
       ENV["HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK"] = "1"
       ENV["HOMEBREW_FAIL_LOG_LINES"] = "150"
+      ENV["HOMEBREW_CURL_PATH"] = "/usr/bin/curl"
       ENV["HOMEBREW_GIT_PATH"] = GIT
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
