@@ -38,7 +38,7 @@ module Homebrew
       end
 
       def install_ca_certificates_if_needed
-        return if ENV["HOMEBREW_FORCE_BREWED_CA_CERTIFICATES"].blank?
+        return if DevelopmentTools.ca_file_handles_most_https_certificates?
 
         test "brew", "install", "ca-certificates",
              env: { "HOMEBREW_DEVELOPER" => nil }
