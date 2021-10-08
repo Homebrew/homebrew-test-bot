@@ -285,7 +285,6 @@ module Homebrew
         tap_needed_taps(deps)
         install_ca_certificates_if_needed
         install_curl_if_needed(formula)
-        install_gcc_if_needed(formula, deps)
         install_mercurial_if_needed(deps, reqs)
         install_subversion_if_needed(deps, reqs)
         setup_formulae_deps_instances(formula, formula_name, args: args)
@@ -303,6 +302,11 @@ module Homebrew
         # Don't care about e.g. bottle failures for dependencies.
         test "brew", "install", "--only-dependencies", *install_args,
              env: { "HOMEBREW_DEVELOPER" => nil }
+
+        # Do this after installing dependencies to avoid skipping formulae
+        # that build with and declare a dependency on GCC. See discussion at
+        # https://github.com/Homebrew/homebrew-core/pull/86826
+        install_gcc_if_needed(formula, deps)
 
         env = {}
         env["HOMEBREW_GIT_PATH"] = nil if deps.any? do |d|
