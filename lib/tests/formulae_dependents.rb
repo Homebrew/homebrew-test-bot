@@ -33,14 +33,15 @@ module Homebrew
             dependent.bottled?
           end
 
-          # TODO: A better thing to do here would be to attempt a source build
-          #       of unbottled dependents, but reverse the failure condition; i.e.
-          #       a successful source build is a failure, but a failed source build
-          #       is a pass to enable detection of unbottled formulae that should be bottled.
-          next unless bottled
+          install_dependent(
+            dependent,
+            testable_dependents,
+            build_from_source: true,
+            args: args,
+            check_for_missing_bottle: !bottled
+          )
 
-          install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
-          install_dependent(dependent, testable_dependents, args: args)
+          install_dependent(dependent, testable_dependents, args: args) if bottled
         end
 
         bottled_dependents.each do |dependent|
@@ -136,7 +137,16 @@ module Homebrew
         [source_dependents, bottled_dependents, testable_dependents]
       end
 
-      def install_dependent(dependent, testable_dependents, args:, build_from_source: false)
+      # NOTE: Don't pass `check_for_missing_bottle: true` if `dependent` is bottled.
+      def install_dependent(
+        dependent,
+        testable_dependents,
+        args:,
+        build_from_source: false,
+        check_for_missing_bottle: false
+      )
+        build_from_source = true if check_for_missing_bottle && !build_from_source
+
         if (messages = unsatisfied_requirements_messages(dependent))
           skipped dependent, messages
           return
@@ -161,15 +171,16 @@ module Homebrew
 
           unlink_conflicts dependent
 
+          no_dev_env = { "HOMEBREW_DEVELOPER" => nil }
+          # Use `expect_error` here because a formula might be unbottled because it has an unbottled dependency.
           test "brew", "install", *build_args, "--only-dependencies", dependent.full_name,
-               env: { "HOMEBREW_DEVELOPER" => nil }
+               env: no_dev_env, expect_error: check_for_missing_bottle, multistage: check_for_missing_bottle
 
-          env = {}
-          env["HOMEBREW_GIT_PATH"] = nil if build_from_source && required_dependent_deps.any? do |d|
+          no_dev_env["HOMEBREW_GIT_PATH"] = nil if build_from_source && required_dependent_deps.any? do |d|
             d.name == "git" && (!d.test? || d.build?)
           end
           test "brew", "install", *build_args, dependent.full_name,
-               env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
+               env: no_dev_env, expect_error: check_for_missing_bottle, multistage: check_for_missing_bottle
           return if steps.last.failed?
         end
         return unless dependent.latest_version_installed?
@@ -179,7 +190,8 @@ module Homebrew
           test "brew", "link", dependent.full_name
         end
         test "brew", "install", "--only-dependencies", dependent.full_name
-        test "brew", "linkage", "--test", dependent.full_name
+        test "brew", "linkage", "--test", dependent.full_name,
+             expect_error: check_for_missing_bottle, multistage: check_for_missing_bottle
 
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
@@ -195,11 +207,22 @@ module Homebrew
             test "brew", "link", dependency_f.full_name
           end
 
-          env = {}
-          env["HOMEBREW_GIT_PATH"] = nil if required_dependent_deps.any? do |d|
+          test_env = {}
+          test_env["HOMEBREW_GIT_PATH"] = nil if required_dependent_deps.any? do |d|
             d.name == "git" && (!d.build? || d.test?)
           end
-          test "brew", "test", "--retry", "--verbose", dependent.full_name, env: env
+          test "brew", "test", "--retry", "--verbose", dependent.full_name,
+               env: test_env, expect_error: check_for_missing_bottle, multistage: check_for_missing_bottle
+        end
+
+        if check_for_missing_bottle && pending_steps.present?
+          # All pending steps are pending fails if they all unexpectedly succeeded.
+          if pending_steps.all?(&:pending_fail?)
+            resolve_pending
+            info_header "#{dependent}: source build unexpectedly succeeded! #{dependent} should be bottled."
+          else
+            resolve_pending(passed: true)
+          end
         end
 
         test "brew", "uninstall", "--force", dependent.full_name

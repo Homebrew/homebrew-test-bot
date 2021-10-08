@@ -9,10 +9,12 @@ module Homebrew
     # Instantiates a Step object.
     # @param command [Array<String>] Command to execute and arguments.
     # @param env [Hash] Environment variables to set when running command.
-    def initialize(command, env:, verbose:)
+    def initialize(command, env:, verbose:, expect_error:, multistage:)
       @command = command
       @env = env
       @verbose = verbose
+      @expect_error = expect_error
+      @multistage = multistage
 
       @name = command[1].delete("-")
       @status = :running
@@ -54,12 +56,69 @@ module Homebrew
       @status == :failed
     end
 
-    def puts_command
-      puts Formatter.headline(command_trimmed, color: :blue)
+    def produced_error?
+      (@expect_error && passed?) || (!@expect_error && failed?)
+    end
+
+    def produced_no_error_unexpectedly?
+      @expect_error && failed?
+    end
+
+    def errors_to_report?
+      !@output.empty? && produced_error?
+    end
+
+    def pending_pass?
+      @status == :pending_pass
+    end
+
+    def pending_fail?
+      @status == :pending_fail
+    end
+
+    def pending?
+      pending_pass? || pending_fail?
+    end
+
+    def resolved_status_from_pending_status
+      return @status unless pending?
+
+      if pending_pass?
+        :passed
+      else
+        :failed
+      end
+    end
+
+    def resolve_pending(passed: nil)
+      return unless pending?
+
+      @status = if passed.nil?
+        resolved_status_from_pending_status
+      elsif passed
+        :passed
+      else
+        :failed
+      end
+
+      # This is the second time we're showing this, but didn't
+      # actually run the command this time, so show a visual cue.
+      puts_command(:orange)
+      puts_result
+
+      return unless errors_to_report?
+
+      puts @output
+      puts
+    end
+
+    def puts_command(color)
+      puts Formatter.headline(command_trimmed, color: color)
     end
 
     def puts_result
-      puts Formatter.headline(Formatter.error("FAILED"), color: :red) if failed?
+      message = produced_no_error_unexpectedly? ? "Expected to error, but did not" : "FAILED"
+      puts Formatter.headline(Formatter.error(message), color: :red) if failed? || produced_error?
     end
 
     def output?
@@ -76,7 +135,7 @@ module Homebrew
     def run(dry_run: false, fail_fast: false)
       @start_time = Time.now
 
-      puts_command
+      puts_command(:blue)
       if dry_run
         @status = :passed
         puts_result
@@ -93,7 +152,10 @@ module Homebrew
                                           env:          @env
 
       @end_time = Time.now
-      @status = result.success? ? :passed : :failed
+      succeeded = @expect_error ? !result.success? : result.success?
+      passed_status = @multistage ? :pending_pass : :passed
+      failed_status = @multistage ? :pending_fail : :failed
+      @status = succeeded ? passed_status : failed_status
       puts_result
 
       output = result.merged_output
