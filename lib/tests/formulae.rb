@@ -239,13 +239,13 @@ module Homebrew
 
         if OS.linux? &&
            args.skip_unbottled_linux? &&
+           !formula.bottled? &&
+           !formula.bottle_unneeded? &&
+           !new_formula &&
            tap.present? &&
            tap.full_name == "Homebrew/homebrew-core"
-
-          if !formula.bottled? && !formula.bottle_unneeded? && !new_formula
-            skipped formula_name, "#{formula.full_name} has not (yet) been bottled on Linux!"
-            return
-          end
+          skipped formula_name, "#{formula.full_name} has not (yet) been bottled on Linux!"
+          return
         end
 
         deps = []
