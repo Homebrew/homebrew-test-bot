@@ -29,12 +29,18 @@ module Homebrew
           dependents_for_formula(formula, formula_name, args: args)
 
         source_dependents.each do |dependent|
-          install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
-
           bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
             dependent.bottled?
           end
-          install_dependent(dependent, testable_dependents, args: args) if bottled
+
+          # TODO: A better thing to do here would be to attempt a source build
+          #       of unbottled dependents, but reverse the failure condition; i.e.
+          #       a successful source build is a failure, but a failed source build
+          #       is a pass to enable detection of unbottled formulae that should be bottled.
+          next unless bottled
+
+          install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
+          install_dependent(dependent, testable_dependents, args: args)
         end
 
         bottled_dependents.each do |dependent|
