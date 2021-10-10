@@ -36,8 +36,8 @@ module Homebrew
           install_dependent(
             dependent,
             testable_dependents,
-            build_from_source: true,
-            args: args,
+            build_from_source:        true,
+            args:                     args,
             check_for_missing_bottle: !bottled
           )
 
@@ -183,7 +183,11 @@ module Homebrew
                env: no_dev_env, expect_error: check_for_missing_bottle, multistage: check_for_missing_bottle
           return if steps.last.failed?
         end
-        return unless dependent.latest_version_installed?
+
+        unless dependent.latest_version_installed?
+          resolve_pending(passed: true) if check_for_missing_bottle
+          return
+        end
 
         if !dependent.keg_only? && !dependent.linked_keg.exist?
           unlink_conflicts dependent

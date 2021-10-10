@@ -33,7 +33,7 @@ module Homebrew
     end
 
     def resolve_pending(passed: nil)
-      return unless pending_steps.present?
+      return if pending_steps.blank?
 
       info_header "Determining status of pending tests..."
 
