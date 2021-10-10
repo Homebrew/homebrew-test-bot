@@ -9,7 +9,7 @@ module Homebrew
     # Instantiates a Step object.
     # @param command [Array<String>] Command to execute and arguments.
     # @param env [Hash] Environment variables to set when running command.
-    def initialize(command, env:, verbose:, expect_error:, multistage:)
+    def initialize(command, env:, verbose:, expect_error: false, multistage: false)
       @command = command
       @env = env
       @verbose = verbose
