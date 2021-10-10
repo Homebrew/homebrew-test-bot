@@ -38,7 +38,7 @@ module Homebrew
             testable_dependents,
             build_from_source:        true,
             args:                     args,
-            check_for_missing_bottle: !bottled
+            check_for_missing_bottle: !bottled,
           )
 
           install_dependent(dependent, testable_dependents, args: args) if bottled
