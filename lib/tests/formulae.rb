@@ -266,6 +266,9 @@ module Homebrew
           audit_args << "--git" << "--skip-style"
         end
 
+        # This needs to be done before any network operation.
+        install_ca_certificates_if_needed
+
         if (messages = unsatisfied_requirements_messages(formula))
           test "brew", "fetch", "--retry", *fetch_args
           test "brew", "audit", *audit_args
@@ -278,7 +281,6 @@ module Homebrew
         reqs |= formula.requirements.to_a.reject(&:optional?)
 
         tap_needed_taps(deps)
-        install_ca_certificates_if_needed
         install_curl_if_needed(formula)
         install_mercurial_if_needed(deps, reqs)
         install_subversion_if_needed(deps, reqs)
