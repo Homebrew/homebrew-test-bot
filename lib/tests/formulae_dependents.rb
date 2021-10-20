@@ -51,14 +51,6 @@ module Homebrew
       def dependents_for_formula(formula, formula_name, args:)
         info_header "Determining dependents..."
 
-        # Only test reverse dependencies for linux-only formulae in linuxbrew-core.
-        if tap.present? &&
-           tap.full_name == "Homebrew/linuxbrew-core" &&
-           args.keep_old? &&
-           formula.requirements.exclude?(LinuxRequirement.new)
-          return [[], [], []]
-        end
-
         build_dependents_from_source_disabled = OS.linux? && tap.present? && tap.full_name == "Homebrew/homebrew-core"
 
         uses_args = %w[--formula --include-build --include-test]
