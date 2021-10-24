@@ -228,6 +228,13 @@ module Homebrew
         end
         new_formula = @added_formulae.include?(formula_name)
 
+        if MacOS.version == :monterey &&
+           !formula.bottled? &&
+           !formula.bottle_unneeded?
+          skipped formula_name, "#{formula.full_name} has not yet been bottled on Monterey!"
+          return
+        end
+
         if Hardware::CPU.arm? &&
            args.skip_unbottled_arm? &&
            !formula.bottled? &&
