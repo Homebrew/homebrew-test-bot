@@ -44,18 +44,19 @@ module Homebrew
              env: { "HOMEBREW_DEVELOPER" => nil }
       end
 
-      def install_curl_if_needed(formula)
-        %w[Stable HEAD].each do |name|
-          spec_name = name.downcase.to_sym
-          next unless (spec = formula.send(spec_name))
+      def downloads_using_homebrew_curl?(formula)
+        [:stable, :head].any? do |spec_name|
+          next false unless (spec = formula.send(spec_name))
 
-          next if spec.using != :homebrew_curl && ENV["HOMEBREW_FORCE_BREWED_CURL"].blank?
-
-          test "brew", "install", "curl",
-               env: { "HOMEBREW_DEVELOPER" => nil }
-
-          break
+          spec.using == :homebrew_curl || spec.resources.values.any? { |r| r.using == :homebrew_curl }
         end
+      end
+
+      def install_curl_if_needed(formula)
+        return unless downloads_using_homebrew_curl?(formula)
+
+        test "brew", "install", "curl",
+             env: { "HOMEBREW_DEVELOPER" => nil }
       end
 
       def install_gcc_if_needed(formula, deps)
