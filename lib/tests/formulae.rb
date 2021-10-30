@@ -45,7 +45,7 @@ module Homebrew
       end
 
       def downloads_using_homebrew_curl?(formula)
-        %i[stable head].any? do |spec_name|
+        [:stable, :head].any? do |spec_name|
           next false unless (spec = formula.send(spec_name))
 
           spec.using == :homebrew_curl || spec.resources.values.any? { |r| r.using == :homebrew_curl }
