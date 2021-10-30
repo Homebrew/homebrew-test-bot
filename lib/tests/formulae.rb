@@ -216,14 +216,14 @@ module Homebrew
         test "brew", "install", @bottle_filename
       end
 
-      def all_bottled_deps?(formula)
+      def all_deps_bottled?(formula)
         formula.deps.all? do |dep|
           dep.to_formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: true)
         end
       end
 
       def build_bottle?(formula, args:)
-        !formula.bottle_disabled? && !args.build_from_source? && all_bottled_deps?(formula)
+        !formula.bottle_disabled? && !args.build_from_source? && all_deps_bottled?(formula)
       end
 
       def formula!(formula_name, args:)
