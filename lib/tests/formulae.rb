@@ -228,26 +228,7 @@ module Homebrew
           return
         end
         new_formula = @added_formulae.include?(formula_name)
-
-        if Hardware::CPU.arm? &&
-           args.skip_unbottled_arm? &&
-           !formula.bottled? &&
-           !formula.bottle_unneeded? &&
-           !new_formula
-          skipped formula_name, "#{formula.full_name} has not yet been bottled on ARM!"
-          return
-        end
-
-        if OS.linux? &&
-           args.skip_unbottled_linux? &&
-           !formula.bottled? &&
-           !formula.bottle_unneeded? &&
-           !new_formula &&
-           tap.present? &&
-           tap.full_name == "Homebrew/homebrew-core"
-          skipped formula_name, "#{formula.full_name} has not (yet) been bottled on Linux!"
-          return
-        end
+        bottled_on_current_version = formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: true)
 
         deps = []
         reqs = []
@@ -318,7 +299,11 @@ module Homebrew
 
         test "brew", "audit", *audit_args unless formula.deprecated?
         unless install_passed
-          failed formula_name, "install failed"
+          if bottled_on_current_version
+            failed formula_name, "install failed"
+          else
+            skipped formula_name, "install failed"
+          end
           return
         end
 
@@ -349,7 +334,11 @@ module Homebrew
             FileUtils.mv [@bottle_filename, @bottle_json_filename], failed_dir
           end
 
-          failed formula_name, failed_linkage_or_test_messages.join(", ")
+          if bottled_on_current_version
+            failed formula_name, failed_linkage_or_test_messages.join(", ")
+          else
+            skipped formula_name, failed_linkage_or_test_messages.join(", ")
+          end
         end
       ensure
         cleanup_bottle_etc_var(formula) if args.cleanup?
