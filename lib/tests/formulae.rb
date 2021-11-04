@@ -227,6 +227,15 @@ module Homebrew
           skipped formula_name, "#{formula.full_name} has been disabled!"
           return
         end
+
+        all_deps_have_compatible_bottles = formula.deps.all? do |dep|
+          dep.to_formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: false)
+        end
+        unless all_deps_have_compatible_bottles
+          skipped formula_name, "#{formula_name} has dependencies without a compatible bottle!"
+          return
+        end
+
         new_formula = @added_formulae.include?(formula_name)
         bottled_on_current_version = formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: true)
 
