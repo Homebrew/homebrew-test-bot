@@ -55,10 +55,6 @@ module Homebrew
              description: "Don't test any dependents."
       switch "--skip-recursive-dependents",
              description: "Only test the direct dependents."
-      switch "--skip-unbottled-arm",
-             description: "Only test bottled formulae on Apple Silicon."
-      switch "--skip-unbottled-linux",
-             description: "Only test bottled formulae on Linux."
       switch "--only-cleanup-before",
              description: "Only run the pre-cleanup step. Needs `--cleanup`."
       switch "--only-setup",
