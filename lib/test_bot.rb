@@ -76,7 +76,7 @@ module Homebrew
       # bottle rebuild and bottle upload rely on full clone.
       if tap
         if !tap.path.exist?
-          safe_system "brew", "tap", tap.name, "--full"
+          safe_system "brew", "tap", tap.name
         elsif (tap.path/".git/shallow").exist?
           raise unless quiet_system GIT, "-C", tap.path, "fetch", "--unshallow"
         end
