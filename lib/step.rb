@@ -54,6 +54,10 @@ module Homebrew
       @status == :failed
     end
 
+    def ignore
+      @status = :ignored
+    end
+
     def puts_command
       puts Formatter.headline(command_trimmed, color: :blue)
     end
