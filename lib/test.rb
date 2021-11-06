@@ -6,6 +6,10 @@ module Homebrew
       @steps.select(&:failed?)
     end
 
+    def ignored_steps
+      @steps.select(&:ignored?)
+    end
+
     attr_reader :steps
 
     private

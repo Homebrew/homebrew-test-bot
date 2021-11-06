@@ -54,6 +54,10 @@ module Homebrew
       @status == :failed
     end
 
+    def ignored?
+      @status == :ignored
+    end
+
     def ignore
       @status = :ignored
     end
