@@ -222,11 +222,13 @@ module Homebrew
       end
 
       def build_bottle?(formula, args:)
-        all_deps_bottled = formula.deps.all? do |dep|
-          bottled?(dep.to_formula, no_older_versions: true)
+        # Build and runtime dependencies must be bottled on the current OS,
+        # but accept an older compatible bottle for test dependencies.
+        return false if formula.deps.any? do |dep|
+          !bottled?(dep.to_formula, no_older_versions: !dep.test?)
         end
 
-        all_deps_bottled && !formula.bottle_disabled? && !args.build_from_source?
+        !formula.bottle_disabled? && !args.build_from_source?
       end
 
       def formula!(formula_name, args:)
