@@ -217,8 +217,8 @@ module Homebrew
         test "brew", "install", @bottle_filename
       end
 
-      def bottled?(formula, no_older_versions:)
-        formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: no_older_versions)
+      def bottled?(formula, tag = nil, no_older_versions: false)
+        formula.bottle_specification.tag?(Utils::Bottles.tag(tag), no_older_versions: no_older_versions)
       end
 
       def build_bottle?(formula, args:)
@@ -241,11 +241,11 @@ module Homebrew
         end
 
         all_deps_have_compatible_bottles = formula.deps.all? do |dep|
-          bottled?(dep.to_formula, no_older_versions: false)
+          bottled?(dep.to_formula)
         end
         bottled_on_current_version = bottled?(formula, no_older_versions: true)
 
-        if !all_deps_have_compatible_bottles && !bottled_on_current_version
+        if !all_deps_have_compatible_bottles && (!bottled_on_current_version || bottled?(formula, :all))
           skipped formula_name, "#{formula_name} has dependencies without a compatible bottle!"
           return
         end
