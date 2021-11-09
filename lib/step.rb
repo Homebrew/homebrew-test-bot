@@ -59,6 +59,8 @@ module Homebrew
     end
 
     def ignore
+      return if passed?
+
       @status = :ignored
     end
 
