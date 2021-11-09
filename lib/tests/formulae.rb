@@ -217,10 +217,6 @@ module Homebrew
         test "brew", "install", @bottle_filename
       end
 
-      def bottled?(formula, no_older_versions:)
-        formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: no_older_versions)
-      end
-
       def build_bottle?(formula, args:)
         all_deps_bottled = formula.deps.all? do |dep|
           bottled?(dep.to_formula, no_older_versions: true)
