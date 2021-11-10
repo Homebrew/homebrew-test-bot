@@ -13,8 +13,8 @@ module Homebrew
 
       protected
 
-      def bottled?(formula, no_older_versions:)
-        formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: no_older_versions)
+      def bottled?(formula, tag = nil, no_older_versions: false)
+        formula.bottle_specification.tag?(Utils::Bottles.tag(tag), no_older_versions: no_older_versions)
       end
 
       def skipped(formula_name, reason)
