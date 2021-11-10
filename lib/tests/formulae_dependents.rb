@@ -33,7 +33,12 @@ module Homebrew
           #       dependents that can be bottled. See
           #       https://github.com/Homebrew/homebrew-test-bot/pull/678
           next unless bottled?(dependent, no_older_versions: true)
-          next if bottled?(dependent, :all) && dependent.deps.any? { |d| !bottled?(d.to_formula) }
+          next if bottled?(dependent, :all) && dependent.deps.any? do |d|
+            f = d.to_formula
+            built_formulae = @testing_formulae - skipped_or_failed_formulae
+
+            !bottled?(f, no_older_versions: true) && built_formulae.exclude?(f.full_name)
+          end
 
           install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
           install_dependent(dependent, testable_dependents, args: args)
@@ -103,7 +108,12 @@ module Homebrew
           # have useable bottles. Otherwise, we can check the dependent directly.
           next bottled?(dep, no_older_versions: true) unless bottled?(dep, :all)
 
-          dep.deps.all? { |d| bottled?(d.to_formula) }
+          dep.deps.all? do |d|
+            f = d.to_formula
+            built_formulae = @testing_formulae - skipped_or_failed_formulae
+
+            bottled?(f, no_older_versions: true) || built_formulae.include?(f.full_name)
+          end
         end
         testable_dependents += bottled_dependents.select(&:test_defined?)
 
