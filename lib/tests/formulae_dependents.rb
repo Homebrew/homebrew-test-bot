@@ -143,7 +143,7 @@ module Homebrew
         cleanup_during!(args: args)
 
         required_dependent_deps = dependent.deps.reject(&:optional?)
-        bottled_on_current_version = bottled?(formula, no_older_versions: true)
+        bottled_on_current_version = bottled?(dependent, no_older_versions: true)
 
         unless dependent.latest_version_installed?
           build_args = []
