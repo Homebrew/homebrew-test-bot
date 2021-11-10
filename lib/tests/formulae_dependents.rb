@@ -143,6 +143,7 @@ module Homebrew
         cleanup_during!(args: args)
 
         required_dependent_deps = dependent.deps.reject(&:optional?)
+        bottled_on_current_version = bottled?(formula, no_older_versions: true)
 
         unless dependent.latest_version_installed?
           build_args = []
@@ -162,7 +163,12 @@ module Homebrew
           end
           test "brew", "install", *build_args, dependent.full_name,
                env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
-          return if steps.last.failed?
+          install_step = steps.last
+
+          if install_step.failed?
+            install_step.ignore if build_from_source && !bottled_on_current_version
+            return
+          end
         end
         return unless dependent.latest_version_installed?
 
@@ -172,6 +178,7 @@ module Homebrew
         end
         test "brew", "install", "--only-dependencies", dependent.full_name
         test "brew", "linkage", "--test", dependent.full_name
+        steps.last.ignore if steps.last.failed? && !bottled_on_current_version
 
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
@@ -192,6 +199,7 @@ module Homebrew
             d.name == "git" && (!d.build? || d.test?)
           end
           test "brew", "test", "--retry", "--verbose", dependent.full_name, env: env
+          steps.last.ignore if steps.last.failed? && !bottled_on_current_version
         end
 
         test "brew", "uninstall", "--force", dependent.full_name

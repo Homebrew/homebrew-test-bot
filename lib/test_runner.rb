@@ -53,12 +53,25 @@ module Homebrew
       failed_steps = tests.map(&:failed_steps)
                           .flatten
                           .compact
-      steps_output = if failed_steps.empty?
+      ignored_steps = tests.map(&:ignored_steps)
+                           .flatten
+                           .compact
+      steps_output = if failed_steps.blank? && ignored_steps.blank?
         "All steps passed!"
       else
-        failed_steps_output = ["Error: #{failed_steps.count} failed #{"step".pluralize(failed_steps.count)}!"]
-        failed_steps_output += failed_steps.map(&:command_trimmed)
-        failed_steps_output.join("\n")
+        output_lines = []
+
+        if ignored_steps.present?
+          output_lines += ["Warning: #{ignored_steps.count} failed #{"step".pluralize(ignored_steps.count)} ignored!"]
+          output_lines += ignored_steps.map(&:command_trimmed)
+        end
+
+        if failed_steps.present?
+          output_lines += ["Error: #{failed_steps.count} failed #{"step".pluralize(failed_steps.count)}!"]
+          output_lines += failed_steps.map(&:command_trimmed)
+        end
+
+        output_lines.join("\n")
       end
       puts steps_output
 

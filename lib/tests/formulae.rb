@@ -217,10 +217,6 @@ module Homebrew
         test "brew", "install", @bottle_filename
       end
 
-      def bottled?(formula, tag = nil, no_older_versions: false)
-        formula.bottle_specification.tag?(Utils::Bottles.tag(tag), no_older_versions: no_older_versions)
-      end
-
       def build_bottle?(formula, args:)
         # Build and runtime dependencies must be bottled on the current OS,
         # but accept an older compatible bottle for test dependencies.
@@ -323,15 +319,16 @@ module Homebrew
         end
         test "brew", "install", *install_args,
              env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
-        install_passed = steps.last.passed?
+        install_step = steps.last
 
         test "brew", "livecheck", *livecheck_args if formula.livecheckable? && !formula.livecheck.skip?
 
         test "brew", "audit", *audit_args unless formula.deprecated?
-        unless install_passed
+        unless install_step.passed?
           if bottled_on_current_version
             failed formula_name, "install failed"
           else
+            install_step.ignore
             skipped formula_name, "install failed"
           end
           return
@@ -339,8 +336,9 @@ module Homebrew
 
         bottle_reinstall_formula(formula, new_formula, args: args)
         test "brew", "linkage", "--test", formula_name
+        linkage_step = steps.last
         failed_linkage_or_test_messages ||= []
-        failed_linkage_or_test_messages << "linkage failed" if steps.last.failed?
+        failed_linkage_or_test_messages << "linkage failed" if linkage_step.failed?
 
         test "brew", "install", "--only-dependencies", "--include-test", formula_name
 
@@ -353,7 +351,8 @@ module Homebrew
           # Intentionally not passing --retry here to avoid papering over
           # flaky tests when a formula isn't being pulled in as a dependent.
           test "brew", "test", "--verbose", formula_name, env: env
-          failed_linkage_or_test_messages << "test failed" if steps.last.failed?
+          test_step = steps.last
+          failed_linkage_or_test_messages << "test failed" if test_step.failed?
         end
 
         # Move bottle and don't test dependents if the formula linkage or test failed.
@@ -367,6 +366,8 @@ module Homebrew
           if bottled_on_current_version
             failed formula_name, failed_linkage_or_test_messages.join(", ")
           else
+            linkage_step.ignore if linkage_step.failed?
+            test_step.ignore if test_step&.failed?
             skipped formula_name, failed_linkage_or_test_messages.join(", ")
           end
         end
