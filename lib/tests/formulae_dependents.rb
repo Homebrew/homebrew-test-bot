@@ -29,15 +29,16 @@ module Homebrew
           dependents_for_formula(formula, formula_name, args: args)
 
         source_dependents.each do |dependent|
-          bottled = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-            dependent.bottled?
-          end
+          # TODO: Work out how to use this code to identify
+          #       dependents that can be bottled. See
+          #       https://github.com/Homebrew/homebrew-test-bot/pull/678
+          next unless bottled?(dependent, no_older_versions: true)
+          next if bottled?(dependent, :all) && dependent.deps.any? do |d|
+            f = d.to_formula
+            built_formulae = @testing_formulae - skipped_or_failed_formulae
 
-          # TODO: A better thing to do here would be to attempt a source build
-          #       of unbottled dependents, but reverse the failure condition; i.e.
-          #       a successful source build is a failure, but a failed source build
-          #       is a pass to enable detection of unbottled formulae that should be bottled.
-          next unless bottled
+            !bottled?(f, no_older_versions: true) && built_formulae.exclude?(f.full_name)
+          end
 
           install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
           install_dependent(dependent, testable_dependents, args: args)
@@ -102,16 +103,16 @@ module Homebrew
         source_dependents = source_dependents.transpose.first.to_a
 
         testable_dependents = source_dependents.select(&:test_defined?)
-        bottled_dependents = with_env(HOMEBREW_SKIP_OR_LATER_BOTTLES: "1") do
-          if OS.linux? &&
-             tap.present? &&
-             tap.full_name == "Homebrew/homebrew-core"
-            # :all bottles are considered as Linux bottles, but as we did not bottle
-            # everything (yet) in homebrew-core, we do not want to test formulae
-            # with :all bottles for the time being.
-            dependents.select { |dep| dep.bottled? && !dep.bottle_specification.tag?(:all) }
-          else
-            dependents.select(&:bottled?)
+        bottled_dependents = dependents.select do |dep|
+          # If a dependent has an all bottle, we need to check that the dependent's dependencies
+          # have useable bottles. Otherwise, we can check the dependent directly.
+          next bottled?(dep, no_older_versions: true) unless bottled?(dep, :all)
+
+          dep.deps.all? do |d|
+            f = d.to_formula
+            built_formulae = @testing_formulae - skipped_or_failed_formulae
+
+            bottled?(f, no_older_versions: true) || built_formulae.include?(f.full_name)
           end
         end
         testable_dependents += bottled_dependents.select(&:test_defined?)
