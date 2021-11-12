@@ -267,7 +267,8 @@ module Homebrew
         livecheck_args << "--full-name"
         livecheck_args << "--debug"
 
-        audit_args = [formula_name, "--online"]
+        audit_args = [formula_name]
+        audit_args << "--online" unless args.skip_online_checks?
         if new_formula
           audit_args << "--new-formula"
         else
@@ -321,7 +322,9 @@ module Homebrew
              env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
         install_step = steps.last
 
-        test "brew", "livecheck", *livecheck_args if formula.livecheckable? && !formula.livecheck.skip?
+        if formula.livecheckable? && !formula.livecheck.skip? && !args.skip_online_checks?
+          test "brew", "livecheck", *livecheck_args
+        end
 
         test "brew", "audit", *audit_args unless formula.deprecated?
         unless install_step.passed?

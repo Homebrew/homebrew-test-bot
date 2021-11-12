@@ -51,6 +51,8 @@ module Homebrew
              description: "Set the Git author/committer email to the given email."
       switch "--publish",
              description: "Publish the uploaded bottles."
+      switch "--skip-online-checks",
+             description: "Don't pass `--online` to `brew audit` and skip `brew livecheck`."
       switch "--skip-dependents",
              description: "Don't test any dependents."
       switch "--skip-recursive-dependents",
