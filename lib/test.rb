@@ -32,6 +32,10 @@ module Homebrew
       end
     end
 
+    def warn(file, msg)
+      puts "::warning file=#{file}::#{msg}"
+    end
+
     def test_header(klass, method: "run!")
       puts
       puts Formatter.headline("Running #{klass}##{method}", color: :magenta)

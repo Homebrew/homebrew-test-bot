@@ -128,9 +128,6 @@ module Homebrew
           test "brew", "fetch", "--retry", "--build-from-source",
                *changed_dependencies
 
-          unbottled_deps = changed_dependencies.any? do |dep|
-            !bottled?(Formulary.factory(dep), no_older_versions: true)
-          end
           # Install changed dependencies as new bottles so we don't have
           # checksum problems. We have to install all `changed_dependencies`
           # in one `brew install` command to make sure they are installed in
@@ -142,9 +139,24 @@ module Homebrew
           test "brew", "postinstall", *changed_dependencies
           postinstall_step = steps.last
 
-          if unbottled_deps
-            install_step.ignore if install_step.failed?
-            postinstall_step.ignore if postinstall_step.failed?
+          if changed_dependencies.any? do |dep|
+            !bottled?(Formulary.factory(dep), no_older_versions: true)
+          end
+            if install_step.failed?
+              install_step.ignore
+
+              changed_dependencies.each do |dep|
+                warn_formula_step_failure(dep, install_step)
+              end
+            end
+
+            if postinstall_step.failed?
+              postinstall_step.ignore
+
+              changed_dependencies.each do |dep|
+                warn_formula_step_failure(dep, postinstall_step)
+              end
+            end
           end
         end
 
