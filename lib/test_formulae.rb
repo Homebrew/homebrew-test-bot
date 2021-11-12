@@ -15,7 +15,7 @@ module Homebrew
 
       def warn_formula_step_failure(formula, step)
         formula = Formulary.factory(formula.to_s)
-        path = formula.path.delete_prefix("#{@repository}/")
+        path = formula.path.to_s.delete_prefix("#{@repository}/")
         arch = Hardware::CPU.arch
         runner = OS.mac? ? "macOS #{MacOS.version}-#{arch}" : "#{arch}-#{OS.kernel_name}"
         warn(path, "`#{step.command_short}` failed on #{runner}!")
