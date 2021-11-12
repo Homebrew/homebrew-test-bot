@@ -325,7 +325,7 @@ module Homebrew
 
         test "brew", "audit", *audit_args unless formula.deprecated?
         unless install_step.passed?
-          if bottled_on_current_version
+          if bottled_on_current_version || new_formula
             failed formula_name, "install failed"
           else
             install_step.ignore
@@ -363,7 +363,7 @@ module Homebrew
             FileUtils.mv [@bottle_filename, @bottle_json_filename], failed_dir
           end
 
-          if bottled_on_current_version
+          if bottled_on_current_version || new_formula
             failed formula_name, failed_linkage_or_test_messages.join(", ")
           else
             linkage_step.ignore if linkage_step.failed?
