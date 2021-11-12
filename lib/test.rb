@@ -33,6 +33,8 @@ module Homebrew
     end
 
     def warn(file, msg)
+      return if ENV["GITHUB_ACTIONS"].blank?
+
       puts "::warning file=#{file}::#{msg}"
     end
 
