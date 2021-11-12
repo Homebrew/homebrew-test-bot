@@ -127,12 +127,37 @@ module Homebrew
         unless changed_dependencies.empty?
           test "brew", "fetch", "--retry", "--build-from-source",
                *changed_dependencies
+
           # Install changed dependencies as new bottles so we don't have
-          # checksum problems.
+          # checksum problems. We have to install all `changed_dependencies`
+          # in one `brew install` command to make sure they are installed in
+          # the right order.
           test "brew", "install", "--build-from-source", *changed_dependencies
+          install_step = steps.last
           # Run postinstall on them because the tested formula might depend on
           # this step
           test "brew", "postinstall", *changed_dependencies
+          postinstall_step = steps.last
+
+          if changed_dependencies.any? do |dep|
+            !bottled?(Formulary.factory(dep), no_older_versions: true)
+          end
+            if install_step.failed?
+              install_step.ignore
+
+              changed_dependencies.each do |dep|
+                warn_formula_step_failure(dep, install_step)
+              end
+            end
+
+            if postinstall_step.failed?
+              postinstall_step.ignore
+
+              changed_dependencies.each do |dep|
+                warn_formula_step_failure(dep, postinstall_step)
+              end
+            end
+          end
         end
 
         runtime_or_test_dependencies =
