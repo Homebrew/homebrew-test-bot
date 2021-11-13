@@ -9,10 +9,13 @@ module Homebrew
     # Instantiates a Step object.
     # @param command [Array<String>] Command to execute and arguments.
     # @param env [Hash] Environment variables to set when running command.
-    def initialize(command, env:, verbose:)
-      @command = command
+    def initialize(command, env:, verbose:, named_args: nil, ignore_failures: false, repository: nil)
+      @named_args = [named_args].flatten.compact.map(&:to_s)
+      @command = command | @named_args
       @env = env
       @verbose = verbose
+      @ignore_failures = ignore_failures
+      @repository = repository
 
       @name = command[1].delete("-")
       @status = :running
@@ -69,7 +72,14 @@ module Homebrew
     end
 
     def puts_result
-      puts Formatter.headline(Formatter.error("FAILED"), color: :red) if failed?
+      puts Formatter.headline(Formatter.error("FAILED"), color: :red) unless passed?
+    end
+
+    def emit_annotation(msg, type = :error, file = nil, line = nil)
+      return if ENV["GITHUB_ACTIONS"].blank?
+
+      annotation = GitHub::Actions::Annotation.new(type, msg, file: file, line: line)
+      puts annotation
     end
 
     def output?
@@ -103,7 +113,15 @@ module Homebrew
                                           env:          @env
 
       @end_time = Time.now
-      @status = result.success? ? :passed : :failed
+
+      @status = if result.success?
+        :passed
+      elsif @ignore_failures
+        :ignored
+      else
+        :failed
+      end
+
       puts_result
 
       output = result.merged_output
@@ -120,9 +138,32 @@ module Homebrew
 
         if @verbose
           puts
-        elsif failed?
+        elsif !passed?
           puts @output
           puts
+
+          @named_args.each do |name|
+            next if name.blank?
+
+            path, line = begin
+              formula = Formulary.factory(name)
+              method_sym = command.second.to_sym
+              method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
+
+              if method_location.present? && (method_location.first == formula.path.to_s)
+                method_location
+              else
+                [formula.path, nil]
+              end
+            rescue FormulaUnavailableError
+              [@repository.glob("**/#{name}*").first, nil]
+            end
+            next if path.blank?
+
+            annotation_type = failed? ? :error : :warning
+            file = path.to_s.delete_prefix("#{@repository}/")
+            emit_annotation("`#{command_short}` failed!", annotation_type, file, line)
+          end
         end
       end
 
