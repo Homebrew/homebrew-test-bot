@@ -137,7 +137,7 @@ module Homebrew
           # in one `brew install` command to make sure they are installed in
           # the right order.
           test "brew", "install", "--build-from-source",
-               named_args: changed_dependencies,
+               named_args:      changed_dependencies,
                ignore_failures: ignore_failures
           # Run postinstall on them because the tested formula might depend on
           # this step
@@ -328,8 +328,8 @@ module Homebrew
           d.name == "git" && (!d.test? || d.build?)
         end
         test "brew", "install", *install_args,
-             named_args: formula_name,
-             env: env.merge({ "HOMEBREW_DEVELOPER" => nil }),
+             named_args:      formula_name,
+             env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
              ignore_failures: ignore_failures
         install_step = steps.last
 

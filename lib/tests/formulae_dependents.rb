@@ -163,8 +163,8 @@ module Homebrew
             d.name == "git" && (!d.test? || d.build?)
           end
           test "brew", "install", *build_args,
-               named_args: dependent.full_name,
-               env: env.merge({ "HOMEBREW_DEVELOPER" => nil }),
+               named_args:      dependent.full_name,
+               env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
                ignore_failures: build_from_source && !bottled_on_current_version
 
           return unless steps.last.passed?
@@ -177,7 +177,7 @@ module Homebrew
         end
         test "brew", "install", "--only-dependencies", dependent.full_name
         test "brew", "linkage", "--test",
-             named_args: dependent.full_name,
+             named_args:      dependent.full_name,
              ignore_failures: !bottled_on_current_version
 
         if testable_dependents.include? dependent
@@ -199,8 +199,8 @@ module Homebrew
             d.name == "git" && (!d.build? || d.test?)
           end
           test "brew", "test", "--retry", "--verbose",
-               named_args: dependent.full_name,
-               env: env,
+               named_args:      dependent.full_name,
+               env:             env,
                ignore_failures: !bottled_on_current_version
         end
 
