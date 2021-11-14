@@ -284,6 +284,9 @@ module Homebrew
           "--build-from-source"
         end
 
+        # Online checks are a bit flaky and less useful for PRs that modify multiple formulae.
+        skip_online_checks = args.skip_online_checks? || (@testing_formulae.count > 5)
+
         fetch_args = [formula_name]
         fetch_args << build_flag
         fetch_args << "--force" if args.cleanup?
@@ -293,7 +296,7 @@ module Homebrew
         livecheck_args << "--debug"
 
         audit_args = [formula_name]
-        audit_args << "--online" unless args.skip_online_checks?
+        audit_args << "--online" unless skip_online_checks
         if new_formula
           audit_args << "--new-formula"
         else
@@ -347,7 +350,7 @@ module Homebrew
              env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
         install_step = steps.last
 
-        if formula.livecheckable? && !formula.livecheck.skip? && !args.skip_online_checks?
+        if formula.livecheckable? && !formula.livecheck.skip? && !skip_online_checks
           test "brew", "livecheck", *livecheck_args
         end
 
