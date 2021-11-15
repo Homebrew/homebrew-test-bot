@@ -162,14 +162,12 @@ module Homebrew
           env["HOMEBREW_GIT_PATH"] = nil if build_from_source && required_dependent_deps.any? do |d|
             d.name == "git" && (!d.test? || d.build?)
           end
-          test "brew", "install", *build_args, dependent.full_name,
-               env: env.merge({ "HOMEBREW_DEVELOPER" => nil })
-          install_step = steps.last
+          test "brew", "install", *build_args,
+               named_args:      dependent.full_name,
+               env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
+               ignore_failures: build_from_source && !bottled_on_current_version
 
-          if install_step.failed?
-            install_step.ignore if build_from_source && !bottled_on_current_version
-            return
-          end
+          return unless steps.last.passed?
         end
         return unless dependent.latest_version_installed?
 
@@ -178,8 +176,9 @@ module Homebrew
           test "brew", "link", dependent.full_name
         end
         test "brew", "install", "--only-dependencies", dependent.full_name
-        test "brew", "linkage", "--test", dependent.full_name
-        steps.last.ignore if steps.last.failed? && !bottled_on_current_version
+        test "brew", "linkage", "--test",
+             named_args:      dependent.full_name,
+             ignore_failures: !bottled_on_current_version
 
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
@@ -199,8 +198,10 @@ module Homebrew
           env["HOMEBREW_GIT_PATH"] = nil if required_dependent_deps.any? do |d|
             d.name == "git" && (!d.build? || d.test?)
           end
-          test "brew", "test", "--retry", "--verbose", dependent.full_name, env: env
-          steps.last.ignore if steps.last.failed? && !bottled_on_current_version
+          test "brew", "test", "--retry", "--verbose",
+               named_args:      dependent.full_name,
+               env:             env,
+               ignore_failures: !bottled_on_current_version
         end
 
         test "brew", "uninstall", "--force", dependent.full_name

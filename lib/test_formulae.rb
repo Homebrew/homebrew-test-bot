@@ -13,14 +13,6 @@ module Homebrew
 
       protected
 
-      def warn_formula_step_failure(formula, step)
-        formula = Formulary.factory(formula.to_s)
-        path = formula.path.to_s.delete_prefix("#{@repository}/")
-        arch = Hardware::CPU.arch
-        runner = OS.mac? ? "macOS #{MacOS.version}-#{arch}" : "#{arch}-#{OS.kernel_name}"
-        warn(path, "`#{step.command_short}` failed on #{runner}!")
-      end
-
       def bottled?(formula, tag = nil, no_older_versions: false)
         formula.bottle_specification.tag?(Utils::Bottles.tag(tag), no_older_versions: no_older_versions)
       end

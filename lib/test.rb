@@ -32,12 +32,6 @@ module Homebrew
       end
     end
 
-    def warn(file, msg)
-      return if ENV["GITHUB_ACTIONS"].blank?
-
-      puts "::warning file=#{file}::#{msg}"
-    end
-
     def test_header(klass, method: "run!")
       puts
       puts Formatter.headline("Running #{klass}##{method}", color: :magenta)
@@ -47,8 +41,15 @@ module Homebrew
       puts Formatter.headline(text, color: :cyan)
     end
 
-    def test(*arguments, env: {}, verbose: @verbose)
-      step = Step.new(arguments, env: env, verbose: verbose)
+    def test(*arguments, named_args: nil, env: {}, verbose: @verbose, ignore_failures: false)
+      step = Step.new(
+        arguments,
+        named_args:      named_args,
+        env:             env,
+        verbose:         verbose,
+        ignore_failures: ignore_failures,
+        repository:      @repository,
+      )
       step.run(dry_run: @dry_run, fail_fast: @fail_fast)
       @steps << step
       step
