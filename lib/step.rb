@@ -156,7 +156,7 @@ module Homebrew
 
             annotation_type = failed? ? :error : :warning
             file = path.to_s.delete_prefix("#{@repository}/")
-            emit_annotation("`#{command_short}` failed!", annotation_type, file, line)
+            emit_annotation(@output, annotation_type, file, line)
           end
         end
       end
