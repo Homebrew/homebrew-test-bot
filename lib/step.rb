@@ -132,32 +132,43 @@ module Homebrew
 
         if @verbose
           puts
-        elsif !passed?
-          puts @output
-          puts
+          return
+        end
 
-          @named_args.each do |name|
-            next if name.blank?
+        return if passed?
 
-            path, line = begin
-              formula = Formulary.factory(name)
-              method_sym = command.second.to_sym
-              method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
+        puts @output
+        puts
 
-              if method_location.present? && (method_location.first == formula.path.to_s)
-                method_location
-              else
-                [formula.path, nil]
-              end
-            rescue FormulaUnavailableError
-              [@repository.glob("**/#{name}*").first, nil]
+        @named_args.each do |name|
+          next if name.blank?
+
+          path, line = begin
+            formula = Formulary.factory(name)
+            method_sym = command.second.to_sym
+            method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
+
+            if method_location.present? && (method_location.first == formula.path.to_s)
+              method_location
+            else
+              [formula.path, nil]
             end
-            next if path.blank?
-
-            annotation_type = failed? ? :error : :warning
-            file = path.to_s.delete_prefix("#{@repository}/")
-            emit_annotation("`#{command_short}` failed!", annotation_type, file, line)
+          rescue FormulaUnavailableError
+            [@repository.glob("**/#{name}*").first, nil]
           end
+          next if path.blank?
+
+          annotation_contents = <<~EOS
+            <details>
+            <summary>`#{command_trimmed}` failed!</summary>
+            ```
+            #{@output}
+            ```
+            </details>
+          EOS
+          annotation_type = failed? ? :error : :warning
+          file = path.to_s.delete_prefix("#{@repository}/")
+          emit_annotation(annotation_contents, annotation_type, file, line)
         end
       end
 
