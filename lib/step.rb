@@ -161,9 +161,11 @@ module Homebrew
           annotation_contents = <<~EOS
             <details>
             <summary>`#{command_trimmed}` failed!</summary>
+
             ```
-            #{@output}
+            #{@output.strip}
             ```
+
             </details>
           EOS
           annotation_type = failed? ? :error : :warning
