@@ -11,7 +11,7 @@ module Homebrew
     # @param env [Hash] Environment variables to set when running command.
     def initialize(command, env:, verbose:, named_args: nil, ignore_failures: false, repository: nil)
       @named_args = [named_args].flatten.compact.map(&:to_s)
-      @command = command | @named_args
+      @command = command + @named_args
       @env = env
       @verbose = verbose
       @ignore_failures = ignore_failures
