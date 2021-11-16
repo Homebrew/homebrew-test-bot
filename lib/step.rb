@@ -69,10 +69,10 @@ module Homebrew
       puts Formatter.headline(Formatter.error("FAILED"), color: :red) unless passed?
     end
 
-    def emit_annotation(msg, type = :error, file = nil, line = nil)
+    def emit_annotation(type, message, title, file, line)
       return if ENV["GITHUB_ACTIONS"].blank?
 
-      annotation = GitHub::Actions::Annotation.new(type, msg, file: file, line: line)
+      annotation = GitHub::Actions::Annotation.new(type, message, title: title, file: file, line: line)
       puts annotation
     end
 
@@ -158,19 +158,10 @@ module Homebrew
           end
           next if path.blank?
 
-          annotation_contents = <<~EOS
-            <details>
-            <summary>`#{command_trimmed}` failed!</summary>
-
-            ```
-            #{@output.strip}
-            ```
-
-            </details>
-          EOS
+          annotation_title = "`#{command_trimmed}` failed!"
           annotation_type = failed? ? :error : :warning
           file = path.to_s.delete_prefix("#{@repository}/")
-          emit_annotation(annotation_contents, annotation_type, file, line)
+          emit_annotation(annotation_type, output.strip, annotation_title, file, line)
         end
       end
 
