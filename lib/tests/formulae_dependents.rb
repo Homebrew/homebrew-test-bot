@@ -145,8 +145,9 @@ module Homebrew
 
         required_dependent_deps = dependent.deps.reject(&:optional?)
         bottled_on_current_version = bottled?(dependent, no_older_versions: true)
+        dependent_was_previously_installed = dependent.latest_version_installed?
 
-        unless dependent.latest_version_installed?
+        unless dependent_was_previously_installed
           build_args = []
           build_args << "--build-from-source" if build_from_source
 
@@ -166,8 +167,9 @@ module Homebrew
                named_args:      dependent.full_name,
                env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
                ignore_failures: build_from_source && !bottled_on_current_version
+          install_step = steps.last
 
-          return unless steps.last.passed?
+          return unless install_step.passed?
         end
         return unless dependent.latest_version_installed?
 
@@ -179,6 +181,7 @@ module Homebrew
         test "brew", "linkage", "--test",
              named_args:      dependent.full_name,
              ignore_failures: !bottled_on_current_version
+        linkage_step = steps.last
 
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
@@ -202,9 +205,25 @@ module Homebrew
                named_args:      dependent.full_name,
                env:             env,
                ignore_failures: !bottled_on_current_version
+          test_step = steps.last
         end
 
         test "brew", "uninstall", "--force", dependent.full_name
+
+        if build_from_source &&
+           !bottled_on_current_version &&
+           !dependent_was_previously_installed &&
+           install_step.passed? &&
+           linkage_step.passed? &&
+           (testable_dependents.exclude?(dependent) || test_step.passed?) &&
+           dependent.deps.all? { |d| bottled?(d.to_formula, no_older_versions: true) }
+          puts GitHub::Actions::Annotation.new(
+            :notice,
+            "All tests passed!",
+            file:  dependent.path,
+            title: "#{dependent} should be bottled!",
+          )
+        end
       end
 
       def unlink_conflicts(formula)
