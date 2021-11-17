@@ -210,6 +210,8 @@ module Homebrew
 
         test "brew", "uninstall", "--force", dependent.full_name
 
+        return if ENV["GITHUB_ACTIONS"].blank?
+
         if build_from_source &&
            !bottled_on_current_version &&
            !dependent_was_previously_installed &&
