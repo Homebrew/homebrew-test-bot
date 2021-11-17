@@ -183,8 +183,8 @@ module Homebrew
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
 
-          dependent.deps.each do |dependency|
-            next if dependency.build?
+          dependent.recursive_dependencies.each do |dependency|
+            next if dependency.build? && !dependency.test?
 
             dependency_f = dependency.to_formula
             next if dependency_f.keg_only?
