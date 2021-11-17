@@ -187,6 +187,8 @@ module Homebrew
             next if dependency.build? && !dependency.test?
 
             dependency_f = dependency.to_formula
+            # We don't want to attempt to link runtime deps of build deps.
+            next unless dependency_f.any_version_installed?
             next if dependency_f.keg_only?
             next if dependency_f.linked_keg.exist?
 
