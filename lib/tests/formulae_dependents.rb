@@ -48,8 +48,6 @@ module Homebrew
       def dependents_for_formula(formula, formula_name, args:)
         info_header "Determining dependents..."
 
-        build_dependents_from_source_disabled = OS.linux? && tap.present? && tap.full_name == "Homebrew/homebrew-core"
-
         uses_args = %w[--formula --include-build --include-test]
         uses_args << "--recursive" unless args.skip_recursive_dependents?
         dependents = with_env(HOMEBREW_STDERR: "1") do
@@ -76,15 +74,17 @@ module Homebrew
         end)
 
         # Split into dependents that we could potentially be building from source and those
-        # we should not. The criteria is that it depends on a formula in the allowlist and
-        # that formula has been, or will be, built in this test run.
-        source_dependents, dependents = dependents.partition do |_, deps|
-          deps.any? do |d|
-            full_name = d.to_formula.full_name
+        # we should not. The criteria is that either the `--build-dependents-from-source` flag
+        # was passed or a dependent has no bottle but has useable dependencies.
+        source_dependents, dependents = dependents.partition do |dependent, deps|
+          next false if OS.linux? && dependent.requirements.exclude?(LinuxRequirement.new)
+          next true if args.build_dependents_from_source?
 
-            next false if !args.build_dependents_from_source? || build_dependents_from_source_disabled
+          !bottled?(dependent, no_older_versions: true) && deps.all? do |dep|
+            f = dep.to_formula
+            built_formulae = @testing_formulae - skipped_or_failed_formulae
 
-            @testing_formulae.include?(full_name)
+            bottled?(f) || built_formulae.include?(f.full_name)
           end
         end
 
