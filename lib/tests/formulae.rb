@@ -247,13 +247,17 @@ module Homebrew
           return
         end
 
-        all_deps_have_compatible_bottles = formula.deps.all? do |dep|
-          bottled?(dep.to_formula)
-        end
+        deps_without_compatible_bottles = formula.deps
+                                                 .map(&:to_formula)
+                                                 .reject { |dep| bottled?(dep) }
         bottled_on_current_version = bottled?(formula, no_older_versions: true)
 
-        if !all_deps_have_compatible_bottles && (!bottled_on_current_version || bottled?(formula, :all))
-          skipped formula_name, "#{formula_name} has dependencies without a compatible bottle!"
+        if deps_without_compatible_bottles.present? && !bottled_on_current_version
+          message <<~EOS
+            #{formula_name} has dependencies without compatible bottles:
+              #{deps_without_compatible_bottles * "\n  "}
+          EOS
+          skipped formula_name, message
           return
         end
 
