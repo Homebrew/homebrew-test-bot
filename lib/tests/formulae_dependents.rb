@@ -183,7 +183,7 @@ module Homebrew
           end
 
           dependencies_to_link.each do |dependency|
-            dependency_f = dependency.to_f
+            dependency_f = dependency.to_formula
             next if dependency_f.keg_only?
             next if dependency_f.linked?
 
