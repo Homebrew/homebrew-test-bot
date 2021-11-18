@@ -172,7 +172,10 @@ module Homebrew
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
 
           # Traverse the dependency tree to check for formulae we need to link
-          dependencies_to_link = Dependency.expand(dependent, cache_key: "test-bot-link-#{dependent.full_name}-#{Time.now.to_f}") do |dep_dependent, dependency|
+          dependencies_to_link = Dependency.expand(
+            dependent,
+            cache_key: "test-bot-link-#{dependent.full_name}-#{Time.now.to_f}",
+          ) do |dep_dependent, dependency|
             Dependency.prune if dependency.build? && !dependency.test?
             Dependency.prune if dependency.test? && dep_dependent != dependent
             dependency_f = dependency.to_formula
