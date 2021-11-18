@@ -176,17 +176,19 @@ module Homebrew
             dependent,
             cache_key: "test-bot-link",
           ) do |dep_dependent, dependency|
-            Dependency.prune if dependency.build? && !dependency.test?
-            Dependency.prune if dependency.test? && dep_dependent != dependent
-            dependency_f = dependency.to_formula
-            Dependency.skip if dependency_f.keg_only?
-          end.map(&:to_formula)
+            next if !dependency.build? && !dependency.test?
+            next if dependency.test? && dep_dependent == dependent
 
-          dependencies_to_link.each do |f|
-            next if f.linked?
+            Dependency.prune
+          end
 
-            unlink_conflicts f
-            test "brew", "link", f.full_name
+          dependencies_to_link.each do |dependency|
+            dependency_f = dependency.to_f
+            next if dependency_f.keg_only?
+            next if dependency_f.linked?
+
+            unlink_conflicts dependency_f
+            test "brew", "link", dependency_f.full_name
           end
 
           env = {}
