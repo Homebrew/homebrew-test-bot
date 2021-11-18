@@ -186,12 +186,14 @@ module Homebrew
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
 
-          dependent.recursive_dependencies do |_, dependency|
-            Dependency.prune if dependency.build? && !dependency.test?
+          dependent.recursive_dependencies.each do |dependency|
+            next if dependency.build? && !dependency.test?
 
             dependency_f = dependency.to_formula
-            Dependency.skip if dependency_f.keg_only?
-            Dependency.skip if dependency_f.linked_keg.exist?
+            # We don't want to attempt to link runtime deps of build deps.
+            next unless dependency_f.any_version_installed?
+            next if dependency_f.keg_only?
+            next if dependency_f.linked_keg.exist?
 
             unlink_conflicts dependency_f
             test "brew", "link", dependency_f.full_name
