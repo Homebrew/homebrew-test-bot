@@ -70,6 +70,8 @@ module Homebrew
     end
 
     def emit_annotation(type, message, title, file, line)
+      # https://github.com/Homebrew/homebrew-test-bot/issues/712
+      return if OS.linux?
       return if ENV["GITHUB_ACTIONS"].blank?
 
       annotation = GitHub::Actions::Annotation.new(type, message, title: title, file: file, line: line)
