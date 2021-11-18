@@ -142,7 +142,10 @@ module Homebrew
 
       puts_result
 
-      if (output = result.merged_output.presence)
+      output = result.merged_output
+
+      # ActiveSupport can barf on some Unicode so don't use .present?
+      unless output.empty?
         output.force_encoding(Encoding::UTF_8)
 
         @output = if output.valid_encoding?
