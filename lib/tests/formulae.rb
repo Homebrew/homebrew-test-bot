@@ -253,7 +253,7 @@ module Homebrew
         bottled_on_current_version = bottled?(formula, no_older_versions: true)
 
         if deps_without_compatible_bottles.present? && !bottled_on_current_version
-          message <<~EOS
+          message = <<~EOS
             #{formula_name} has dependencies without compatible bottles:
               #{deps_without_compatible_bottles * "\n  "}
           EOS
