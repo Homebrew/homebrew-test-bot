@@ -13,8 +13,16 @@ module Homebrew
 
       protected
 
-      def bottled?(formula, tag = nil, no_older_versions: false)
-        formula.bottle_specification.tag?(Utils::Bottles.tag(tag), no_older_versions: no_older_versions)
+      def bottled?(formula, no_older_versions: false)
+        # If a formula has an `:all` bottle, then all its dependencies have
+        # to be bottled too for us to use it. We only need to recurse
+        # up the dep tree when we encounter an `:all` bottle because
+        # a formula is not bottled unless its dependencies are.
+        if formula.bottle_specification.tag?(Utils::Bottles.tag(:all))
+          formula.deps.all? { |dep| bottled?(dep.to_formula, no_older_versions: no_older_versions) }
+        else
+          formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: no_older_versions)
+        end
       end
 
       def skipped(formula_name, reason)
