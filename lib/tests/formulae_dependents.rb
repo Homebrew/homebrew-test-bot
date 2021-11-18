@@ -13,6 +13,11 @@ module Homebrew
 
       private
 
+      def bottled_or_built?(formula)
+        built_formulae = @testing_formulae - skipped_or_failed_formulae
+        bottled?(formula) || built_formulae.include?(formula.full_name)
+      end
+
       def dependent_formulae!(formula_name, args:)
         cleanup_during!(args: args)
 
@@ -29,13 +34,6 @@ module Homebrew
           dependents_for_formula(formula, formula_name, args: args)
 
         source_dependents.each do |dependent|
-          next if dependent.deps.any? do |d|
-            f = d.to_formula
-            built_formulae = @testing_formulae - skipped_or_failed_formulae
-
-            !bottled?(f) && built_formulae.exclude?(f.full_name)
-          end
-
           install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
           install_dependent(dependent, testable_dependents, args: args) if bottled?(dependent)
         end
@@ -74,18 +72,16 @@ module Homebrew
         end)
 
         # Split into dependents that we could potentially be building from source and those
-        # we should not. The criteria is that either the `--build-dependents-from-source` flag
-        # was passed or a dependent has no bottle but has useable dependencies.
+        # we should not. The criteria is that a dependent must have bottled dependencies, and
+        # either the `--build-dependents-from-source` flag was passed or a dependent has no
+        # bottle on the current OS.
         source_dependents, dependents = dependents.partition do |dependent, deps|
           next false if OS.linux? && dependent.requirements.exclude?(LinuxRequirement.new)
-          next true if args.build_dependents_from_source?
 
-          !bottled?(dependent, no_older_versions: true) && deps.all? do |dep|
-            f = dep.to_formula
-            built_formulae = @testing_formulae - skipped_or_failed_formulae
+          all_deps_bottled_or_built = deps.all? { |d| bottled_or_built?(d.to_formula) }
+          next all_deps_bottled_or_built if args.build_dependents_from_source?
 
-            bottled?(f) || built_formulae.include?(f.full_name)
-          end
+          all_deps_bottled_or_built && !bottled?(dependent, no_older_versions: true)
         end
 
         # From the non-source list, get rid of any dependents we are only a build dependency to
