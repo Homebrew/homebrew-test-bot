@@ -168,42 +168,46 @@ module Homebrew
 
         puts_full_output
 
-        if in_github_actions?
-          os_string = if OS.mac?
-            str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
-            str << " on Apple Silicon" if Hardware::CPU.arm?
-          else
-            OS.kernel_name
+        unless in_github_actions?
+          puts
+          exit 1 if fail_fast && failed?
+          return
+        end
+
+        os_string = if OS.mac?
+          str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
+          str << " on Apple Silicon" if Hardware::CPU.arm?
+        else
+          OS.kernel_name
+        end
+
+        @named_args.each do |name|
+          next if name.blank?
+
+          path, line = begin
+            formula = Formulary.factory(name)
+            method_sym = command.second.to_sym
+            method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
+
+            if method_location.present? && (method_location.first == formula.path.to_s)
+              method_location
+            else
+              [formula.path, nil]
+            end
+          rescue FormulaUnavailableError
+            [@repository.glob("**/#{name}*").first, nil]
           end
+          next if path.blank?
 
-          @named_args.each do |name|
-            next if name.blank?
+          # GitHub Actions has a 64KB maximum for annotiations. That's a bit
+          # too long so instead let's go for a maximum of 24KB or 256 lines.
+          max_length_start = [@output.length - (24 * 1024), 0].max
+          annotation_output = @output[max_length_start..].lines.last(256).join
 
-            path, line = begin
-              formula = Formulary.factory(name)
-              method_sym = command.second.to_sym
-              method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
-
-              if method_location.present? && (method_location.first == formula.path.to_s)
-                method_location
-              else
-                [formula.path, nil]
-              end
-            rescue FormulaUnavailableError
-              [@repository.glob("**/#{name}*").first, nil]
-            end
-            next if path.blank?
-
-            # GitHub Actions has a 64KB maximum for annotiations. That's a bit
-            # too long so instead let's go for a maximum of 24KB or 256 lines.
-            max_length_start = [@output.length - (24 * 1024), 0].max
-            annotation_output = @output[max_length_start..].lines.last(256).join
-
-            annotation_title = "`#{command_trimmed}` failed on #{os_string}!"
-            file = path.to_s.delete_prefix("#{@repository}/")
-            puts_in_github_actions_group("Truncated #{command_short} output") do
-              puts_github_actions_annotation(annotation_output, annotation_title, file, line)
-            end
+          annotation_title = "`#{command_trimmed}` failed on #{os_string}!"
+          file = path.to_s.delete_prefix("#{@repository}/")
+          puts_in_github_actions_group("Truncated #{command_short} output") do
+            puts_github_actions_annotation(annotation_output, annotation_title, file, line)
           end
         end
 
