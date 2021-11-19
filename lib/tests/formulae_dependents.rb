@@ -171,14 +171,21 @@ module Homebrew
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
 
-          dependent.recursive_dependencies.each do |dependency|
-            next if dependency.build? && !dependency.test?
+          # Traverse the dependency tree to check for formulae we need to link
+          dependencies_to_link = Dependency.expand(
+            dependent,
+            cache_key: "test-bot-link-#{dependent.full_name}",
+          ) do |dep_dependent, dependency|
+            next if !dependency.build? && !dependency.test?
+            next if dependency.test? && dep_dependent == dependent
 
+            Dependency.prune
+          end
+
+          dependencies_to_link.each do |dependency|
             dependency_f = dependency.to_formula
-            # We don't want to attempt to link runtime deps of build deps.
-            next unless dependency_f.any_version_installed?
             next if dependency_f.keg_only?
-            next if dependency_f.linked_keg.exist?
+            next if dependency_f.linked?
 
             unlink_conflicts dependency_f
             test "brew", "link", dependency_f.full_name
