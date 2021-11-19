@@ -73,12 +73,20 @@ module Homebrew
       ENV["GITHUB_ACTIONS"].present?
     end
 
-    def puts_github_actions_annotation(type, message, title, file, line)
+    def puts_github_actions_annotation(message, title, file, line)
       return unless in_github_actions?
 
       # Temporarily disable annotations on Linux
       # https://github.com/Homebrew/homebrew-test-bot/issues/712
       return if OS.linux?
+
+      type = if passed?
+        :notice
+      elsif ignored?
+        :warning
+      else
+        :error
+      end
 
       annotation = GitHub::Actions::Annotation.new(type, message, title: title, file: file, line: line)
       puts annotation
@@ -87,7 +95,7 @@ module Homebrew
     def puts_in_github_actions_group(title)
       puts "::group::#{title}" if in_github_actions?
       yield
-      puts "::endgroup" if in_github_actions?
+      puts "::endgroup::" if in_github_actions?
     end
 
     def output?
@@ -102,13 +110,31 @@ module Homebrew
     end
 
     def puts_full_output
-      if in_github_actions?
-        puts_in_github_actions_group("Full #{command_short} output") do
-          puts @output
-        end
-      else
+      return if @output.blank? || @verbose
+
+      puts_in_github_actions_group("Full #{command_short} output") do
         puts @output
       end
+    end
+
+    def annotation_location(name)
+      formula = Formulary.factory(name)
+      method_sym = command.second.to_sym
+      method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
+
+      if method_location.present? && (method_location.first == formula.path.to_s)
+        method_location
+      else
+        [formula.path, nil]
+      end
+    rescue FormulaUnavailableError
+      [@repository.glob("**/#{name}*").first, nil]
+    end
+
+    def truncate_output(output, max_kb:, max_lines:)
+      max_length_start = [output.length - (max_kb * 1024), 0].max
+
+      output[max_length_start..].lines.last(max_lines).join
     end
 
     def run(dry_run: false, fail_fast: false)
@@ -145,70 +171,55 @@ module Homebrew
       output = result.merged_output
 
       # ActiveSupport can barf on some Unicode so don't use .present?
-      unless output.empty?
-        output.force_encoding(Encoding::UTF_8)
-
-        @output = if output.valid_encoding?
-          output
-        else
-          output.encode!(Encoding::UTF_16, invalid: :replace)
-          output.encode!(Encoding::UTF_8)
-        end
-
-        if @verbose
-          puts
-          return
-        end
-
-        return if passed?
-
-        puts_full_output
-
-        if in_github_actions?
-          os_string = if OS.linux?
-            "Linux"
-          elsif Hardware::CPU.arm?
-            "macOS #{MacOS.version.pretty_name} (#{MacOS.version}) on Apple Silicon"
-          else
-            "macOS #{MacOS.version.pretty_name}"
-          end
-
-          @named_args.each do |name|
-            next if name.blank?
-
-            path, line = begin
-              formula = Formulary.factory(name)
-              method_sym = command.second.to_sym
-              method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
-
-              if method_location.present? && (method_location.first == formula.path.to_s)
-                method_location
-              else
-                [formula.path, nil]
-              end
-            rescue FormulaUnavailableError
-              [@repository.glob("**/#{name}*").first, nil]
-            end
-            next if path.blank?
-
-            annotation_type = failed? ? :error : :warning
-
-            # GitHub Actions has a 64KB maximum for annotiations. That's a bit
-            # too long so instead let's go for a maximum of 24KB or 256 lines.
-            max_length_start = [@output.length - (24 * 1024), 0].max
-            annotation_output = @output[max_length_start..].lines.last(256).join("\n")
-
-            annotation_title = "`#{command_trimmed}` failed on #{os_string}!"
-            file = path.to_s.delete_prefix("#{@repository}/")
-            puts_in_github_actions_group("Truncated #{command_short} output") do
-              puts_github_actions_annotation(annotation_type, annotation_output, annotation_title, file, line)
-            end
-          end
-        end
-
+      if output.empty?
         puts
+        exit 1 if fail_fast && failed?
+        return
       end
 
+      output.force_encoding(Encoding::UTF_8)
+      @output = if output.valid_encoding?
+        output
+      else
+        output.encode!(Encoding::UTF_16, invalid: :replace)
+        output.encode!(Encoding::UTF_8)
+      end
+
+      return if passed?
+
+      puts_full_output
+
+      unless in_github_actions?
+        puts
+        exit 1 if fail_fast && failed?
+        return
+      end
+
+      os_string = if OS.mac?
+        str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
+        str << " on Apple Silicon" if Hardware::CPU.arm?
+      else
+        OS.kernel_name
+      end
+
+      @named_args.each do |name|
+        next if name.blank?
+
+        path, line = annotation_location(name)
+        next if path.blank?
+
+        # GitHub Actions has a 64KB maximum for annotiations. That's a bit
+        # too long so instead let's go for a maximum of 24KB or 256 lines.
+        annotation_output = truncate_output(@output, max_kb: 24, max_lines: 256)
+
+        annotation_title = "`#{command_trimmed}` failed on #{os_string}!"
+        file = path.to_s.delete_prefix("#{@repository}/")
+        puts_in_github_actions_group("Truncated #{command_short} output") do
+          puts_github_actions_annotation(annotation_output, annotation_title, file, line)
+        end
+      end
+
+      puts
       exit 1 if fail_fast && failed?
     end
   end
