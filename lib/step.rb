@@ -73,12 +73,20 @@ module Homebrew
       ENV["GITHUB_ACTIONS"].present?
     end
 
-    def puts_github_actions_annotation(type, message, title, file, line)
+    def puts_github_actions_annotation(message, title, file, line)
       return unless in_github_actions?
 
       # Temporarily disable annotations on Linux
       # https://github.com/Homebrew/homebrew-test-bot/issues/712
       return if OS.linux?
+
+      type = if passed?
+        :notice
+      elsif ignored?
+        :warning
+      else
+        :error
+      end
 
       annotation = GitHub::Actions::Annotation.new(type, message, title: title, file: file, line: line)
       puts annotation
@@ -87,7 +95,7 @@ module Homebrew
     def puts_in_github_actions_group(title)
       puts "::group::#{title}" if in_github_actions?
       yield
-      puts "::endgroup" if in_github_actions?
+      puts "::endgroup::" if in_github_actions?
     end
 
     def output?
@@ -102,11 +110,7 @@ module Homebrew
     end
 
     def puts_full_output
-      if in_github_actions?
-        puts_in_github_actions_group("Full #{command_short} output") do
-          puts @output
-        end
-      else
+      puts_in_github_actions_group("Full #{command_short} output") do
         puts @output
       end
     end
@@ -165,12 +169,11 @@ module Homebrew
         puts_full_output
 
         if in_github_actions?
-          os_string = if OS.linux?
-            "Linux"
-          elsif Hardware::CPU.arm?
-            "macOS #{MacOS.version.pretty_name} (#{MacOS.version}) on Apple Silicon"
+          os_string = if OS.mac?
+            str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
+            str << " on Apple Silicon" if Hardware::CPU.arm?
           else
-            "macOS #{MacOS.version.pretty_name}"
+            OS.kernel_name
           end
 
           @named_args.each do |name|
@@ -191,17 +194,15 @@ module Homebrew
             end
             next if path.blank?
 
-            annotation_type = failed? ? :error : :warning
-
             # GitHub Actions has a 64KB maximum for annotiations. That's a bit
             # too long so instead let's go for a maximum of 24KB or 256 lines.
             max_length_start = [@output.length - (24 * 1024), 0].max
-            annotation_output = @output[max_length_start..].lines.last(256).join("\n")
+            annotation_output = @output[max_length_start..].lines.last(256).join
 
             annotation_title = "`#{command_trimmed}` failed on #{os_string}!"
             file = path.to_s.delete_prefix("#{@repository}/")
             puts_in_github_actions_group("Truncated #{command_short} output") do
-              puts_github_actions_annotation(annotation_type, annotation_output, annotation_title, file, line)
+              puts_github_actions_annotation(annotation_output, annotation_title, file, line)
             end
           end
         end
