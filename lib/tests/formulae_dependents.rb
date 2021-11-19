@@ -174,7 +174,7 @@ module Homebrew
           # Traverse the dependency tree to check for formulae we need to link
           dependencies_to_link = Dependency.expand(
             dependent,
-            cache_key: "test-bot-link",
+            cache_key: "test-bot-link-#{dependent.full_name}",
           ) do |dep_dependent, dependency|
             next if !dependency.build? && !dependency.test?
             next if dependency.test? && dep_dependent == dependent
