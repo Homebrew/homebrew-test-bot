@@ -198,6 +198,8 @@ module Homebrew
       os_string = if OS.mac?
         str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
         str << " on Apple Silicon" if Hardware::CPU.arm?
+
+        str
       else
         OS.kernel_name
       end
