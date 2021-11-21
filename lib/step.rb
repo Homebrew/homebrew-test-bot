@@ -76,10 +76,6 @@ module Homebrew
     def puts_github_actions_annotation(message, title, file, line)
       return unless in_github_actions?
 
-      # Temporarily disable annotations on Linux
-      # https://github.com/Homebrew/homebrew-test-bot/issues/712
-      return if OS.linux?
-
       type = if passed?
         :notice
       elsif ignored?
