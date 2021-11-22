@@ -360,11 +360,13 @@ module Homebrew
         failed_linkage_or_test_messages ||= []
         failed_linkage_or_test_messages << "linkage failed" unless steps.last.passed?
 
-        # Check for opportunistic linkage. Ignore failures because
-        # they can be unavoidable but we still want to know about them.
-        test "brew", "linkage", "--test", "--strict",
-             named_args:      formula_name,
-             ignore_failures: true
+        if steps.last.passed?
+          # Check for opportunistic linkage. Ignore failures because
+          # they can be unavoidable but we still want to know about them.
+          test "brew", "linkage", "--test", "--strict",
+               named_args:      formula_name,
+               ignore_failures: true
+        end
 
         test "brew", "install", "--only-dependencies", "--include-test", formula_name
 
