@@ -168,6 +168,14 @@ module Homebrew
              ignore_failures: !bottled_on_current_version
         linkage_step = steps.last
 
+        if linkage_step.passed?
+          # Check for opportunistic linkage. Ignore failures because
+          # they can be unavoidable but we still want to know about them.
+          test "brew", "linkage", "--cached", "--test", "--strict",
+               named_args:      dependent.full_name,
+               ignore_failures: true
+        end
+
         if testable_dependents.include? dependent
           test "brew", "install", "--only-dependencies", "--include-test", dependent.full_name
 
