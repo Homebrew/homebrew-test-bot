@@ -171,7 +171,7 @@ module Homebrew
         if linkage_step.passed?
           # Check for opportunistic linkage. Ignore failures because
           # they can be unavoidable but we still want to know about them.
-          test "brew", "linkage", "--test", "--strict",
+          test "brew", "linkage", "--cached", "--test", "--strict",
                named_args:      dependent.full_name,
                ignore_failures: true
         end
