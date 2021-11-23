@@ -14,10 +14,12 @@ module Homebrew
       def run!(args:)
         sorted_formulae.each do |f|
           formula!(f, args: args)
+          puts
         end
 
         @deleted_formulae.each do |f|
           deleted_formula!(f)
+          puts
         end
 
         return unless ENV["GITHUB_ACTIONS"]
