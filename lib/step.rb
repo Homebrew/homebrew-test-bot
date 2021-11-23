@@ -168,7 +168,7 @@ module Homebrew
 
       # ActiveSupport can barf on some Unicode so don't use .present?
       if output.empty?
-        puts
+        puts if @verbose
         exit 1 if fail_fast && failed?
         return
       end
@@ -217,7 +217,6 @@ module Homebrew
         end
       end
 
-      puts
       exit 1 if fail_fast && failed?
     end
   end

@@ -8,6 +8,7 @@ module Homebrew
       def run!(args:)
         (@testing_formulae - skipped_or_failed_formulae).each do |f|
           dependent_formulae!(f, args: args)
+          puts
         end
       end
 
