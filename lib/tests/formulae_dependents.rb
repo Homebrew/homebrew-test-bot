@@ -218,11 +218,20 @@ module Homebrew
            linkage_step.passed? &&
            (testable_dependents.exclude?(dependent) || test_step.passed?) &&
            dependent.deps.all? { |d| bottled?(d.to_formula, no_older_versions: true) }
+          os_string = if OS.mac?
+            str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
+            str << " on Apple Silicon" if Hardware::CPU.arm?
+
+            str
+          else
+            OS.kernel_name
+          end
+
           puts GitHub::Actions::Annotation.new(
             :notice,
-            "All tests passed!",
-            file:  dependent.path,
-            title: "#{dependent} should be bottled!",
+            "All tests passed.",
+            file:  dependent.path.to_s.delete_prefix("#{repository}/"),
+            title: "#{dependent} should be bottled for #{os_string}!",
           )
         end
       end
