@@ -80,9 +80,7 @@ module Homebrew
           next false if OS.linux? && dependent.requirements.exclude?(LinuxRequirement.new)
 
           all_deps_bottled_or_built = deps.all? { |d| bottled_or_built?(d.to_formula) }
-          next all_deps_bottled_or_built if args.build_dependents_from_source?
-
-          all_deps_bottled_or_built && !bottled?(dependent, no_older_versions: true)
+          args.build_dependents_from_source? && all_deps_bottled_or_built
         end
 
         # From the non-source list, get rid of any dependents we are only a build dependency to
