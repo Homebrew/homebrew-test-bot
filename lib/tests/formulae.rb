@@ -274,7 +274,7 @@ module Homebrew
           "--build-bottle"
         else
           if ENV["GITHUB_ACTIONS"].present?
-            puts GitHub::Actions::Annotation(
+            puts GitHub::Actions::Annotation.new(
               :warning,
               "#{formula} has unbottled dependencies, so a bottle will not be built.",
               title: "No bottle built for #{formula}!",
