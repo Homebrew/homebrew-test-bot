@@ -232,7 +232,8 @@ module Homebrew
         # Build and runtime dependencies must be bottled on the current OS,
         # but accept an older compatible bottle for test dependencies.
         return false if formula.deps.any? do |dep|
-          !bottled?(dep.to_formula, no_older_versions: !dep.test?)
+          !bottled?(dep.to_formula, no_older_versions: !dep.test?) &&
+          @added_formulae.exclude?(dep.name)
         end
 
         !formula.bottle_disabled? && !args.build_from_source?
@@ -272,6 +273,17 @@ module Homebrew
         build_flag = if build_bottle?(formula, args: args)
           "--build-bottle"
         else
+          if ENV["GITHUB_ACTIONS"].present?
+            puts GitHub::Actions::Annotation(
+              :warning,
+              "#{formula} has unbottled dependencies, so a bottle will not be built.",
+              title: "No bottle built for #{formula}!",
+              file:  formula.path.to_s.delete_prefix("#{repository}/"),
+            )
+          else
+            onoe "Not building a bottle for #{formula} because it has unbottled dependencies."
+          end
+
           "--build-from-source"
         end
 
