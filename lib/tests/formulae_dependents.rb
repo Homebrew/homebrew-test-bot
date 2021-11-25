@@ -14,9 +14,9 @@ module Homebrew
 
       private
 
-      def bottled_or_built?(formula)
+      def bottled_or_built?(formula, no_older_versions: false)
         built_formulae = @testing_formulae - skipped_or_failed_formulae
-        bottled?(formula) || built_formulae.include?(formula.full_name)
+        bottled?(formula, no_older_versions: no_older_versions) || built_formulae.include?(formula.full_name)
       end
 
       def dependent_formulae!(formula_name, args:)
@@ -217,7 +217,7 @@ module Homebrew
            install_step.passed? &&
            linkage_step.passed? &&
            (testable_dependents.exclude?(dependent) || test_step.passed?) &&
-           dependent.deps.all? { |d| bottled?(d.to_formula, no_older_versions: true) }
+           dependent.deps.all? { |d| bottled_or_built?(d.to_formula, no_older_versions: true) }
           os_string = if OS.mac?
             str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
             str << " on Apple Silicon" if Hardware::CPU.arm?
