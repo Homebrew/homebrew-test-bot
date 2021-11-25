@@ -233,7 +233,7 @@ module Homebrew
         # but accept an older compatible bottle for test dependencies.
         return false if formula.deps.any? do |dep|
           !bottled?(dep.to_formula, no_older_versions: !dep.test?) &&
-          @added_formulae.exclude?(dep.name)
+          @testing_formulae.exclude?(dep.name)
         end
 
         !formula.bottle_disabled? && !args.build_from_source?
