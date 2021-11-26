@@ -114,17 +114,24 @@ module Homebrew
     end
 
     def annotation_location(name)
-      formula = Formulary.factory(name)
-      method_sym = command.second.to_sym
-      method_location = formula.method(method_sym).source_location if formula.respond_to?(method_sym)
-
-      if method_location.present? && (method_location.first == formula.path.to_s)
-        method_location
-      else
-        [formula.path, nil]
+      formula, formula_path = begin
+        f = Formulary.factory(name)
+        [f, f.path]
+      rescue FormulaUnavailableError
+        [nil, @repository.glob("**/#{name}*").first]
       end
-    rescue FormulaUnavailableError
-      [@repository.glob("**/#{name}*").first, nil]
+
+      method_sym = command.second.to_sym
+
+      formula_line = if output? && (line = output.lines.find { |l| l.start_with? formula_path })
+        line.split(":").second
+      elsif formula.respond_to?(method_sym) &&
+            (method_location = formula.method(method_sym).source_location) &&
+            (method_location.first == formula_path.to_s)
+        method_location.second
+      end
+
+      [formula_path, formula_line]
     end
 
     def truncate_output(output, max_kb:, max_lines:)
