@@ -25,6 +25,11 @@ module Homebrew
         end
       end
 
+      def bottled_or_built?(formula, no_older_versions: false)
+        built_formulae = @testing_formulae - @skipped_or_failed_formulae
+        bottled?(formula, no_older_versions: no_older_versions) || built_formulae.include?(formula.full_name)
+      end
+
       def skipped(formula_name, reason)
         @skipped_or_failed_formulae << formula_name
 

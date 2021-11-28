@@ -232,8 +232,7 @@ module Homebrew
         # Build and runtime dependencies must be bottled on the current OS,
         # but accept an older compatible bottle for test dependencies.
         return false if formula.deps.any? do |dep|
-          !bottled?(dep.to_formula, no_older_versions: !dep.test?) &&
-          @testing_formulae.exclude?(dep.name)
+          !bottled_or_built?(dep.to_formula, no_older_versions: !dep.test?)
         end
 
         !formula.bottle_disabled? && !args.build_from_source?
@@ -252,7 +251,7 @@ module Homebrew
 
         deps_without_compatible_bottles = formula.deps
                                                  .map(&:to_formula)
-                                                 .reject { |dep| bottled?(dep) }
+                                                 .reject { |dep| bottled_or_built?(dep) }
         bottled_on_current_version = bottled?(formula, no_older_versions: true)
 
         if deps_without_compatible_bottles.present? && !bottled_on_current_version

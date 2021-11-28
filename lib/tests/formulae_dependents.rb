@@ -14,11 +14,6 @@ module Homebrew
 
       private
 
-      def bottled_or_built?(formula)
-        built_formulae = @testing_formulae - skipped_or_failed_formulae
-        bottled?(formula) || built_formulae.include?(formula.full_name)
-      end
-
       def dependent_formulae!(formula_name, args:)
         cleanup_during!(args: args)
 
