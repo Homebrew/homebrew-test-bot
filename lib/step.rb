@@ -118,12 +118,12 @@ module Homebrew
         f = Formulary.factory(name)
         [f, f.path]
       rescue FormulaUnavailableError
-        [nil, @repository.glob("**/#{name}*").first]
+        [nil, @repository.glob("**/#{name}.rb").first]
       end
-
       method_sym = command.second.to_sym
 
-      formula_line = if output? && (line = output.lines.find { |l| l.start_with? formula_path })
+      formula_line = if output? &&
+                        (line = output.lines.find { |l| l.start_with?(/#{Regexp.escape(formula_path)}:\d+:in /) })
         line.split(":").second
       elsif formula.respond_to?(method_sym) &&
             (method_location = formula.method(method_sym).source_location) &&
