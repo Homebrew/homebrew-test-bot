@@ -46,21 +46,6 @@ module Homebrew
              env: { "HOMEBREW_DEVELOPER" => nil }
       end
 
-      def downloads_using_homebrew_curl?(formula)
-        [:stable, :head].any? do |spec_name|
-          next false unless (spec = formula.send(spec_name))
-
-          spec.using == :homebrew_curl || spec.resources.values.any? { |r| r.using == :homebrew_curl }
-        end
-      end
-
-      def install_curl_if_needed(formula)
-        return unless downloads_using_homebrew_curl?(formula)
-
-        test "brew", "install", "curl",
-             env: { "HOMEBREW_DEVELOPER" => nil }
-      end
-
       def install_gcc_if_needed(formula, deps)
         installed_gcc = false
         begin
@@ -76,20 +61,6 @@ module Homebrew
           end
           skipped formula.name, e.message
         end
-      end
-
-      def install_mercurial_if_needed(deps, reqs)
-        return if (deps | reqs).none? { |d| d.name == "mercurial" && d.build? }
-
-        test "brew", "install", "mercurial",
-             env:  { "HOMEBREW_DEVELOPER" => nil }
-      end
-
-      def install_subversion_if_needed(deps, reqs)
-        return if (deps | reqs).none? { |d| d.name == "subversion" && d.build? }
-
-        test "brew", "install", "subversion",
-             env:  { "HOMEBREW_DEVELOPER" => nil }
       end
 
       def setup_formulae_deps_instances(formula, formula_name, args:)
