@@ -124,7 +124,15 @@ module Homebrew
 
         unless dependent_was_previously_installed
           build_args = []
-          build_args << "--build-from-source" if build_from_source
+
+          if build_from_source
+            required_dependent_reqs = dependent.requirements.reject(&:optional?)
+            install_curl_if_needed(dependent)
+            install_mercurial_if_needed(required_dependent_deps, required_dependent_reqs)
+            install_subversion_if_needed(required_dependent_deps, required_dependent_reqs)
+
+            build_args << "--build-from-source"
+          end
 
           test "brew", "fetch", *build_args, "--retry", dependent.full_name
           return if steps.last.failed?
