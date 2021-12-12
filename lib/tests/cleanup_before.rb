@@ -19,7 +19,7 @@ module Homebrew
 
         Pathname.glob("*.bottle*.*").each(&:unlink)
 
-        if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"]
+        if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
           # minimally fix brew doctor failures (a full clean takes ~5m)
           if OS.linux?
             # brew doctor complains
