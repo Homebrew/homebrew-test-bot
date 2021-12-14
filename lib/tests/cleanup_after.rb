@@ -4,7 +4,7 @@ module Homebrew
   module Tests
     class CleanupAfter < TestCleanup
       def run!(args:)
-        if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"] &&
+        if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"] &&
            # don't need to do post-build cleanup unless testing test-bot itself.
            tap.to_s != "homebrew/test-bot"
           return
