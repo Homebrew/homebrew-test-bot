@@ -40,7 +40,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  activesupport
+  activesupport (< 7)
   rspec
   simplecov
 
