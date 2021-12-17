@@ -34,15 +34,13 @@ jobs:
 
       - name: Set up Ruby
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/setup-ruby@master
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: "2.6"
-
-      - name: Install Bundler
-        if: matrix.os == 'ubuntu-latest'
-        run: gem install bundler -v "~>1"
+          bundler-cache: true
 
       - name: Install Homebrew/homebrew-test-bot RubyGems
+        if: matrix.os == 'macOS-latest'
         run: bundle install --jobs 4 --retry 3
 
       - name: Run Homebrew/homebrew-test-bot RSpec tests
