@@ -24,6 +24,10 @@ module Homebrew
           return
         end
 
+        # Restore etc/var files that may have been nuked in the build stage.
+        test "brew", "postinstall", formula_name
+        return if steps.last.failed?
+
         formula = Formulary.factory(formula_name)
 
         source_dependents, bottled_dependents, testable_dependents =
