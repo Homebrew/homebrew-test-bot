@@ -24,6 +24,11 @@ module Homebrew
           return
         end
 
+        # Install formula dependencies. These will have been uninstalled after building.
+        test "brew", "install", "--only-dependencies", formula_name,
+             env: { "HOMEBREW_DEVELOPER" => nil }
+        return if steps.last.failed?
+
         # Restore etc/var files that may have been nuked in the build stage.
         test "brew", "postinstall", formula_name
         return if steps.last.failed?
