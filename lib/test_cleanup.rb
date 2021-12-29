@@ -44,6 +44,8 @@ module Homebrew
     end
 
     def cleanup_shared
+      FileUtils.chmod_R("u+X", HOMEBREW_CELLAR, force: true)
+
       cleanup_git_meta(repository)
       clean_if_needed(repository)
       prune_if_needed(repository)
