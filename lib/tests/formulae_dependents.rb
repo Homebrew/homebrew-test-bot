@@ -3,7 +3,7 @@
 module Homebrew
   module Tests
     class FormulaeDependents < TestFormulae
-      attr_writer :testing_formulae
+      attr_accessor :testing_formulae
 
       def run!(args:)
         (@testing_formulae - skipped_or_failed_formulae).each do |f|
