@@ -3,7 +3,8 @@
 module Homebrew
   module Tests
     class Formulae < TestFormulae
-      attr_writer :testing_formulae, :added_formulae, :deleted_formulae
+      attr_accessor :testing_formulae
+      attr_writer :added_formulae, :deleted_formulae
 
       def initialize(tap:, git:, dry_run:, fail_fast:, verbose:, bottle_output_path:)
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
