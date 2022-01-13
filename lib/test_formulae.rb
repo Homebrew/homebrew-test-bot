@@ -111,7 +111,8 @@ module Homebrew
         end
 
         return unless HOMEBREW_CACHE.exist?
-        test_header(:TestFormulae, method: :cleanup_during!) unless uninstallable_formulae.present?
+
+        test_header(:TestFormulae, method: :cleanup_during!) if uninstallable_formulae.blank?
 
         FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
         test "rm", "-rf", HOMEBREW_CACHE.to_s
