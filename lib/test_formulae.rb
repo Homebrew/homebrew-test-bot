@@ -25,8 +25,11 @@ module Homebrew
         end
       end
 
+      def built_formulae
+        testing_formulae - skipped_or_failed_formulae
+      end
+
       def bottled_or_built?(formula, no_older_versions: false)
-        built_formulae = testing_formulae - skipped_or_failed_formulae
         bottled?(formula, no_older_versions: no_older_versions) || built_formulae.include?(formula.full_name)
       end
 
@@ -92,7 +95,6 @@ module Homebrew
 
       def cleanup_during!(args:)
         return unless args.cleanup?
-        return unless HOMEBREW_CACHE.exist?
 
         free_gb = Utils.safe_popen_read({ "BLOCKSIZE" => (1000 ** 3).to_s }, "df", HOMEBREW_CACHE.to_s)
                        .lines[1] # HOMEBREW_CACHE
@@ -100,7 +102,16 @@ module Homebrew
                        .to_i
         return if free_gb > 10
 
-        test_header(:TestFormulae, method: :cleanup_during!)
+        installed_formulae = Formula.installed.map(&:full_name)
+        uninstallable_formulae = installed_formulae - built_formulae
+
+        if uninstallable_formulae.present?
+          test_header(:TestFormulae, method: :cleanup_during!)
+          test "brew", "uninstall", *uninstallable_formulae
+        end
+
+        return unless HOMEBREW_CACHE.exist?
+        test_header(:TestFormulae, method: :cleanup_during!) unless uninstallable_formulae.present?
 
         FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
         test "rm", "-rf", HOMEBREW_CACHE.to_s
