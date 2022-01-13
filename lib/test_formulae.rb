@@ -102,8 +102,10 @@ module Homebrew
                        .to_i
         return if free_gb > 10
 
-        installed_formulae = Utils.safe_popen_read("brew", "list", "--formula", "--full-name").strip.split
-        uninstallable_formulae = installed_formulae - built_formulae
+        uninstallable_formulae = if testing_formulae.exclude?("testbottest")
+          installed_formulae = Formula.installed.map(&:full_name)
+          installed_formulae - built_formulae
+        end
 
         if uninstallable_formulae.present?
           test_header(:TestFormulae, method: :cleanup_during!)
