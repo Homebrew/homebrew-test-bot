@@ -102,7 +102,7 @@ module Homebrew
                        .to_i
         return if free_gb > 10
 
-        installed_formulae = Formula.installed.map(&:full_name)
+        installed_formulae = Utils.safe_popen_read("brew", "list", "--formula", "--full-name").strip.split
         uninstallable_formulae = installed_formulae - built_formulae
 
         if uninstallable_formulae.present?
