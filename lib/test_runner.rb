@@ -16,19 +16,30 @@ module Homebrew
   module TestRunner
     module_function
 
+    def ensure_blank_file_exists!(file)
+      if file.exist?
+        file.truncate(0)
+      else
+        FileUtils.touch(file)
+      end
+    end
+
     def run!(tap, git:, args:)
       tests = []
       skip_setup = args.skip_setup?
       skip_cleanup_before = false
 
       bottle_output_path = Pathname("bottle_output.txt")
+      linkage_output_path = Pathname("linkage_output.txt")
       if no_only_args?(args) || args.only_formulae?
-        if bottle_output_path.exist?
-          bottle_output_path.truncate(0)
-        else
-          FileUtils.touch(bottle_output_path)
-        end
+        ensure_blank_file_exists!(bottle_output_path)
+        ensure_blank_file_exists!(linkage_output_path)
       end
+
+      output_paths = {
+        bottle:  bottle_output_path,
+        linkage: linkage_output_path,
+      }
 
       test_bot_args = args.named.dup
 
@@ -39,7 +50,7 @@ module Homebrew
         skip_cleanup_after = argument != test_bot_args.last
         current_tests = build_tests(argument, tap:                 tap,
                                               git:                 git,
-                                              bottle_output_path:  bottle_output_path,
+                                              output_paths:        output_paths,
                                               skip_setup:          skip_setup,
                                               skip_cleanup_before: skip_cleanup_before,
                                               skip_cleanup_after:  skip_cleanup_after,
@@ -100,7 +111,7 @@ module Homebrew
       !any_only
     end
 
-    def build_tests(argument, tap:, git:, bottle_output_path:, skip_setup:,
+    def build_tests(argument, tap:, git:, output_paths:, skip_setup:,
                     skip_cleanup_before:, skip_cleanup_after:, args:)
       tests = {}
 
@@ -131,12 +142,12 @@ module Homebrew
       end
 
       if no_only_args || args.only_formulae?
-        tests[:formulae] = Tests::Formulae.new(tap:                tap,
-                                               git:                git,
-                                               dry_run:            args.dry_run?,
-                                               fail_fast:          args.fail_fast?,
-                                               verbose:            args.verbose?,
-                                               bottle_output_path: bottle_output_path)
+        tests[:formulae] = Tests::Formulae.new(tap:          tap,
+                                               git:          git,
+                                               dry_run:      args.dry_run?,
+                                               fail_fast:    args.fail_fast?,
+                                               verbose:      args.verbose?,
+                                               output_paths: output_paths)
       end
 
       if !args.skip_dependents? && (no_only_args || args.only_formulae? || args.only_formulae_dependents?)

@@ -6,10 +6,11 @@ module Homebrew
       attr_accessor :testing_formulae
       attr_writer :added_formulae, :deleted_formulae
 
-      def initialize(tap:, git:, dry_run:, fail_fast:, verbose:, bottle_output_path:)
+      def initialize(tap:, git:, dry_run:, fail_fast:, verbose:, output_paths:)
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
-        @bottle_output_path = bottle_output_path
+        @bottle_output_path = output_paths[:bottle]
+        @linkage_output_path = output_paths[:linkage]
       end
 
       def run!(args:)
@@ -352,6 +353,10 @@ module Homebrew
                named_args:      formula_name,
                ignore_failures: true
         end
+
+        test "brew", "linkage", "--cached", formula_name
+        @linkage_output_path.write(Formatter.headline(steps.last.command_trimmed, color: :blue), mode: "a")
+        @linkage_output_path.write(steps.last.output, mode: "a")
 
         test "brew", "install", "--only-dependencies", "--include-test", formula_name
 
