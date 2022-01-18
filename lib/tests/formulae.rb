@@ -355,7 +355,7 @@ module Homebrew
         end
 
         test "brew", "linkage", "--cached", formula_name
-        @linkage_output_path.write(Formatter.headline(steps.last.command_trimmed, color: :blue))
+        @linkage_output_path.write(Formatter.headline(steps.last.command_trimmed, color: :blue), mode: "a")
         @linkage_output_path.write(steps.last.output, mode: "a")
 
         test "brew", "install", "--only-dependencies", "--include-test", formula_name
