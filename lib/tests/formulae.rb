@@ -3,12 +3,12 @@
 module Homebrew
   module Tests
     class Formulae < TestFormulae
-      attr_accessor :testing_formulae
-      attr_writer :added_formulae, :deleted_formulae
+      attr_writer :testing_formulae, :added_formulae, :deleted_formulae
 
       def initialize(tap:, git:, dry_run:, fail_fast:, verbose:, output_paths:)
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
+        @built_formulae = []
         @bottle_output_path = output_paths[:bottle]
         @linkage_output_path = output_paths[:linkage]
       end
@@ -190,6 +190,7 @@ module Homebrew
                        download_strategy.symlink_location,
                        force: true
 
+        @built_formulae << formula.full_name
         @testing_formulae.delete(formula.name)
 
         unless @unchanged_build_dependencies.empty?
@@ -205,7 +206,11 @@ module Homebrew
         # Build and runtime dependencies must be bottled on the current OS,
         # but accept an older compatible bottle for test dependencies.
         return false if formula.deps.any? do |dep|
-          !bottled_or_built?(dep.to_formula, no_older_versions: !dep.test?)
+          !bottled_or_built?(
+            dep.to_formula,
+            @built_formulae - @skipped_or_failed_formulae,
+            no_older_versions: !dep.test?,
+          )
         end
 
         !formula.bottle_disabled? && !args.build_from_source?
@@ -222,9 +227,10 @@ module Homebrew
           return
         end
 
-        deps_without_compatible_bottles = formula.deps
-                                                 .map(&:to_formula)
-                                                 .reject { |dep| bottled_or_built?(dep) }
+        deps_without_compatible_bottles = formula.deps.map(&:to_formula)
+        deps_without_compatible_bottles.reject! do |dep|
+          bottled_or_built?(dep, @built_formulae - @skipped_or_failed_formulae)
+        end
         bottled_on_current_version = bottled?(formula, no_older_versions: true)
 
         if deps_without_compatible_bottles.present? && !bottled_on_current_version
