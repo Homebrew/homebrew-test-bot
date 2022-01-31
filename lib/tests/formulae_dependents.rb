@@ -3,7 +3,7 @@
 module Homebrew
   module Tests
     class FormulaeDependents < TestFormulae
-      attr_accessor :testing_formulae
+      attr_writer :testing_formulae
 
       def run!(args:)
         (@testing_formulae - skipped_or_failed_formulae).each do |f|
@@ -83,7 +83,9 @@ module Homebrew
         source_dependents, dependents = dependents.partition do |dependent, deps|
           next false if OS.linux? && dependent.requirements.exclude?(LinuxRequirement.new)
 
-          all_deps_bottled_or_built = deps.all? { |d| bottled_or_built?(d.to_formula) }
+          all_deps_bottled_or_built = deps.all? do |d|
+            bottled_or_built?(d.to_formula, @testing_formulae - @skipped_or_failed_formulae)
+          end
           args.build_dependents_from_source? && all_deps_bottled_or_built
         end
 

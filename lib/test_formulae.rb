@@ -25,8 +25,7 @@ module Homebrew
         end
       end
 
-      def bottled_or_built?(formula, no_older_versions: false)
-        built_formulae = testing_formulae - skipped_or_failed_formulae
+      def bottled_or_built?(formula, built_formulae, no_older_versions: false)
         bottled?(formula, no_older_versions: no_older_versions) || built_formulae.include?(formula.full_name)
       end
 
