@@ -6,6 +6,9 @@ module Homebrew
       attr_writer :testing_formulae
 
       def run!(args:)
+        @source_tested_dependents = []
+        @bottle_tested_dependents = []
+
         (@testing_formulae - skipped_or_failed_formulae).each do |f|
           dependent_formulae!(f, args: args)
           puts
@@ -39,12 +42,19 @@ module Homebrew
           dependents_for_formula(formula, formula_name, args: args)
 
         source_dependents.each do |dependent|
+          next if @source_tested_dependents.include?(dependent)
+
           install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
           install_dependent(dependent, testable_dependents, args: args) if bottled?(dependent)
+          @source_tested_dependents << dependent
         end
 
         bottled_dependents.each do |dependent|
+          # Testing a dependent from source also tests the bottle (if available).
+          next if @bottle_tested_dependents.include?(dependent) || @source_tested_dependents.include?(dependent)
+
           install_dependent(dependent, testable_dependents, args: args)
+          @bottle_tested_dependents << dependent
         end
       end
 
