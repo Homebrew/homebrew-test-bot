@@ -51,11 +51,19 @@ module Homebrew
       def dependents_for_formula(formula, formula_name, args:)
         info_header "Determining dependents..."
 
-        uses_args = %w[--formula --include-build --include-test]
+        uses_args = %w[--formula --include-test]
+        uses_args << "--include-build" unless args.skip_recursive_build_dependents?
         uses_args << "--recursive" unless args.skip_recursive_dependents?
         dependents = with_env(HOMEBREW_STDERR: "1") do
           Utils.safe_popen_read("brew", "uses", *uses_args, formula_name)
                .split("\n")
+        end
+        if args.skip_recursive_build_dependents?
+          dependents += with_env(HOMEBREW_STDERR: "1") do
+            Utils.safe_popen_read("brew", "uses", "--formula", "--include-build", formula_name)
+                 .split("\n")
+          end
+          dependents.uniq!.sort!
         end
         dependents -= @testing_formulae
         dependents = dependents.map { |d| Formulary.factory(d) }
