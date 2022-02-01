@@ -29,7 +29,7 @@ module Homebrew
         source_dependents, bottled_dependents, testable_dependents =
           dependents_for_formula(formula, formula_name, args: args)
 
-        return if source_dependents.blank? && bottled_dependents.blank? && testable_dependents.blank?
+        return if source_dependents.blank? && bottled_dependents.blank?
 
         # Install formula dependencies. These will have been uninstalled after building.
         test "brew", "install", "--only-dependencies", formula_name,
