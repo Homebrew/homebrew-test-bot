@@ -52,19 +52,22 @@ module Homebrew
         info_header "Determining dependents..."
 
         uses_args = %w[--formula --include-test]
-        uses_args << "--include-build" unless args.skip_recursive_build_dependents?
         uses_args << "--recursive" unless args.skip_recursive_dependents?
         dependents = with_env(HOMEBREW_STDERR: "1") do
           Utils.safe_popen_read("brew", "uses", *uses_args, formula_name)
                .split("\n")
         end
-        if args.skip_recursive_build_dependents?
-          dependents += with_env(HOMEBREW_STDERR: "1") do
-            Utils.safe_popen_read("brew", "uses", "--formula", "--include-build", formula_name)
-                 .split("\n")
-          end
-          dependents.uniq!.sort!
+
+        # TODO: Consider handling the following case better.
+        #       `foo` has a build dependency on `bar`, and `bar` has a runtime dependency on
+        #       `baz`. When testing `baz` with `--build-dependents-from-source`, `foo` is
+        #       not tested, but maybe should be.
+        dependents += with_env(HOMEBREW_STDERR: "1") do
+          Utils.safe_popen_read("brew", "uses", "--formula", "--include-build", formula_name)
+               .split("\n")
         end
+        dependents.uniq!.sort!
+
         dependents -= @testing_formulae
         dependents = dependents.map { |d| Formulary.factory(d) }
 
