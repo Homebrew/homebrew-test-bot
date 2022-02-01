@@ -24,6 +24,13 @@ module Homebrew
           return
         end
 
+        formula = Formulary.factory(formula_name)
+
+        source_dependents, bottled_dependents, testable_dependents =
+          dependents_for_formula(formula, formula_name, args: args)
+
+        return if source_dependents.blank? && bottled_dependents.blank? && testable_dependents.blank?
+
         # Install formula dependencies. These will have been uninstalled after building.
         test "brew", "install", "--only-dependencies", formula_name,
              env: { "HOMEBREW_DEVELOPER" => nil }
@@ -32,11 +39,6 @@ module Homebrew
         # Restore etc/var files that may have been nuked in the build stage.
         test "brew", "postinstall", formula_name
         return if steps.last.failed?
-
-        formula = Formulary.factory(formula_name)
-
-        source_dependents, bottled_dependents, testable_dependents =
-          dependents_for_formula(formula, formula_name, args: args)
 
         source_dependents.each do |dependent|
           install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
