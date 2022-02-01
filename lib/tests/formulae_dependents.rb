@@ -42,7 +42,7 @@ module Homebrew
           dependents_for_formula(formula, formula_name, args: args)
 
         source_dependents.each do |dependent|
-          next if @source_tested_dependents.include? dependent
+          next if @source_tested_dependents.include?(dependent)
 
           install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
           install_dependent(dependent, testable_dependents, args: args) if bottled?(dependent)
@@ -50,7 +50,8 @@ module Homebrew
         end
 
         bottled_dependents.each do |dependent|
-          next if @bottle_tested_dependents.include? dependent
+          # Testing a dependent from source also tests the bottle (if available).
+          next if @bottle_tested_dependents.include?(dependent) || @source_tested_dependents.include?(dependent)
 
           install_dependent(dependent, testable_dependents, args: args)
           @bottle_tested_dependents << dependent
