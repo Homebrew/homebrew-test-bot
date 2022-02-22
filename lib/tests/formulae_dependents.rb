@@ -215,8 +215,8 @@ module Homebrew
             dependent,
             cache_key: "test-bot-link-#{dependent.full_name}",
           ) do |dep_dependent, dependency|
-            next if !dependency.build? && !dependency.test?
-            next if dependency.test? && dep_dependent == dependent
+            next if !dependency.build? && !dependency.test? && !dependency.optional?
+            next if dependency.test? && dep_dependent == dependent && !dependency.optional?
 
             Dependency.prune
           end
