@@ -80,8 +80,7 @@ module Homebrew
 
       def unsatisfied_requirements_messages(formula)
         f = Formulary.factory(formula.full_name)
-        fi = FormulaInstaller.new(f)
-        fi.build_bottle = true
+        fi = FormulaInstaller.new(f, build_bottle: true)
 
         unsatisfied_requirements, = fi.expand_requirements
         return if unsatisfied_requirements.blank?
