@@ -148,9 +148,9 @@ module Homebrew
 
       clean_args = [
         "-dx",
-        "--exclude=*.bottle*.*",
-        "--exclude=Library/Taps",
-        "--exclude=Library/Homebrew/vendor",
+        "--exclude=/*.bottle*.*",
+        "--exclude=/Library/Taps",
+        "--exclude=/Library/Homebrew/vendor",
       ]
       return if Utils.safe_popen_read(
         git, "-C", repository, "clean", "--dry-run", *clean_args
