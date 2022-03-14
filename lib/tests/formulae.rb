@@ -216,6 +216,31 @@ module Homebrew
         !formula.bottle_disabled? && !args.build_from_source?
       end
 
+      def livecheck(formula)
+        return unless formula.livecheckable?
+        return if formula.livecheck.skip?
+
+        livecheck_step = test "brew", "livecheck", "--json", "--full-name", formula.full_name
+
+        return if livecheck_step.failed?
+        return unless livecheck_step.output?
+
+        livecheck_info = JSON.parse(livecheck_step.output)
+        return unless livecheck_info.first["version"]["newer_than_upstream"]
+
+        msg = "The current #{formula} version is newer than the latest determined by `brew livecheck`."
+        if ENV["GITHUB_ACTIONS"].present?
+          puts GitHub::Actions::Annotation.new(
+            :warning,
+            msg,
+            title: "#{formula} livecheck mismatch",
+            file:  formula.path.to_s.delete_prefix("#{repository}/"),
+          )
+        else
+          opoo msg
+        end
+      end
+
       def formula!(formula_name, args:)
         cleanup_during!(args: args)
 
@@ -271,10 +296,6 @@ module Homebrew
         fetch_args = [formula_name]
         fetch_args << build_flag
         fetch_args << "--force" if args.cleanup?
-
-        livecheck_args = [formula_name]
-        livecheck_args << "--full-name"
-        livecheck_args << "--debug"
 
         audit_args = [formula_name]
         audit_args << "--online" unless skip_online_checks
@@ -332,9 +353,7 @@ module Homebrew
              ignore_failures: ignore_failures
         install_step = steps.last
 
-        if formula.livecheckable? && !formula.livecheck.skip? && !skip_online_checks
-          test "brew", "livecheck", *livecheck_args
-        end
+        livecheck(formula) unless skip_online_checks
 
         test "brew", "audit", *audit_args unless formula.deprecated?
         unless install_step.passed?
