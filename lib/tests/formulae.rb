@@ -225,19 +225,54 @@ module Homebrew
         return if livecheck_step.failed?
         return unless livecheck_step.output?
 
-        livecheck_info = JSON.parse(livecheck_step.output)
-        return unless livecheck_info.first["version"]["newer_than_upstream"]
+        livecheck_info = JSON.parse(livecheck_step.output)&.first
 
-        msg = "The current #{formula} version is newer than the latest determined by `brew livecheck`."
+        if livecheck_info["status"] == "error"
+          error_msg = if livecheck_info["messages"].present? && livecheck_info["messages"].length.positive?
+            livecheck_info["messages"].join("\n")
+          else
+            # An error message should always be provided alongside an "error"
+            # status but this is a failsafe
+            "Error encountered (no message provided)"
+          end
+
+          if ENV["GITHUB_ACTIONS"].present?
+            puts GitHub::Actions::Annotation.new(
+              :error,
+              error_msg,
+              title: "#{formula}: livecheck error",
+              file:  formula.path.to_s.delete_prefix("#{repository}/"),
+            )
+          else
+            onoe error_msg
+          end
+        end
+
+        # `status` and `version` are mutually exclusive (the presence of one
+        # indicates the absence of the other)
+        return if livecheck_info["status"].present?
+
+        return if livecheck_info["version"]["newer_than_upstream"] != true
+
+        current_version = livecheck_json["version"]["current"]
+        latest_version = livecheck_json["version"]["latest"]
+
+        newer_than_upstream_msg = if current_version.present? && latest_version.present?
+          "The formula version (#{current_version}) is newer than the " \
+            "version from `brew livecheck` (#{latest_version})."
+        else
+          "The formula version is newer than the version from `brew livecheck`."
+        end
+
         if ENV["GITHUB_ACTIONS"].present?
           puts GitHub::Actions::Annotation.new(
             :warning,
-            msg,
-            title: "#{formula} livecheck mismatch",
+            newer_than_upstream_msg,
+            title: "#{formula}: Formula version newer than livecheck",
             file:  formula.path.to_s.delete_prefix("#{repository}/"),
           )
         else
-          opoo msg
+          opoo newer_than_upstream_msg
         end
       end
 
