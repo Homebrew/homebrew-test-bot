@@ -254,8 +254,8 @@ module Homebrew
 
         return if livecheck_info["version"]["newer_than_upstream"] != true
 
-        current_version = livecheck_json["version"]["current"]
-        latest_version = livecheck_json["version"]["latest"]
+        current_version = livecheck_info["version"]["current"]
+        latest_version = livecheck_info["version"]["latest"]
 
         newer_than_upstream_msg = if current_version.present? && latest_version.present?
           "The formula version (#{current_version}) is newer than the " \
