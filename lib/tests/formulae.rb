@@ -213,7 +213,7 @@ module Homebrew
           )
         end
 
-        !formula.bottle_disabled? && !args.build_from_source?
+        !args.build_from_source?
       end
 
       def livecheck(formula)
