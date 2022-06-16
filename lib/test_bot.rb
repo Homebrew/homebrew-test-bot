@@ -26,7 +26,7 @@ module Homebrew
       return Tap.fetch(tap) if tap
 
       # Get tap from GitHub Actions GITHUB_REPOSITORY
-      git_url = ENV["GITHUB_REPOSITORY"]
+      git_url = ENV.fetch("GITHUB_REPOSITORY", nil)
       return if git_url.blank?
 
       url_path = git_url.sub(%r{^https?://.*github\.com/}, "")
@@ -60,13 +60,15 @@ module Homebrew
       ENV["HOMEBREW_CURL_PATH"] = "/usr/bin/curl"
       ENV["HOMEBREW_GIT_PATH"] = GIT
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
-        "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV["PATH"]}"
+        "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV.fetch("PATH")}"
 
       if args.local?
-        ENV["HOMEBREW_HOME"] = ENV["HOME"] = "#{Dir.pwd}/home"
-        ENV["HOMEBREW_LOGS"] = "#{Dir.pwd}/logs"
-        FileUtils.mkdir_p ENV["HOMEBREW_HOME"]
-        FileUtils.mkdir_p ENV["HOMEBREW_LOGS"]
+        home = "#{Dir.pwd}/home"
+        logs = "#{Dir.pwd}/logs"
+        ENV["HOMEBREW_HOME"] = ENV["HOME"] = home
+        ENV["HOMEBREW_LOGS"] = logs
+        FileUtils.mkdir_p home
+        FileUtils.mkdir_p logs
       end
 
       tap = resolve_test_tap(args.tap)
