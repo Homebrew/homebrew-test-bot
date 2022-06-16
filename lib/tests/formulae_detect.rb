@@ -31,12 +31,15 @@ module Homebrew
         url = nil
         origin_ref = "origin/master"
 
+        github_repository = ENV.fetch("GITHUB_REPOSITORY", nil)
+        github_ref = ENV.fetch("GITHUB_REF", nil)
+
         if @argument == "HEAD"
           @testing_formulae = []
           # Use GitHub Actions variables for pull request jobs.
-          if ENV["GITHUB_REF"].present? && ENV["GITHUB_REPOSITORY"].present? &&
-             %r{refs/pull/(?<pr>\d+)/merge} =~ ENV["GITHUB_REF"]
-            url = "https://github.com/#{ENV["GITHUB_REPOSITORY"]}/pull/#{pr}/checks"
+          if github_ref.present? && github_repository.present? &&
+             %r{refs/pull/(?<pr>\d+)/merge} =~ github_ref
+            url = "https://github.com/#{github_repository}/pull/#{pr}/checks"
           end
         elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args: args))
           @testing_formulae = [canonical_formula_name]
@@ -45,7 +48,8 @@ module Homebrew
                 "#{@argument} is not detected from GitHub Actions or a formula name!"
         end
 
-        if ENV["GITHUB_REPOSITORY"].blank? || ENV["GITHUB_SHA"].blank? || ENV["GITHUB_REF"].blank?
+        github_sha = ENV.fetch("GITHUB_SHA", nil)
+        if github_repository.blank? || github_sha.blank? || github_ref.blank?
           if ENV["GITHUB_ACTIONS"]
             odie <<~EOS
               We cannot find the needed GitHub Actions environment variables! Check you have e.g. exported them to a Docker container.
@@ -55,21 +59,21 @@ module Homebrew
               No known CI provider detected! If you are using GitHub Actions then we cannot find the expected environment variables! Check you have e.g. exported them to a Docker container.
             EOS
           end
-        elsif tap.present? && tap.full_name.casecmp(ENV["GITHUB_REPOSITORY"]).zero?
+        elsif tap.present? && tap.full_name.casecmp(github_repository).zero?
           # Use GitHub Actions variables for pull request jobs.
-          if ENV["GITHUB_BASE_REF"].present?
+          if (base_ref = ENV.fetch("GITHUB_BASE_REF", nil)).present?
             unless tap.official?
               test git, "-C", repository, "fetch",
-                   "origin", "+refs/heads/#{ENV["GITHUB_BASE_REF"]}"
+                   "origin", "+refs/heads/#{base_ref}"
             end
-            origin_ref = "origin/#{ENV["GITHUB_BASE_REF"]}"
+            origin_ref = "origin/#{base_ref}"
             diff_start_sha1 = rev_parse(origin_ref)
-            diff_end_sha1 = ENV["GITHUB_SHA"]
+            diff_end_sha1 = github_sha
           # Use GitHub Actions variables for branch jobs.
           else
-            test git, "-C", repository, "fetch", "origin", "+#{ENV["GITHUB_REF"]}" unless tap.official?
-            origin_ref = "origin/#{ENV["GITHUB_REF"].gsub(%r{^refs/heads/}, "")}"
-            diff_end_sha1 = diff_start_sha1 = ENV["GITHUB_SHA"]
+            test git, "-C", repository, "fetch", "origin", "+#{github_ref}" unless tap.official?
+            origin_ref = "origin/#{github_ref.gsub(%r{^refs/heads/}, "")}"
+            diff_end_sha1 = diff_start_sha1 = github_sha
           end
         end
 
