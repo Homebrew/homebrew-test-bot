@@ -22,11 +22,6 @@ module Homebrew
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
 
-        if OS.linux? && ENV["HOMEBREW_ON_DEBIAN7"]
-          skipped formula_name, "Not testing dependents in Debian Wheezy container"
-          return
-        end
-
         # Install formula dependencies. These will have been uninstalled after building.
         test "brew", "install", "--only-dependencies", formula_name,
              env: { "HOMEBREW_DEVELOPER" => nil }
