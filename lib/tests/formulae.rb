@@ -70,6 +70,21 @@ module Homebrew
         formula.recursive_dependencies.each do |dependency|
           conflicts += dependency.to_formula.conflicts
         end
+
+        build_fails_with_boost_installed = %w[mysql percona-server percona-xtrabackup]
+        if build_fails_with_boost_installed.include?(formula_name)
+          boost = begin
+            Formula["boost"]
+          rescue FormulaUnavailableError
+            nil
+          end
+
+          if boost.present?
+            conflicts << boost
+            conflicts += boost.versioned_formulae
+          end
+        end
+
         unlink_formulae = conflicts.map(&:name)
         unlink_formulae.uniq.each do |name|
           unlink_formula = Formulary.factory(name)
