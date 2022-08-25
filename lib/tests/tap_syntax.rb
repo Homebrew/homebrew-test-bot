@@ -12,7 +12,7 @@ module Homebrew
                                 MacOS.active_developer_dir == "/Applications/Xcode.app/Contents/Developer"
         test "brew", "style", tap.name unless broken_xcode_rubygems
 
-        test "brew", "audit", "--tap=#{tap.name}", "--except=version,gcc_dependency"
+        test "brew", "audit", "--tap=#{tap.name}", "--except=version"
       end
     end
   end
