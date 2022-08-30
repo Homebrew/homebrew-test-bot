@@ -287,6 +287,8 @@ module Homebrew
           return
         end
 
+        test "brew", "deps", "--tree", "--annotate", "--include-build", "--include-test", formula_name
+
         deps_without_compatible_bottles = formula.deps.map(&:to_formula)
         deps_without_compatible_bottles.reject! do |dep|
           bottled_or_built?(dep, @built_formulae - @skipped_or_failed_formulae)
