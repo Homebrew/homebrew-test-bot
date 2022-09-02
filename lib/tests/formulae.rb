@@ -96,12 +96,17 @@ module Homebrew
 
         dependencies -= installed
         @unchanged_dependencies = dependencies - @testing_formulae
-        test "brew", "fetch", "--retry", *@unchanged_dependencies unless @unchanged_dependencies.empty?
+        if @unchanged_dependencies.present?
+          test "brew", "fetch", "--retry",
+               named_args:      @unchanged_dependencies,
+               ignore_failures: true
+        end
 
         changed_dependencies = dependencies - @unchanged_dependencies
         unless changed_dependencies.empty?
           test "brew", "fetch", "--retry", "--build-from-source",
-               *changed_dependencies
+               named_args:      changed_dependencies,
+               ignore_failures: true
 
           ignore_failures = changed_dependencies.any? do |dep|
             !bottled?(Formulary.factory(dep), no_older_versions: true)
@@ -330,8 +335,7 @@ module Homebrew
         # Online checks are a bit flaky and less useful for PRs that modify multiple formulae.
         skip_online_checks = args.skip_online_checks? || (@testing_formulae.count > 5)
 
-        fetch_args = [formula_name]
-        fetch_args << build_flag
+        fetch_args = [build_flag]
         fetch_args << "--force" if args.cleanup?
 
         audit_args = [formula_name]
@@ -364,7 +368,9 @@ module Homebrew
 
         info_header "Starting build of #{formula_name}"
 
-        test "brew", "fetch", "--retry", *fetch_args
+        test "brew", "fetch", "--retry", *fetch_args,
+             named_args:      formula_name,
+             ignore_failures: true
 
         test "brew", "uninstall", "--force", formula_name if formula.latest_version_installed?
 
@@ -372,8 +378,10 @@ module Homebrew
         install_args << build_flag
 
         # Don't care about e.g. bottle failures for dependencies.
-        test "brew", "install", "--only-dependencies", *install_args, formula_name,
-             env: { "HOMEBREW_DEVELOPER" => nil }
+        test "brew", "install", "--only-dependencies", *install_args,
+             named_args:      formula_name,
+             ignore_failures: true,
+             env:             { "HOMEBREW_DEVELOPER" => nil }
 
         # Do this after installing dependencies to avoid skipping formulae
         # that build with and declare a dependency on GCC. See discussion at
