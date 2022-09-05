@@ -461,7 +461,9 @@ module Homebrew
       def deleted_formula!(formula_name)
         test_header(:Formulae, method: "deleted_formula!(#{formula_name})")
 
-        test "brew", "uses", "--include-build",
+        test "brew", "uses",
+             "--eval-all",
+             "--include-build",
              "--include-optional",
              "--include-test",
              formula_name
