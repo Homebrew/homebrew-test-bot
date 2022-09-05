@@ -14,6 +14,9 @@ module Homebrew
       end
 
       def run!(args:)
+        # #run! modifies `@testing_formulae`, so we need to track this separately.
+        @testing_formulae_count = @testing_formulae.count
+
         sorted_formulae.each do |f|
           formula!(f, args: args)
           puts
@@ -328,7 +331,7 @@ module Homebrew
         end
 
         # Online checks are a bit flaky and less useful for PRs that modify multiple formulae.
-        skip_online_checks = args.skip_online_checks? || (@testing_formulae.count > 5)
+        skip_online_checks = args.skip_online_checks? || (@testing_formulae_count > 5)
 
         fetch_args = [formula_name]
         fetch_args << build_flag
