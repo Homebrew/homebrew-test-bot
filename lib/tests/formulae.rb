@@ -396,6 +396,7 @@ module Homebrew
         livecheck(formula) unless skip_online_checks
 
         test "brew", "audit", *audit_args unless formula.deprecated?
+        test "brew", "audit", "--strict", "--only=gcc_dependency", formula_name
         unless install_step.passed?
           if ignore_failures
             skipped formula_name, "install failed"
