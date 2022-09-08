@@ -291,7 +291,10 @@ module Homebrew
         end
 
         test "brew", "audit", "--strict", "--only=gcc_dependency", formula_name
-        return unless steps.last.passed?
+        if steps.last.failed?
+          skipped formula_name, "#{formula_name} should not have a Linux-only GCC dependency!"
+          return
+        end
 
         test "brew", "deps", "--tree", "--annotate", "--include-build", "--include-test", formula_name
 
