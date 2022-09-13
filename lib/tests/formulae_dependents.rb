@@ -69,7 +69,7 @@ module Homebrew
         #       `baz`. When testing `baz` with `--build-dependents-from-source`, `foo` is
         #       not tested, but maybe should be.
         dependents += with_env(HOMEBREW_STDERR: "1") do
-          Utils.safe_popen_read("brew", "uses", *uses_args, formula_name)
+          Utils.safe_popen_read("brew", "uses", *uses_args, "--include-build", formula_name)
                .split("\n")
         end
         dependents&.uniq!
