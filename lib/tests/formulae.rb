@@ -399,7 +399,7 @@ module Homebrew
              ignore_failures: ignore_failures
         install_step = steps.last
 
-        livecheck(formula) unless skip_online_checks
+        livecheck(formula) if !args.skip_livecheck? && !skip_online_checks
 
         test "brew", "audit", *audit_args unless formula.deprecated?
         unless install_step.passed?

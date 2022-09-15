@@ -55,6 +55,8 @@ module Homebrew
              description: "Don't pass `--online` to `brew audit` and skip `brew livecheck`."
       switch "--skip-dependents",
              description: "Don't test any dependents."
+      switch "--skip-livecheck",
+             description: "Don't test livecheck."
       switch "--skip-recursive-dependents",
              description: "Only test the direct dependents."
       switch "--only-cleanup-before",
