@@ -8,8 +8,10 @@ module Homebrew
       def run!(args:)
         @source_tested_dependents = []
         @bottle_tested_dependents = []
+        @testable_formulae = @testing_formulae - skipped_or_failed_formulae
+        @postinstalled_formulae = []
 
-        (@testing_formulae - skipped_or_failed_formulae).each do |f|
+        @testable_formulae.each do |f|
           dependent_formulae!(f, args: args)
           puts
         end
@@ -22,19 +24,29 @@ module Homebrew
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
 
+        formula = Formulary.factory(formula_name)
+
+        source_dependents, bottled_dependents, testable_dependents =
+          dependents_for_formula(formula, formula_name, args: args)
+
+        return if source_dependents.blank? &&
+                  bottled_dependents.blank? &&
+                  testable_dependents.blank?
+
         # Install formula dependencies. These will have been uninstalled after building.
         test "brew", "install", "--only-dependencies", formula_name,
              env: { "HOMEBREW_DEVELOPER" => nil }
         return if steps.last.failed?
 
         # Restore etc/var files that may have been nuked in the build stage.
-        test "brew", "postinstall", formula_name
+        formula_dependencies = Utils.safe_popen_read("brew", "deps", formula_name).split("\n")
+        # Some dependencies will need postinstalling too.
+        postinstall_dependencies = @testable_formulae & formula_dependencies
+        postinstall_formulae = [formula_name, *postinstall_dependencies] - @postinstalled_formulae
+        test "brew", "postinstall", *postinstall_formulae
         return if steps.last.failed?
 
-        formula = Formulary.factory(formula_name)
-
-        source_dependents, bottled_dependents, testable_dependents =
-          dependents_for_formula(formula, formula_name, args: args)
+        @postinstalled_formulae += postinstall_formulae
 
         source_dependents.each do |dependent|
           next if @source_tested_dependents.include?(dependent)
@@ -54,6 +66,21 @@ module Homebrew
       end
 
       def dependents_for_formula(formula, formula_name, args:)
+        # Calling `brew uses` is slow, so let's reserve doing that for
+        # if we can find a formula in the same tap that declares a dependency
+        # on the formula we are testing.
+        has_dependents = formula.tap.potential_formula_dirs.any? do |dir|
+          next false unless dir.exist?
+
+          dir.children.any? do |child|
+            next false unless child.file?
+            next false unless child.extname == ".rb"
+
+            child.read.include? "depends_on \"#{formula_name}\""
+          end
+        end
+        return unless has_dependents
+
         info_header "Determining dependents..."
 
         uses_args = %w[--formula --eval-all]
@@ -64,13 +91,16 @@ module Homebrew
                .split("\n")
         end
 
-        # TODO: Consider handling the following case better.
-        #       `foo` has a build dependency on `bar`, and `bar` has a runtime dependency on
-        #       `baz`. When testing `baz` with `--build-dependents-from-source`, `foo` is
-        #       not tested, but maybe should be.
-        dependents += with_env(HOMEBREW_STDERR: "1") do
-          Utils.safe_popen_read("brew", "uses", *uses_args, "--include-build", formula_name)
-               .split("\n")
+        # We care about build dependents only if we are building them from source.
+        if args.build_dependents_from_source?
+          # TODO: Consider handling the following case better.
+          #       `foo` has a build dependency on `bar`, and `bar` has a runtime dependency on
+          #       `baz`. When testing `baz` with `--build-dependents-from-source`, `foo` is
+          #       not tested, but maybe should be.
+          dependents += with_env(HOMEBREW_STDERR: "1") do
+            Utils.safe_popen_read("brew", "uses", *uses_args, "--include-build", formula_name)
+                 .split("\n")
+          end
         end
         dependents&.uniq!
         dependents&.sort!
@@ -104,7 +134,7 @@ module Homebrew
           next false if OS.linux? && dependent.requirements.exclude?(LinuxRequirement.new)
 
           all_deps_bottled_or_built = deps.all? do |d|
-            bottled_or_built?(d.to_formula, @testing_formulae - @skipped_or_failed_formulae)
+            bottled_or_built?(d.to_formula, @testable_formulae)
           end
           args.build_dependents_from_source? && all_deps_bottled_or_built
         end
