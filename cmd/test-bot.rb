@@ -104,11 +104,10 @@ module Homebrew
   end
 
   def setup_argv_and_env
-    github_actions = ENV["GITHUB_ACTIONS"].present?
-    if github_actions
-      ARGV << "--cleanup" << "--local"
-      ENV["HOMEBREW_COLOR"] = "1"
-      ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
-    end
+    return if ENV["GITHUB_ACTIONS"].blank?
+
+    ARGV << "--cleanup" << "--local"
+    ENV["HOMEBREW_COLOR"] = "1"
+    ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
   end
 end
