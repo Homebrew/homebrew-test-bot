@@ -106,14 +106,12 @@ module Homebrew
   def setup_argv_and_env
     github_actions = ENV["GITHUB_ACTIONS"].present?
     if github_actions
-      ARGV << "--cleanup"
+      ARGV << "--cleanup" << "--local"
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
     end
 
     # TODO: remove me after a few days
     ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"] = "1" if ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"].present?
-
-    ARGV << "--local" if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
   end
 end
