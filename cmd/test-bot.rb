@@ -110,8 +110,5 @@ module Homebrew
       ENV["HOMEBREW_COLOR"] = "1"
       ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
     end
-
-    # TODO: remove me after a few days
-    ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"] = "1" if ENV["GITHUB_ACTIONS_HOMEBREW_MACOS_SELF_HOSTED"].present?
   end
 end
