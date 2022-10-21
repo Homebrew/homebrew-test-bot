@@ -65,6 +65,7 @@ jobs:
             docker exec brewtestbot \
               brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
           else
+            cd
             brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
           fi
 
@@ -76,6 +77,7 @@ jobs:
                             --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }} \
                             --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
           else
+            cd
             brew test-bot --only-formulae-dependents --junit \
                           --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }} \
                           --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
