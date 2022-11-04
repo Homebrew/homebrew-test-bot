@@ -176,7 +176,7 @@ module Homebrew
         @bottle_json_filename =
           @bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
         bottle_merge_args =
-          ["--merge", "--write", "--no-commit", @bottle_json_filename]
+          ["--merge", "--write", "--no-commit", "--no-all-checks", @bottle_json_filename]
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
 
         test "brew", "bottle", *bottle_merge_args
