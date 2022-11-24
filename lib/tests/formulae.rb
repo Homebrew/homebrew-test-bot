@@ -296,7 +296,7 @@ module Homebrew
           return
         end
 
-        test "brew", "deps", "--tree", "--annotate", "--include-build", "--include-test", formula_name
+        test "brew", "deps", "--tree", "--annotate", "--include-build", "--include-test", named_args: formula_name
 
         deps_without_compatible_bottles = formula.deps.map(&:to_formula)
         deps_without_compatible_bottles.reject! do |dep|
