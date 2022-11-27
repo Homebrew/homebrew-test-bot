@@ -18,9 +18,11 @@ module Homebrew
 
         return unless ENV["GITHUB_ACTIONS"]
 
-        puts "::set-output name=testing_formulae::#{@testing_formulae.join(",")}"
-        puts "::set-output name=added_formulae::#{@added_formulae.join(",")}"
-        puts "::set-output name=deleted_formulae::#{@deleted_formulae.join(",")}"
+        File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
+          f.puts "testing_formulae=#{@testing_formulae.join(",")}"
+          f.puts "added_formulae=#{@added_formulae.join(",")}"
+          f.puts "deleted_formulae=#{@deleted_formulae.join(",")}"
+        end
       end
 
       private
