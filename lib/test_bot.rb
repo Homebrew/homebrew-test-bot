@@ -62,6 +62,8 @@ module Homebrew
       ENV["HOMEBREW_DISALLOW_LIBNSL1"] = "1"
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV.fetch("PATH")}"
+      # https://github.com/Homebrew/brew/issues/14274
+      ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 
       if args.local?
         home = "#{Dir.pwd}/home"
