@@ -64,6 +64,7 @@ module Homebrew
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV.fetch("PATH")}"
       # https://github.com/Homebrew/brew/issues/14274
       ENV["PYTHONDONTWRITEBYTECODE"] = "1"
+      ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1"
 
       if args.local?
         home = "#{Dir.pwd}/home"
