@@ -51,9 +51,12 @@ jobs:
         run: |
           docker build -t brew .
           docker create \
-            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_OUTPUT -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            -v "$GITHUB_OUTPUT:$GITHUB_OUTPUT" \
             --name=brewtestbot brew sleep infinity
           docker start brewtestbot
+          docker exec brewtestbot \
+            sudo setfacl -Rm "d:u:linuxbrew:rwX,u:linuxbrew:rwX" "$RUNNER_TEMP"
 
       - run: brew test-bot --only-formulae-detect --test-default-formula
         id: formulae-detect

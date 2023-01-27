@@ -29,7 +29,9 @@ module Homebrew
 
         return unless ENV["GITHUB_ACTIONS"]
 
-        puts "::set-output name=skipped_or_failed_formulae::#{@skipped_or_failed_formulae.join(",")}"
+        File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
+          f.puts "skipped_or_failed_formulae=#{@skipped_or_failed_formulae.join(",")}"
+        end
       end
 
       private
