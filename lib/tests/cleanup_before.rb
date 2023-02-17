@@ -6,15 +6,8 @@ module Homebrew
       def run!(args:)
         test_header(:CleanupBefore)
 
-        if tap.to_s != CoreTap.instance.name
-          core_path = CoreTap.instance.path
-          if core_path.exist?
-            reset_if_needed(core_path.to_s)
-          else
-            test git, "clone",
-                 CoreTap.instance.default_remote,
-                 core_path.to_s
-          end
+        if tap.to_s != CoreTap.instance.name && CoreTap.instance.installed?
+          reset_if_needed(CoreTap.instance.path.to_s)
         end
 
         Pathname.glob("*.bottle*.*").each(&:unlink)
