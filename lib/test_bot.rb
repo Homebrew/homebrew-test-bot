@@ -64,7 +64,6 @@ module Homebrew
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV.fetch("PATH")}"
       # https://github.com/Homebrew/brew/issues/14274
       ENV["PYTHONDONTWRITEBYTECODE"] = "1"
-      ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1"
 
       if args.local?
         home = "#{Dir.pwd}/home"
@@ -76,6 +75,9 @@ module Homebrew
       end
 
       tap = resolve_test_tap(args.tap)
+
+      ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1" if tap.to_s == CoreTap.instance.name
+
       # Tap repository if required, this is done before everything else
       # because Formula parsing and/or git commit hash lookup depends on it.
       # At the same time, make sure Tap is not a shallow clone.
@@ -108,7 +110,7 @@ module Homebrew
       ).strip
       puts Formatter.headline("Using Homebrew/brew #{brew_version} (#{brew_commit_subject})", color: :cyan)
 
-      if tap.to_s != CoreTap.instance.name
+      if tap.to_s != CoreTap.instance.name && CoreTap.instance.installed?
         core_revision = Utils.safe_popen_read(
           GIT, "-C", CoreTap.instance.path.to_s,
           "log", "-1", "--format=%h (%s)"

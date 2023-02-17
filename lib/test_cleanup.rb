@@ -7,12 +7,12 @@ module Homebrew
   class TestCleanup < Test
     protected
 
-    REQUIRED_TAPS = %W[
-      #{CoreTap.instance.name}
+    REQUIRED_TAPS = %w[
       homebrew/test-bot
     ].freeze
 
-    ALLOWED_TAPS = (REQUIRED_TAPS + %w[
+    ALLOWED_TAPS = (REQUIRED_TAPS + %W[
+      #{CoreTap.instance.name}
       homebrew/bundle
       homebrew/cask
       homebrew/cask-versions
