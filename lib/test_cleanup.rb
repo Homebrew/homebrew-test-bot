@@ -46,9 +46,11 @@ module Homebrew
     def cleanup_shared
       FileUtils.chmod_R("u+X", HOMEBREW_CELLAR, force: true)
 
-      cleanup_git_meta(repository)
-      clean_if_needed(repository)
-      prune_if_needed(repository)
+      if repository.exist?
+        cleanup_git_meta(repository)
+        clean_if_needed(repository)
+        prune_if_needed(repository)
+      end
 
       if HOMEBREW_REPOSITORY != HOMEBREW_PREFIX
         paths_to_delete = []
