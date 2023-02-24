@@ -126,10 +126,16 @@ module Homebrew
             diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
         end
 
+        # If a formula is both added and deleted: it's actually modified.
+        added_and_deleted_formulae = @added_formulae | @deleted_formulae
+        @added_formulae -= added_and_deleted_formulae
+        @deleted_formulae -= added_and_deleted_formulae
+        modified_formulae += added_and_deleted_formulae
+
         if args.test_default_formula?
           # Build the default test formula.
           @test_default_formula = true
-          modified_formulae << "testbottest"
+          modified_formulae << "homebrew/test-bot/testbottest"
         end
 
         @testing_formulae += @added_formulae + modified_formulae
@@ -137,6 +143,12 @@ module Homebrew
         if @testing_formulae.blank? && @deleted_formulae.blank? && diff_start_sha1 == diff_end_sha1
           raise UsageError, "Did not find any formulae or commits to test!"
         end
+
+        # Remove all duplicates.
+        @testing_formulae.uniq!
+        @added_formulae.uniq!
+        modified_formulae.uniq!
+        @deleted_formulae.uniq!
 
         puts <<-EOS
 
