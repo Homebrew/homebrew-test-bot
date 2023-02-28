@@ -127,7 +127,7 @@ module Homebrew
         end
 
         # If a formula is both added and deleted: it's actually modified.
-        added_and_deleted_formulae = @added_formulae | @deleted_formulae
+        added_and_deleted_formulae = @added_formulae & @deleted_formulae
         @added_formulae -= added_and_deleted_formulae
         @deleted_formulae -= added_and_deleted_formulae
         modified_formulae += added_and_deleted_formulae
