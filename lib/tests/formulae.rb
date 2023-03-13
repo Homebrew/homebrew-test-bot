@@ -72,9 +72,28 @@ module Homebrew
 
       def setup_formulae_deps_instances(formula, formula_name, args:)
         conflicts = formula.conflicts
-        formula.recursive_dependencies.each do |dependency|
-          conflicts += dependency.to_formula.conflicts
+        formula_recursive_dependencies = formula.recursive_dependencies.map(&:to_formula)
+        formula_recursive_dependencies.each do |dependency|
+          conflicts += dependency.conflicts
         end
+
+        # If we depend on a versioned formula, make sure to unlink any other
+        # installed versions to make sure that we use the right one.
+        versioned_dependencies = formula_recursive_dependencies.select(&:versioned_formula?)
+        versioned_dependencies.each do |dependency|
+          alternative_versions = dependency.versioned_formulae
+
+          begin
+            unversioned_name = dependency.name.sub(/@\d+(\.\d+)*$/, "")
+            alternative_versions << Formula[unversioned_name]
+          rescue FormulaUnavailableError
+            nil
+          end
+
+          unneeded_alternative_versions = alternative_versions - formula_recursive_dependencies
+          conflicts += unneeded_alternative_versions
+        end
+
         unlink_formulae = conflicts.map(&:name)
         unlink_formulae.uniq.each do |name|
           unlink_formula = Formulary.factory(name)
