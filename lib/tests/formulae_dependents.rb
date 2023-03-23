@@ -9,20 +9,41 @@ module Homebrew
         @source_tested_dependents = []
         @bottle_tested_dependents = []
 
-        (@testing_formulae - skipped_or_failed_formulae).each do |f|
-          dependent_formulae!(f, args: args)
+        @dependent_testing_formulae = @testing_formulae - skipped_or_failed_formulae
+
+        install_formulae_if_needed_from_bottles!(args: args)
+
+        @dependent_testing_formulae.each do |formula_name|
+          dependent_formulae!(formula_name, args: args)
           puts
         end
       end
 
       private
 
+      def install_formulae_if_needed_from_bottles!(args:)
+        @dependent_testing_formulae.each do |formula_name|
+          formula = Formulary.factory(formula_name)
+          next if formula.latest_version_installed?
+
+          bottle_filename = Dir.glob("#{formula_name}--*.#{Utils::Bottles.tag}.bottle*.tar.gz").first
+          if bottle_filename.blank?
+            raise "Failed to find bottle for '#{formula_name}'." unless args.dry_run?
+
+            bottle_filename = "$BOTTLE_FILENAME"
+          end
+
+          test "brew", "install", "--ignore-dependencies", bottle_filename
+          puts
+        end
+      end
+
       def dependent_formulae!(formula_name, args:)
         cleanup_during!(args: args)
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
 
-        # Install formula dependencies. These will have been uninstalled after building.
+        # Install formula dependencies. These may not be installed.
         test "brew", "install", "--only-dependencies", formula_name,
              env: { "HOMEBREW_DEVELOPER" => nil }
         return if steps.last.failed?
@@ -104,7 +125,7 @@ module Homebrew
           next false if OS.linux? && dependent.requirements.exclude?(LinuxRequirement.new)
 
           all_deps_bottled_or_built = deps.all? do |d|
-            bottled_or_built?(d.to_formula, @testing_formulae - @skipped_or_failed_formulae)
+            bottled_or_built?(d.to_formula, @dependent_testing_formulae)
           end
           args.build_dependents_from_source? && all_deps_bottled_or_built
         end
