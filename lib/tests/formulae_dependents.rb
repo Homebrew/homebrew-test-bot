@@ -33,7 +33,7 @@ module Homebrew
             bottle_filename = "$BOTTLE_FILENAME"
           end
 
-          test "brew", "install", "--ignore-dependencies", bottle_filename
+          test "brew", "install", "--ignore-dependencies", "--skip-post-install", bottle_filename
           puts
         end
       end
