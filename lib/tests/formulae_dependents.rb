@@ -6,6 +6,9 @@ module Homebrew
       attr_writer :testing_formulae
 
       def run!(args:)
+        info_header "Skipped or failed formulae:"
+        puts skipped_or_failed_formulae
+
         @source_tested_dependents = []
         @bottle_tested_dependents = []
 
