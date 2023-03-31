@@ -34,6 +34,7 @@ module Homebrew
           end
 
           test "brew", "install", "--ignore-dependencies", "--skip-post-install", bottle_filename
+          test "brew", "unlink", formula_name
           puts
         end
       end
