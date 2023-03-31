@@ -31,14 +31,18 @@ module Homebrew
 
       bottle_output_path = Pathname("bottle_output.txt")
       linkage_output_path = Pathname("linkage_output.txt")
+      @skipped_or_failed_formulae_output_path = Pathname("skipped_or_failed_formulae-#{Utils::Bottles.tag}.txt")
+
       if no_only_args?(args) || args.only_formulae?
         ensure_blank_file_exists!(bottle_output_path)
         ensure_blank_file_exists!(linkage_output_path)
+        ensure_blank_file_exists!(@skipped_or_failed_formulae_output_path)
       end
 
       output_paths = {
-        bottle:  bottle_output_path,
-        linkage: linkage_output_path,
+        bottle:                     bottle_output_path,
+        linkage:                    linkage_output_path,
+        skipped_or_failed_formulae: @skipped_or_failed_formulae_output_path,
       }
 
       test_bot_args = args.named.dup
@@ -209,8 +213,10 @@ module Homebrew
           formulae_test.run!(args: args)
 
           formulae_test.skipped_or_failed_formulae
-        else
+        elsif args.skipped_or_failed_formulae.present?
           Array(args.skipped_or_failed_formulae)
+        elsif @skipped_or_failed_formulae_output_path.exist?
+          @skipped_or_failed_formulae_output_path.read.chomp.split(",")
         end
 
         if (dependents_test = tests[:formulae_dependents])
