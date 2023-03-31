@@ -11,6 +11,7 @@ module Homebrew
         @built_formulae = []
         @bottle_output_path = output_paths[:bottle]
         @linkage_output_path = output_paths[:linkage]
+        @skipped_or_failed_formulae_output_path = output_paths[:skipped_or_failed_formulae]
       end
 
       def run!(args:)
@@ -32,6 +33,8 @@ module Homebrew
         File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
           f.puts "skipped_or_failed_formulae=#{@skipped_or_failed_formulae.join(",")}"
         end
+
+        @skipped_or_failed_formulae_output_path.write(@skipped_or_failed_formulae.join(","))
       end
 
       private
