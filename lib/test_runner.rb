@@ -217,6 +217,8 @@ module Homebrew
           Array(args.skipped_or_failed_formulae)
         elsif @skipped_or_failed_formulae_output_path.exist?
           @skipped_or_failed_formulae_output_path.read.chomp.split(",")
+        else
+          []
         end
 
         if (dependents_test = tests[:formulae_dependents])
