@@ -59,15 +59,7 @@ module Homebrew
         # Install formula dependencies. These may not be installed.
         test "brew", "install", "--only-dependencies", formula_name,
              env: { "HOMEBREW_DEVELOPER" => nil }
-        # Dump the full output here to help debug Homebrew/homebrew-core#127133.
-        steps.last.puts_full_output
         return if steps.last.failed?
-
-        # Do `brew list` to help debug Homebrew/homebrew-core#127133.
-        test "brew", "list", "--formulae"
-        steps.last.puts_full_output
-        test "brew", "list", "--formula", "shared-mime-info", ignore_failures: true
-        steps.last.puts_full_output
 
         # Restore etc/var files that may have been nuked in the build stage.
         test "brew", "postinstall", formula_name
