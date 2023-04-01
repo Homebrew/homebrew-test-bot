@@ -47,6 +47,15 @@ module Homebrew
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
 
+        # If we installed this from a bottle, then the formula isn't linked.
+        # If the formula isn't linked, `brew install --only-dependences` does
+        # nothing with the message:
+        #     Warning: formula x.y.z is already installed, it's just not linked.
+        #     To link this version, run:
+        #       brew link formula
+        unlink_conflicts Formula[formula_name]
+        test "brew", "link", formula_name
+
         # Install formula dependencies. These may not be installed.
         test "brew", "install", "--only-dependencies", formula_name,
              env: { "HOMEBREW_DEVELOPER" => nil }
