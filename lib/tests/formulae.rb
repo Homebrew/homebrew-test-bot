@@ -210,7 +210,13 @@ module Homebrew
         root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
         filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
 
-        download_strategy = CurlDownloadStrategy.new("#{root_url}/#{filename}", formula.name, formula.version)
+        # Test bottle is never uploaded, so we need to stub a cached download.
+        download_strategy = CurlGitHubPackagesDownloadStrategy.new(
+          "#{root_url}/#{filename}",
+          formula.name,
+          formula.version,
+        )
+        download_strategy.resolved_basename = File.basename(@bottle_filename)
         download_strategy.cached_location.parent.mkpath
         FileUtils.ln @bottle_filename, download_strategy.cached_location, force: true
         FileUtils.ln_s download_strategy.cached_location.relative_path_from(download_strategy.symlink_location),
