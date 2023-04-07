@@ -191,7 +191,6 @@ module Homebrew
           start_revision, end_revision, "--", path
         ).lines.map do |line|
           file = Pathname.new line.chomp
-          next if tap.cask_file?(file)
           next unless tap.formula_file?(file)
 
           tap.formula_file_to_name(file)
