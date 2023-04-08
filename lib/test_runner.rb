@@ -8,6 +8,7 @@ require_relative "tests/cleanup_after"
 require_relative "tests/cleanup_before"
 require_relative "tests/formulae_detect"
 require_relative "tests/formulae_dependents"
+require_relative "tests/formulae_fetch"
 require_relative "tests/formulae"
 require_relative "tests/setup"
 require_relative "tests/tap_syntax"
@@ -111,6 +112,7 @@ module Homebrew
                  args.only_formulae? ||
                  args.only_formulae_detect? ||
                  args.only_formulae_dependents? ||
+                 args.only_formulae_fetch? ||
                  args.only_cleanup_after?
       !any_only
     end
@@ -180,6 +182,14 @@ module Homebrew
         end
       end
 
+      if args.only_formulae_fetch?
+        tests[:formulae_fetch] = Tests::FormulaeFetch.new(tap:       tap,
+                                                          git:       git,
+                                                          dry_run:   args.dry_run?,
+                                                          fail_fast: args.fail_fast?,
+                                                          verbose:   args.verbose?)
+      end
+
       tests
     end
 
@@ -226,6 +236,12 @@ module Homebrew
           dependents_test.skipped_or_failed_formulae = skipped_or_failed_formulae
 
           dependents_test.run!(args: args)
+        end
+
+        if (fetch_test = tests[:formulae_fetch])
+          fetch_test.testing_formulae = testing_formulae
+
+          fetch_test.run!(args: args)
         end
       ensure
         tests[:cleanup_after]&.run!(args: args)

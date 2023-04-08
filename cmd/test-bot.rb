@@ -71,6 +71,8 @@ module Homebrew
              description: "Only run the formulae detection steps."
       switch "--only-formulae-dependents",
              description: "Only run the formulae dependents steps."
+      switch "--only-formulae-fetch",
+             description: "Only run the formulae fetch steps."
       switch "--only-cleanup-after",
              description: "Only run the post-cleanup step. Needs `--cleanup`."
       comma_array "--testing-formulae=",
