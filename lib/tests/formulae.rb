@@ -310,7 +310,7 @@ module Homebrew
       end
 
       def formula!(formula_name, args:)
-        cleanup_during!(args: args)
+        cleanup_during!(@testing_formulae, args: args)
 
         test_header(:Formulae, method: "formula!(#{formula_name})")
 

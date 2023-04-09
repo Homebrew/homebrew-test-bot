@@ -88,7 +88,7 @@ module Homebrew
         unsatisfied_requirements.values.flatten.map(&:message).join("\n").presence
       end
 
-      def cleanup_during!(args:)
+      def cleanup_during!(keep_formulae, args:)
         return unless args.cleanup?
         return unless HOMEBREW_CACHE.exist?
 
@@ -102,6 +102,25 @@ module Homebrew
 
         FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
         test "rm", "-rf", HOMEBREW_CACHE.to_s
+
+        if @cleaned_up_during.blank?
+          @cleaned_up_during = true
+          return
+        end
+
+        installed_formulae = Utils.safe_popen_read("brew", "list", "--full-name", "--formulae").split("\n")
+        uninstallable_formulae = installed_formulae - keep_formulae
+
+        @installed_formulae_deps ||= Hash.new do |h, formula|
+          h[formula] = Utils.safe_popen_read("brew", "deps", "--full-name", formula).split("\n")
+        end
+        uninstallable_formulae.reject! do |name|
+          keep_formulae.any? { |f| @installed_formulae_deps[f].include?(name) }
+        end
+
+        return if uninstallable_formulae.blank?
+
+        test "brew", "uninstall", "--force", "--ignore-dependencies", *uninstallable_formulae
       end
     end
   end
