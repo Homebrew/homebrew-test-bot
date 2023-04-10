@@ -43,7 +43,7 @@ module Homebrew
       end
 
       def dependent_formulae!(formula_name, args:)
-        cleanup_during!(args: args)
+        cleanup_during!(@dependent_testing_formulae, args: args)
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
 
@@ -181,7 +181,7 @@ module Homebrew
           return
         end
 
-        cleanup_during!(args: args)
+        cleanup_during!(@dependent_testing_formulae, args: args)
 
         required_dependent_deps = dependent.deps.reject(&:optional?)
         bottled_on_current_version = bottled?(dependent, no_older_versions: true)
