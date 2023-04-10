@@ -71,8 +71,8 @@ module Homebrew
              description: "Only run the formulae detection steps."
       switch "--only-formulae-dependents",
              description: "Only run the formulae dependents steps."
-      switch "--only-formulae-fetch",
-             description: "Only run the formulae fetch steps. This optional post-upload test checks that all " \
+      switch "--only-bottles-fetch",
+             description: "Only run the bottles fetch steps. This optional post-upload test checks that all " \
                           "the bottles were uploaded correctly. It is not run unless requested and only needs " \
                           "to be run on a single machine. The bottle commit to be tested must be on the tested " \
                           "branch."

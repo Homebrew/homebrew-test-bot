@@ -2,7 +2,7 @@
 
 module Homebrew
   module Tests
-    class FormulaeFetch < TestFormulae
+    class BottlesFetch < TestFormulae
       attr_accessor :testing_formulae
 
       def run!(args:)
@@ -11,14 +11,14 @@ module Homebrew
         puts
 
         testing_formulae.each do |formula_name|
-          fetch_formula!(formula_name, args: args)
+          fetch_bottles!(formula_name, args: args)
           puts
         end
       end
 
       private
 
-      def fetch_formula!(formula_name, args:)
+      def fetch_bottles!(formula_name, args:)
         formula = Formula[formula_name]
         tags = formula.bottle_specification.collector.tags
 
