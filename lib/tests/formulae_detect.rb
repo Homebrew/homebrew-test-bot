@@ -74,7 +74,7 @@ module Homebrew
           # Use GitHub Actions variables for merge group jobs.
           elsif ENV.fetch("GITHUB_EVENT_NAME", nil) == "merge_group"
             origin_ref = "origin/#{github_ref.gsub(%r{^refs/heads/}, "")}"
-            diff_start_sha1 = rev_parse(origin_ref)
+            diff_start_sha1 = rev_parse("#{github_sha}^")
             diff_end_sha1 = github_sha
           # Use GitHub Actions variables for branch jobs.
           else
