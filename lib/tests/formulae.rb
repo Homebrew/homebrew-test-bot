@@ -189,8 +189,10 @@ module Homebrew
         test "brew", "bottle", *bottle_args
 
         bottle_step = steps.last
-        return unless bottle_step.passed?
-        return unless bottle_step.output?
+        if !bottle_step.passed? || !bottle_step.output?
+          skipped formula.full_name, "bottling failed"
+          return
+        end
 
         @bottle_output_path.write(bottle_step.output, mode: "a")
 
