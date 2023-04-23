@@ -374,6 +374,7 @@ module Homebrew
         fetch_args << "--force" if args.cleanup?
 
         audit_args = [formula_name]
+        audit_args << "--strict"
         audit_args << "--online" unless skip_online_checks
         if new_formula
           audit_args << "--new-formula"
