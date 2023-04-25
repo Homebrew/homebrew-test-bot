@@ -88,7 +88,7 @@ module Homebrew
         unsatisfied_requirements.values.flatten.map(&:message).join("\n").presence
       end
 
-      def cleanup_during!(keep_formulae, args:)
+      def cleanup_during!(keep_formulae = [], args:)
         return unless args.cleanup?
         return unless HOMEBREW_CACHE.exist?
 
