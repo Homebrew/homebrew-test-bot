@@ -146,11 +146,11 @@ module Homebrew
         @testing_formulae += @added_formulae + modified_formulae
 
         # TODO: Remove `GITHUB_EVENT_NAME` check when formulae detection
-        #       is fixed for merge groups.
+        #       is fixed for branch jobs.
         if @testing_formulae.blank? &&
            @deleted_formulae.blank? &&
            diff_start_sha1 == diff_end_sha1 &&
-           (ENV["GITHUB_EVENT_NAME"] != "merge_group")
+           (ENV["GITHUB_EVENT_NAME"] != "push")
           raise UsageError, "Did not find any formulae or commits to test!"
         end
 
