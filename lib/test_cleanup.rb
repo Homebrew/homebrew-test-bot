@@ -29,15 +29,24 @@ module Homebrew
 
     # Moving files is faster than removing them,
     # so move them if the current runner is ephemeral.
-    def delete_or_move(paths)
+    def delete_or_move(paths, sudo: false)
       return if paths.blank?
 
       symlinks, paths = paths.partition(&:symlink?)
 
       FileUtils.rm_f symlinks
+      paths.select!(&:exist?)
+
+      return if paths.blank?
 
       if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
-        FileUtils.mv paths, Dir.mktmpdir, force: true
+        if sudo
+          test "sudo", "mv", *paths, Dir.mktmpdir
+        else
+          FileUtils.mv paths, Dir.mktmpdir, force: true
+        end
+      elsif sudo
+        test "sudo", "rm", "-rf", *paths
       else
         FileUtils.rm_rf paths
       end
