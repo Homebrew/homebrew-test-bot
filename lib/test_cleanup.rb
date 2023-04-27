@@ -35,20 +35,21 @@ module Homebrew
       symlinks, paths = paths.partition(&:symlink?)
 
       FileUtils.rm_f symlinks
-      paths.select!(&:exist?)
+      return if ENV["HOMEBREW_GITHUB_ACTIONS"].blank?
 
+      paths.select!(&:exist?)
       return if paths.blank?
 
-      if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
+      if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present?
         if sudo
-          test "sudo", "mv", *paths, Dir.mktmpdir
+          test "sudo", "rm", "-rf", *paths
         else
-          FileUtils.mv paths, Dir.mktmpdir, force: true
+          FileUtils.rm_rf paths
         end
       elsif sudo
-        test "sudo", "rm", "-rf", *paths
+        test "sudo", "mv", *paths, Dir.mktmpdir
       else
-        FileUtils.rm_rf paths
+        FileUtils.mv paths, Dir.mktmpdir, force: true
       end
     end
 
