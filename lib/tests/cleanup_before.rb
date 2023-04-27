@@ -24,6 +24,20 @@ module Homebrew
             end
           elsif OS.mac?
             delete_or_move Pathname.glob(HOMEBREW_CELLAR/"*")
+
+            frameworks_dir = Pathname("/Library/Frameworks")
+            %w[
+              Mono.framework
+              PluginManager.framework
+              Python.framework
+              R.framework
+              Xamarin.Android.framework
+              Xamarin.Mac.framework
+              Xamarin.iOS.framework
+            ].each do |framework|
+              path = frameworks_dir/framework
+              test "sudo", "mv", path, HOMEBREW_TEMP if path.exist?
+            end
           end
         end
 
