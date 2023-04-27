@@ -16,14 +16,27 @@ module Homebrew
           # minimally fix brew doctor failures (a full clean takes ~5m)
           if OS.linux?
             # brew doctor complains
-            %w[
+            bad_paths = %w[
               /usr/local/include/node/
               /opt/pipx_bin/ansible-config
-            ].each do |path|
-              test "sudo", "mv", path, "/tmp" if File.exist?(path)
-            end
+            ].map { |path| Pathname.new(path) }
+
+            delete_or_move bad_paths, sudo: true
           elsif OS.mac?
-            delete_or_move Pathname.glob(HOMEBREW_CELLAR/"*")
+            delete_or_move HOMEBREW_CELLAR.glob("*")
+
+            frameworks_dir = Pathname("/Library/Frameworks")
+            frameworks = %w[
+              Mono.framework
+              PluginManager.framework
+              Python.framework
+              R.framework
+              Xamarin.Android.framework
+              Xamarin.Mac.framework
+              Xamarin.iOS.framework
+            ].map { |framework| frameworks_dir/framework }
+
+            delete_or_move frameworks, sudo: true
           end
         end
 
