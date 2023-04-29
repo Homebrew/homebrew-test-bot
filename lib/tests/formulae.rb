@@ -363,7 +363,8 @@ module Homebrew
             onoe "Not building a bottle for #{formula} because it has unbottled dependencies."
           end
 
-          "--build-from-source"
+          skipped formula_name, "No bottle built."
+          return
         end
 
         # Online checks are a bit flaky and less useful for PRs that modify multiple formulae.
