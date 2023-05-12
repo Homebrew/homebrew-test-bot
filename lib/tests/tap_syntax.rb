@@ -15,13 +15,20 @@ module Homebrew
         test "brew", "readall", "--aliases", tap.name
         test "brew", "audit", "--tap=#{tap.name}"
 
-        return if ["push", "merge_group"].exclude?(ENV["GITHUB_EVENT_NAME"])
+        return if %w[push merge_group].exclude?(ENV["GITHUB_EVENT_NAME"])
+        return if !tap.core_tap? && !tap.name.start_with?("homebrew/cask")
 
+        test_api_generation
+      end
+
+      private
+
+      def test_api_generation
         FileUtils.mkdir_p "api"
         Pathname("api").cd do
           if tap.core_tap?
             test "brew", "generate-formula-api"
-          elsif tap.name.start_with?("homebrew/cask")
+          else
             test "brew", "generate-cask-api"
           end
         end
