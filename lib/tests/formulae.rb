@@ -18,6 +18,8 @@ module Homebrew
         # #run! modifies `@testing_formulae`, so we need to track this separately.
         @testing_formulae_count = @testing_formulae.count
 
+        download_previously_built_bottles!
+
         sorted_formulae.each do |f|
           formula!(f, args: args)
           puts
@@ -38,6 +40,80 @@ module Homebrew
       end
 
       private
+
+      GRAPHQL_QUERY = <<~GRAPHQL
+        query ($node_id: ID!) {
+          node(id: $node_id) {
+            ... on Commit {
+              checkSuites(last: 100) {
+                nodes {
+                  status
+                  workflowRun {
+                    databaseId
+                    event
+                    workflow {
+                      name
+                    }
+                  }
+                  checkRuns(last: 100) {
+                    nodes {
+                      name
+                      status
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      def download_previously_built_bottles!
+        return if ENV["GITHUB_ACTIONS"].blank?
+
+        github_event_path = ENV.fetch("GITHUB_EVENT_PATH")
+        event_payload = JSON.parse(File.read(github_event_path))
+        return if event_payload.fetch("action") != "synchronize"
+
+        previous_sha = event_payload.fetch("before")
+        repo = ENV.fetch("GITHUB_REPOSITORY")
+        url = GitHub.url_to("repos", repo, "commits", previous_sha)
+        response = GitHub::API.open_rest(url)
+        node_id = response.fetch("node_id")
+
+        response = GitHub::API.open_graphql(GRAPHQL_QUERY, variables: { node_id: node_id })
+        check_suite_nodes = response.dig("node", "checkSuites", "nodes")
+        return if check_suite_nodes.blank?
+
+        formulae_tests_node = check_suite_nodes.find do |node|
+          next false if node.fetch("status") != "COMPLETED"
+
+          workflow_run = node.fetch("workflowRun")
+          next false if workflow_run.fetch("event") != "pull_request"
+          next false if workflow_run.dig("workflow", "name") != "CI"
+
+          check_run_nodes = node.dig("checkRuns", "nodes")
+          next false if check_suite_nodes.blank?
+
+          check_run_nodes.any? do |check_run_node|
+            check_run_node.fetch("name") == "conclusion" && check_run_node.fetch("status") == "COMPLETED"
+          end
+        end
+        return if formulae_tests_node.blank?
+
+        run_id = formulae_tests_node.dig("workflowRun", "databaseId")
+        return if run_id.blank?
+
+        url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
+        response = GitHub::API.open_rest(url)
+        return if response.fetch("total_count").zero?
+
+        bottles_artifact = response.fetch("artifacts").find { |artifact| artifact.fetch("name") == "bottles" }
+        return if bottles_artifact.blank?
+
+        download_url = bottles_artifact.fetch("archive_download_url")
+        GitHub.download_artifact(download_url, run_id)
+      end
 
       def tap_needed_taps(deps)
         deps.each { |d| d.to_formula.recursive_dependencies }
@@ -404,10 +480,6 @@ module Homebrew
         install_subversion_if_needed(deps, reqs)
         setup_formulae_deps_instances(formula, formula_name, args: args)
 
-        info_header "Starting build of #{formula_name}"
-
-        test "brew", "fetch", "--retry", *fetch_args
-
         test "brew", "uninstall", "--force", formula_name if formula.latest_version_installed?
 
         install_args = ["--verbose"]
@@ -422,20 +494,32 @@ module Homebrew
         # https://github.com/Homebrew/homebrew-core/pull/86826
         install_gcc_if_needed(formula, deps)
 
+        info_header "Starting tests for #{formula_name}"
+
+        test "brew", "fetch", "--retry", *fetch_args
+
         env = {}
         env["HOMEBREW_GIT_PATH"] = nil if deps.any? do |d|
           d.name == "git" && (!d.test? || d.build?)
         end
-        test "brew", "install", *install_args,
-             named_args:      formula_name,
-             env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
-             ignore_failures: ignore_failures
-        install_step = steps.last
+
+        install_step_passed = formula_installed_from_bottle =
+          install_formula_from_bottle(formula_name,
+                                      testing_formulae_dependents: false,
+                                      dry_run:                     args.dry_run?)
+
+        install_step_passed ||= begin
+          test "brew", "install", *install_args,
+               named_args:      formula_name,
+               env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
+               ignore_failures: ignore_failures
+          steps.last.passed?
+        end
 
         livecheck(formula) if !args.skip_livecheck? && !skip_online_checks
 
         test "brew", "audit", *audit_args unless formula.deprecated?
-        unless install_step.passed?
+        unless install_step_passed
           if ignore_failures
             skipped formula_name, "install failed"
           else
@@ -445,7 +529,7 @@ module Homebrew
           return
         end
 
-        bottle_reinstall_formula(formula, new_formula, args: args)
+        bottle_reinstall_formula(formula, new_formula, args: args) unless formula_installed_from_bottle
         test "brew", "linkage", "--test", named_args: formula_name, ignore_failures: ignore_failures
         failed_linkage_or_test_messages ||= []
         failed_linkage_or_test_messages << "linkage failed" unless steps.last.passed?

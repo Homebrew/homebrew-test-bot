@@ -13,6 +13,28 @@ module Homebrew
 
       protected
 
+      def install_formula_from_bottle(formula_name, testing_formulae_dependents:, dry_run:)
+        bottle_filename = Dir.glob("#{formula_name}--*.#{Utils::Bottles.tag}.bottle*.tar.gz").first
+        if bottle_filename.blank?
+          if testing_formulae_dependents && !dry_run
+            raise "Failed to find bottle for '#{formula_name}'."
+          elsif !dry_run
+            return false
+          end
+
+          bottle_filename = "$BOTTLE_FILENAME"
+        end
+
+        install_args = []
+        install_args += %w[--ignore-dependencies --skip-post-install] if testing_formulae_dependents
+        test "brew", "install", *install_args, bottle_filename
+        install_step = steps.last
+        test "brew", "unlink", formula_name if testing_formulae_dependents
+        puts
+
+        install_step.passed?
+      end
+
       def bottled?(formula, no_older_versions: false)
         # If a formula has an `:all` bottle, then all its dependencies have
         # to be bottled too for us to use it. We only need to recurse
