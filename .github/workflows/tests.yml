@@ -5,28 +5,24 @@ on:
   pull_request:
 jobs:
   tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macOS-latest]
     permissions:
       contents: read
+    strategy:
+      matrix:
+        include:
+          - os: macOS
+            runner: macOS-latest
+          - os: Linux
+            runner: ubuntu-latest
+            container:
+              image: ghcr.io/homebrew/ubuntu22.04:master
+              options: --user=linuxbrew
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     steps:
       - name: Set up Homebrew
-        id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
-
-      - name: Cache Homebrew Bundler RubyGems
-        id: cache
-        uses: actions/cache@v1
-        with:
-          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
-          key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
-          restore-keys: ${{ runner.os }}-rubygems-
-
-      - name: Install Homebrew Bundler RubyGems
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: brew install-bundler-gems
 
       - run: brew test-bot --only-cleanup-before
 
@@ -35,114 +31,54 @@ jobs:
       - run: brew test-bot --only-tap-syntax
 
       - name: Set up Ruby
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "2.6"
           bundler-cache: true
 
       - name: Install Homebrew/homebrew-test-bot RubyGems
-        if: matrix.os == 'macOS-latest'
+        if: runner.os == 'macOS'
         run: bundle install --jobs 4 --retry 3
 
       - name: Run Homebrew/homebrew-test-bot RSpec tests
         run: bundle exec rspec
 
-      - name: Build Docker image and start container
-        if: matrix.os == 'ubuntu-latest'
-        env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          docker build -t brew .
-          docker create \
-            -e GITHUB_ACTIONS \
-            -e GITHUB_BASE_REF \
-            -e GITHUB_EVENT_PATH \
-            -e GITHUB_OUTPUT \
-            -e GITHUB_REF \
-            -e GITHUB_REPOSITORY \
-            -e GITHUB_SHA \
-            -e HOMEBREW_DEBUG \
-            -e HOMEBREW_GITHUB_API_TOKEN \
-            -e HOMEBREW_VERBOSE \
-            -v "$GITHUB_OUTPUT:$GITHUB_OUTPUT" \
-            -v "$GITHUB_EVENT_PATH:$GITHUB_EVENT_PATH" \
-            --name=brewtestbot brew sleep infinity
-          docker start brewtestbot
-          docker exec brewtestbot \
-            sudo setfacl -Rm "d:u:linuxbrew:rwX,u:linuxbrew:rwX" "$RUNNER_TEMP"
-
       - run: brew test-bot --only-formulae-detect --test-default-formula
         id: formulae-detect
 
-      - name: Run brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
-        id: brew-test-bot-formulae
+      - id: brew-test-bot-formulae
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            docker exec brewtestbot \
-              brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
-          else
-            brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
-          fi
+          brew test-bot \
+            --only-formulae \
+            --junit \
+            --only-json-tab \
+            --skip-dependents \
+            --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
 
-      - name: Run brew test-bot --only-formulae-dependents --junit --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
-        run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            docker exec brewtestbot \
-              brew test-bot --only-formulae-dependents --junit \
-                            --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }} \
-                            --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
-          else
-            brew test-bot --only-formulae-dependents --junit \
-                          --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }} \
-                          --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
-          fi
+      - run: |
+          brew test-bot --only-formulae-dependents --junit \
+                        --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }} \
+                        --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
 
       - name: Output brew test-bot failures
-        if: matrix.os == 'macOS-latest'
+        if: runner.os == 'macOS'
         run: |
           cat steps_output.txt
           rm steps_output.txt
 
       - name: Output brew bottle output
-        if: matrix.os == 'macOS-latest'
+        if: runner.os == 'macOS'
         run: |
           cat bottle_output.txt
           rm bottle_output.txt
 
-      - name: Run brew test-bot --only-cleanup-after
-        run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            docker exec brewtestbot \
-              brew test-bot --only-cleanup-after
-          else
-            brew test-bot --only-cleanup-after
-          fi
+      - run: brew test-bot --only-cleanup-after
 
-      - name: Run brew test-bot --only-setup --dry-run
-        run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            docker exec brewtestbot \
-              brew test-bot --only-setup --dry-run
-          else
-            brew test-bot --only-setup --dry-run
-          fi
+      - run: brew test-bot --only-setup --dry-run
 
-      - name: Run brew test-bot testbottest --only-formulae --dry-run
+      - run: brew test-bot testbottest --only-formulae --dry-run
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            docker exec brewtestbot \
-              brew test-bot testbottest --only-formulae --dry-run
-          else
-            brew test-bot testbottest --only-formulae --dry-run
-          fi
-
-      - name: Cleanup Docker container
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          docker stop brewtestbot
-          docker rm brewtestbot
