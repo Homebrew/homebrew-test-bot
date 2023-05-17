@@ -9,6 +9,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest]
+    permissions:
+      contents: read
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
@@ -48,11 +50,23 @@ jobs:
 
       - name: Build Docker image and start container
         if: matrix.os == 'ubuntu-latest'
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           docker build -t brew .
           docker create \
-            -e GITHUB_ACTIONS -e GITHUB_BASE_REF -e GITHUB_OUTPUT -e GITHUB_REF -e GITHUB_REPOSITORY -e GITHUB_SHA \
+            -e GITHUB_ACTIONS \
+            -e GITHUB_BASE_REF \
+            -e GITHUB_EVENT_PATH \
+            -e GITHUB_OUTPUT \
+            -e GITHUB_REF \
+            -e GITHUB_REPOSITORY \
+            -e GITHUB_SHA \
+            -e HOMEBREW_DEBUG \
+            -e HOMEBREW_GITHUB_API_TOKEN \
+            -e HOMEBREW_VERBOSE \
             -v "$GITHUB_OUTPUT:$GITHUB_OUTPUT" \
+            -v "$GITHUB_EVENT_PATH:$GITHUB_EVENT_PATH" \
             --name=brewtestbot brew sleep infinity
           docker start brewtestbot
           docker exec brewtestbot \
@@ -63,6 +77,8 @@ jobs:
 
       - name: Run brew test-bot --only-formulae --junit --only-json-tab --skip-dependents --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
         id: brew-test-bot-formulae
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
             docker exec brewtestbot \
@@ -115,6 +131,8 @@ jobs:
           fi
 
       - name: Run brew test-bot testbottest --only-formulae --dry-run
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
             docker exec brewtestbot \
