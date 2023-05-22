@@ -13,8 +13,12 @@ module Homebrew
 
       protected
 
+      def bottle_glob(formula_name)
+        Pathname.glob("#{formula_name}--*.#{Utils::Bottles.tag}.bottle*.tar.gz")
+      end
+
       def install_formula_from_bottle(formula_name, testing_formulae_dependents:, dry_run:)
-        bottle_filename = Dir.glob("#{formula_name}--*.#{Utils::Bottles.tag}.bottle*.tar.gz").first
+        bottle_filename = bottle_glob(formula_name).first
         if bottle_filename.blank?
           if testing_formulae_dependents && !dry_run
             raise "Failed to find bottle for '#{formula_name}'."

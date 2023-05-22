@@ -535,6 +535,9 @@ module Homebrew
                                       testing_formulae_dependents: false,
                                       dry_run:                     args.dry_run?)
 
+        # Delete bottles that are stale or have install failures.
+        bottle_glob(formula_name).map(&:unlink) unless formula_installed_from_bottle
+
         install_step_passed ||= begin
           test "brew", "install", *install_args,
                named_args:      formula_name,
