@@ -33,7 +33,9 @@ module Homebrew
         install_args += %w[--ignore-dependencies --skip-post-install] if testing_formulae_dependents
         test "brew", "install", *install_args, bottle_filename
         install_step = steps.last
-        test "brew", "unlink", formula_name if testing_formulae_dependents
+        return install_step.passed? unless testing_formulae_dependents
+
+        test "brew", "unlink", formula_name
         puts
 
         install_step.passed?
