@@ -41,6 +41,22 @@ module Homebrew
 
       private
 
+      def previous_github_sha
+        return if ENV["GITHUB_ACTIONS"].blank?
+
+        @previous_sha ||= begin
+          event_path = ENV.fetch("GITHUB_EVENT_PATH")
+          event_payload = JSON.parse(File.read(event_path))
+
+          before = event_payload.fetch("before", nil)
+          test git, "-C", repository, "fetch", "origin", before if before.present?
+
+          before
+        end
+
+        @previous_sha
+      end
+
       GRAPHQL_QUERY = <<~GRAPHQL
         query ($node_id: ID!) {
           node(id: $node_id) {
@@ -69,15 +85,10 @@ module Homebrew
       GRAPHQL
 
       def download_previously_built_bottles!
-        return if ENV["GITHUB_ACTIONS"].blank?
+        return if previous_github_sha.blank?
 
-        github_event_path = ENV.fetch("GITHUB_EVENT_PATH")
-        event_payload = JSON.parse(File.read(github_event_path))
-        return if event_payload.fetch("action") != "synchronize"
-
-        previous_sha = event_payload.fetch("before")
         repo = ENV.fetch("GITHUB_REPOSITORY")
-        url = GitHub.url_to("repos", repo, "commits", previous_sha)
+        url = GitHub.url_to("repos", repo, "commits", previous_github_sha)
         response = GitHub::API.open_rest(url)
         node_id = response.fetch("node_id")
 
@@ -111,8 +122,23 @@ module Homebrew
         bottles_artifact = response.fetch("artifacts").find { |artifact| artifact.fetch("name") == "bottles" }
         return if bottles_artifact.blank?
 
+        ohai "Downloading bottles from #{previous_github_sha}"
         download_url = bottles_artifact.fetch("archive_download_url")
         GitHub.download_artifact(download_url, run_id)
+      end
+
+      def no_diff?(formula, sha)
+        relative_formula_path = formula.path.relative_path_from(repository)
+        system(git, "-C", repository, "diff", "--quiet", sha, relative_formula_path)
+      end
+
+      def install_previously_built_bottle?(formula)
+        return false if previous_github_sha.blank?
+        return false unless no_diff?(formula, previous_github_sha)
+
+        formula.recursive_dependencies.all? do |dep|
+          no_diff?(dep.to_formula, previous_github_sha)
+        end
       end
 
       def tap_needed_taps(deps)
@@ -504,6 +530,7 @@ module Homebrew
         end
 
         install_step_passed = formula_installed_from_bottle =
+          install_previously_built_bottle?(formula) &&
           install_formula_from_bottle(formula_name,
                                       testing_formulae_dependents: false,
                                       dry_run:                     args.dry_run?)
