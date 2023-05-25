@@ -29,16 +29,7 @@ module Homebrew
           formula = Formulary.factory(formula_name)
           next if formula.latest_version_installed?
 
-          bottle_filename = Dir.glob("#{formula_name}--*.#{Utils::Bottles.tag}.bottle*.tar.gz").first
-          if bottle_filename.blank?
-            raise "Failed to find bottle for '#{formula_name}'." unless args.dry_run?
-
-            bottle_filename = "$BOTTLE_FILENAME"
-          end
-
-          test "brew", "install", "--ignore-dependencies", "--skip-post-install", bottle_filename
-          test "brew", "unlink", formula_name
-          puts
+          install_formula_from_bottle(formula_name, testing_formulae_dependents: true, dry_run: args.dry_run?)
         end
       end
 
