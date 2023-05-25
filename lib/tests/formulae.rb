@@ -11,6 +11,7 @@ module Homebrew
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
         @built_formulae = []
+        (@previously_built_bottle_cache = Pathname("bottle-cache")).mkpath
         @bottle_output_path = output_paths[:bottle]
         @linkage_output_path = output_paths[:linkage]
         @skipped_or_failed_formulae_output_path = output_paths[:skipped_or_failed_formulae]
@@ -39,6 +40,8 @@ module Homebrew
         end
 
         @skipped_or_failed_formulae_output_path.write(@skipped_or_failed_formulae.join(","))
+      ensure
+        @previously_built_bottle_cache.rmtree
       end
 
       private
@@ -126,7 +129,10 @@ module Homebrew
 
         ohai "Downloading bottles from #{previous_github_sha}"
         download_url = bottles_artifact.fetch("archive_download_url")
-        GitHub.download_artifact(download_url, run_id)
+
+        @previously_built_bottle_cache.cd do
+          GitHub.download_artifact(download_url, run_id)
+        end
       end
 
       def no_diff?(formula, sha)
@@ -534,11 +540,9 @@ module Homebrew
         install_step_passed = formula_installed_from_bottle =
           install_previously_built_bottle?(formula) &&
           install_formula_from_bottle(formula_name,
+                                      bottle_dir:                  @previously_built_bottle_cache,
                                       testing_formulae_dependents: false,
                                       dry_run:                     args.dry_run?)
-
-        # Delete bottles that are stale or have install failures.
-        bottle_glob(formula_name).map(&:unlink) unless formula_installed_from_bottle
 
         install_step_passed ||= begin
           test "brew", "install", *install_args,
@@ -561,7 +565,13 @@ module Homebrew
           return
         end
 
-        bottle_reinstall_formula(formula, new_formula, args: args) unless formula_installed_from_bottle
+        if formula_installed_from_bottle
+          Pathname.pwd.install bottle_glob(formula_name,
+                                           @previously_built_bottle_cache,
+                                           ".{json,tar.gz}")
+        else
+          bottle_reinstall_formula(formula, new_formula, args: args)
+        end
         test "brew", "linkage", "--test", named_args: formula_name, ignore_failures: ignore_failures
         failed_linkage_or_test_messages ||= []
         failed_linkage_or_test_messages << "linkage failed" unless steps.last.passed?
