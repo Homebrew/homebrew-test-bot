@@ -48,7 +48,7 @@ module Homebrew
           event_path = ENV.fetch("GITHUB_EVENT_PATH")
           event_payload = JSON.parse(File.read(event_path))
 
-          before = event_payload.fetch("before", nil)
+          before = event_payload.fetch("before", "")
           test git, "-C", repository, "fetch", "origin", before if before.present?
 
           before
@@ -104,7 +104,7 @@ module Homebrew
           next false if workflow_run.dig("workflow", "name") != "CI"
 
           check_run_nodes = node.dig("checkRuns", "nodes")
-          next false if check_suite_nodes.blank?
+          next false if check_run_nodes.blank?
 
           check_run_nodes.any? do |check_run_node|
             check_run_node.fetch("name") == "conclusion" && check_run_node.fetch("status") == "COMPLETED"
@@ -129,7 +129,7 @@ module Homebrew
 
       def no_diff?(formula, sha)
         relative_formula_path = formula.path.relative_path_from(repository)
-        system(git, "-C", repository, "diff", "--quiet", sha, relative_formula_path)
+        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", sha, relative_formula_path)
       end
 
       def install_previously_built_bottle?(formula)
