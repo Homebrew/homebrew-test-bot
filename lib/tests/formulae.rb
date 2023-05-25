@@ -69,6 +69,7 @@ module Homebrew
               checkSuites(last: 100) {
                 nodes {
                   status
+                  updatedAt
                   workflowRun {
                     databaseId
                     event
@@ -101,7 +102,7 @@ module Homebrew
         check_suite_nodes = response.dig("node", "checkSuites", "nodes")
         return if check_suite_nodes.blank?
 
-        formulae_tests_node = check_suite_nodes.find do |node|
+        formulae_tests_nodes = check_suite_nodes.select do |node|
           next false if node.fetch("status") != "COMPLETED"
 
           workflow_run = node.fetch("workflowRun")
@@ -115,9 +116,10 @@ module Homebrew
             check_run_node.fetch("name") == "conclusion" && check_run_node.fetch("status") == "COMPLETED"
           end
         end
-        return if formulae_tests_node.blank?
+        return if formulae_tests_nodes.blank?
 
-        run_id = formulae_tests_node.dig("workflowRun", "databaseId")
+        run_id = formulae_tests_nodes.max_by { |node| Time.parse(node.fetch("updatedAt")) }
+                                     .dig("workflowRun", "databaseId")
         return if run_id.blank?
 
         url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
