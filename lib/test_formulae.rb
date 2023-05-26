@@ -4,14 +4,128 @@ module Homebrew
   module Tests
     class TestFormulae < Test
       attr_accessor :skipped_or_failed_formulae
+      attr_reader :artifact_cache
 
       def initialize(tap:, git:, dry_run:, fail_fast:, verbose:)
         super
 
         @skipped_or_failed_formulae = []
+        @artifact_cache = Pathname("artifact-cache")
       end
 
       protected
+
+      def previous_github_sha
+        return if tap.blank?
+        return unless repository.directory?
+        return if ENV["GITHUB_ACTIONS"].blank?
+
+        @previous_sha ||= begin
+          event_path = ENV.fetch("GITHUB_EVENT_PATH")
+          event_payload = JSON.parse(File.read(event_path))
+
+          before = event_payload.fetch("before", "")
+          test git, "-C", repository, "fetch", "origin", before if before.present?
+
+          before
+        end
+
+        @previous_sha
+      end
+
+      GRAPHQL_QUERY = <<~GRAPHQL
+        query ($node_id: ID!) {
+          node(id: $node_id) {
+            ... on Commit {
+              checkSuites(last: 100) {
+                nodes {
+                  status
+                  updatedAt
+                  workflowRun {
+                    databaseId
+                    event
+                    workflow {
+                      name
+                    }
+                  }
+                  checkRuns(last: 100) {
+                    nodes {
+                      name
+                      status
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      def download_artifact_from_previous_run!(name)
+        return if previous_github_sha.blank?
+
+        repo = ENV.fetch("GITHUB_REPOSITORY")
+        url = GitHub.url_to("repos", repo, "commits", previous_github_sha)
+        response = GitHub::API.open_rest(url)
+        node_id = response.fetch("node_id")
+
+        response = GitHub::API.open_graphql(GRAPHQL_QUERY, variables: { node_id: node_id })
+        check_suite_nodes = response.dig("node", "checkSuites", "nodes")
+        return if check_suite_nodes.blank?
+
+        formulae_tests_nodes = check_suite_nodes.select do |node|
+          next false if node.fetch("status") != "COMPLETED"
+
+          workflow_run = node.fetch("workflowRun")
+          next false if workflow_run.fetch("event") != "pull_request"
+          next false if workflow_run.dig("workflow", "name") != "CI"
+
+          check_run_nodes = node.dig("checkRuns", "nodes")
+          next false if check_run_nodes.blank?
+
+          check_run_nodes.any? do |check_run_node|
+            check_run_node.fetch("name") == "conclusion" && check_run_node.fetch("status") == "COMPLETED"
+          end
+        end
+        return if formulae_tests_nodes.blank?
+
+        run_id = formulae_tests_nodes.max_by { |node| Time.parse(node.fetch("updatedAt")) }
+                                     .dig("workflowRun", "databaseId")
+        return if run_id.blank?
+
+        url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
+        response = GitHub::API.open_rest(url)
+        return if response.fetch("total_count").zero?
+
+        wanted_artifact = response.fetch("artifacts").find { |artifact| artifact.fetch("name") == name }
+        return if wanted_artifact.blank?
+
+        ohai "Downloading #{name} from #{previous_github_sha}"
+        download_url = wanted_artifact.fetch("archive_download_url")
+
+        artifact_cache.mkpath
+        artifact_cache.cd do
+          GitHub.download_artifact(download_url, run_id)
+        end
+      rescue GitHub::API::AuthenticationFailedError => e
+        opoo e
+      end
+
+      def no_diff?(formula, sha)
+        return false unless repository.directory?
+
+        relative_formula_path = formula.path.relative_path_from(repository)
+        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", sha, relative_formula_path)
+      end
+
+      def artifact_cache_valid?(formula)
+        return false if previous_github_sha.blank?
+        return false unless no_diff?(formula, previous_github_sha)
+
+        formula.recursive_dependencies.all? do |dep|
+          no_diff?(dep.to_formula, previous_github_sha)
+        end
+      end
 
       def bottle_glob(formula_name, bottle_dir, ext = ".tar.gz")
         bottle_dir.glob("#{formula_name}--*.#{Utils::Bottles.tag}.bottle*#{ext}")
