@@ -302,7 +302,7 @@ module Homebrew
 
         bottle_step = steps.last
         if !bottle_step.passed? || !bottle_step.output?
-          failed formula.full_name, "bottling failed"
+          failed formula.full_name, "bottling failed" unless args.dry_run?
           return
         end
 
