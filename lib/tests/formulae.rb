@@ -54,7 +54,7 @@ module Homebrew
           event_payload = JSON.parse(File.read(event_path))
 
           before = event_payload.fetch("before", "")
-          test git, "-C", repository, "fetch", "origin", before if before.present?
+          test git, "-C", repository, "fetch", "origin", before if before.present? && repository.directory?
 
           before
         end
@@ -140,6 +140,8 @@ module Homebrew
       end
 
       def no_diff?(formula, sha)
+        return false unless repository.directory?
+
         relative_formula_path = formula.path.relative_path_from(repository)
         system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", sha, relative_formula_path)
       end
