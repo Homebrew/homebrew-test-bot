@@ -135,6 +135,8 @@ module Homebrew
         @previously_built_bottle_cache.cd do
           GitHub.download_artifact(download_url, run_id)
         end
+      rescue GitHub::API::AuthenticationFailedError => e
+        opoo e
       end
 
       def no_diff?(formula, sha)
