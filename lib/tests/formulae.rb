@@ -47,26 +47,17 @@ module Homebrew
       private
 
       def previous_github_sha
+        return if tap.blank?
         return if ENV["GITHUB_ACTIONS"].blank?
 
         @previous_sha ||= begin
           event_path = ENV.fetch("GITHUB_EVENT_PATH")
           event_payload = JSON.parse(File.read(event_path))
 
-          repository_data = event_payload.fetch("repository")
-          owner = repository_data.dig("owner", "login")
-          repo = repository_data.fetch("name")
           before = event_payload.fetch("before", "")
+          test git, "-C", repository, "fetch", "origin", before if before.present? && repository.directory?
 
-          if before.present? &&
-             repository.directory? &&
-             tap.full_name == "#{owner}/#{repo}"
-            test git, "-C", repository, "fetch", "origin", before
-
-            before
-          else
-            ""
-          end
+          before
         end
 
         @previous_sha
