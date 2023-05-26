@@ -11,10 +11,18 @@ module Homebrew
 
         @source_tested_dependents = []
         @bottle_tested_dependents = []
+        @tested_dependents_list = Pathname("tested-dependents-#{Utils::Bottles.tag}.txt")
 
         @dependent_testing_formulae = @testing_formulae - skipped_or_failed_formulae
 
         install_formulae_if_needed_from_bottles!(args: args)
+
+        download_artifact_from_previous_run!("dependents")
+        @skip_candidates = if (tested_dependents_cache = artifact_cache/@tested_dependents_list).exist?
+          tested_dependents_cache.read.split("\n")
+        else
+          []
+        end
 
         @dependent_testing_formulae.each do |formula_name|
           dependent_formulae!(formula_name, args: args)
@@ -38,13 +46,15 @@ module Homebrew
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
 
+        formula = Formulary.factory(formula_name)
+
         # If we installed this from a bottle, then the formula isn't linked.
         # If the formula isn't linked, `brew install --only-dependences` does
         # nothing with the message:
         #     Warning: formula x.y.z is already installed, it's just not linked.
         #     To link this version, run:
         #       brew link formula
-        unlink_conflicts Formula[formula_name]
+        unlink_conflicts formula
         test "brew", "link", formula_name
 
         # Install formula dependencies. These may not be installed.
@@ -55,8 +65,6 @@ module Homebrew
         # Restore etc/var files that may have been nuked in the build stage.
         test "brew", "postinstall", formula_name
         return if steps.last.failed?
-
-        formula = Formulary.factory(formula_name)
 
         source_dependents, bottled_dependents, testable_dependents =
           dependents_for_formula(formula, formula_name, args: args)
@@ -161,6 +169,13 @@ module Homebrew
       end
 
       def install_dependent(dependent, testable_dependents, args:, build_from_source: false)
+        if @skip_candidates.include?(dependent.full_name) && artifact_cache_valid?(dependent)
+          @tested_dependents_list.write(dependent.full_name, mode: "a")
+          @tested_dependents_list.write("\n", mode: "a")
+          skipped dependent.name, "#{dependent.full_name} has been tested at #{previous_github_sha}!"
+          return
+        end
+
         if (messages = unsatisfied_requirements_messages(dependent))
           skipped dependent, messages
           return
@@ -266,14 +281,21 @@ module Homebrew
 
         test "brew", "uninstall", "--force", dependent.full_name
 
+        all_tests_passed = (dependent_was_previously_installed || install_step.passed?) &&
+                           linkage_step.passed? &&
+                           (testable_dependents.exclude?(dependent) || test_step.passed?)
+
+        if all_tests_passed
+          @tested_dependents_list.write(dependent.full_name, mode: "a")
+          @tested_dependents_list.write("\n", mode: "a")
+        end
+
         return if ENV["GITHUB_ACTIONS"].blank?
 
         if build_from_source &&
            !bottled_on_current_version &&
            !dependent_was_previously_installed &&
-           install_step.passed? &&
-           linkage_step.passed? &&
-           (testable_dependents.exclude?(dependent) || test_step.passed?) &&
+           all_tests_passed &&
            dependent.deps.all? { |d| bottled?(d.to_formula, no_older_versions: true) }
           os_string = if OS.mac?
             str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
