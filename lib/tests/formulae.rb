@@ -231,7 +231,6 @@ module Homebrew
                        download_strategy.symlink_location,
                        force: true
 
-        @built_formulae << formula.full_name
         @testing_formulae.delete(formula.name)
 
         unless @unchanged_build_dependencies.empty?
@@ -468,6 +467,7 @@ module Homebrew
         else
           bottle_reinstall_formula(formula, new_formula, args: args)
         end
+        @built_formulae << formula.full_name
         test "brew", "linkage", "--test", named_args: formula_name, ignore_failures: ignore_failures
         failed_linkage_or_test_messages ||= []
         failed_linkage_or_test_messages << "linkage failed" unless steps.last.passed?
