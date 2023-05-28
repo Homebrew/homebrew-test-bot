@@ -15,22 +15,22 @@ module Homebrew
 
       protected
 
+      def cached_event_json
+        return unless (event_json = artifact_cache/"event.json").exist?
+
+        event_json
+      end
+
       def previous_github_sha
         return if tap.blank?
         return unless repository.directory?
         return if ENV["GITHUB_ACTIONS"].blank?
 
-        @previous_sha ||= begin
-          event_path = ENV.fetch("GITHUB_EVENT_PATH")
-          event_payload = JSON.parse(File.read(event_path))
+        event_path = cached_event_json
+        event_path ||= Pathname(ENV.fetch("GITHUB_EVENT_PATH"))
+        event_payload = JSON.parse(event_path.read)
 
-          before = event_payload.fetch("before", "")
-          test git, "-C", repository, "fetch", "origin", before if before.present?
-
-          before
-        end
-
-        @previous_sha
+        event_payload.fetch("before", nil)
       end
 
       GRAPHQL_QUERY = <<~GRAPHQL
@@ -62,10 +62,10 @@ module Homebrew
       GRAPHQL
 
       def download_artifact_from_previous_run!(name)
-        return if previous_github_sha.blank?
+        return if (sha = previous_github_sha).blank?
 
         repo = ENV.fetch("GITHUB_REPOSITORY")
-        url = GitHub.url_to("repos", repo, "commits", previous_github_sha)
+        url = GitHub.url_to("repos", repo, "commits", sha)
         response = GitHub::API.open_rest(url)
         node_id = response.fetch("node_id")
 
@@ -97,33 +97,48 @@ module Homebrew
         response = GitHub::API.open_rest(url)
         return if response.fetch("total_count").zero?
 
-        wanted_artifact = response.fetch("artifacts").find { |artifact| artifact.fetch("name") == name }
+        artifacts = response.fetch("artifacts")
+        wanted_artifact = artifacts.find { |artifact| artifact.fetch("name") == name }
+        wanted_artifact ||= artifacts.find { |artifact| artifact.fetch("name") == "event_payload" }
         return if wanted_artifact.blank?
 
-        ohai "Downloading #{name} from #{previous_github_sha}"
+        wanted_artifact_name = wanted_artifact.fetch("name")
+        cached_event_json&.unlink if wanted_artifact_name == "event_payload"
+
+        ohai "Downloading #{wanted_artifact_name} from #{sha}"
         download_url = wanted_artifact.fetch("archive_download_url")
 
         artifact_cache.mkpath
         artifact_cache.cd do
           GitHub.download_artifact(download_url, run_id)
         end
+
+        return if wanted_artifact_name == name
+
+        download_artifact_from_previous_run!(name)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
       end
 
-      def no_diff?(formula, sha)
+      def no_diff?(formula, git_ref)
         return false unless repository.directory?
 
+        @fetched_refs ||= []
+        if @fetched_refs.exclude?(git_ref)
+          test git, "-C", repository, "fetch", "origin", git_ref
+          @fetched_refs << git_ref
+        end
+
         relative_formula_path = formula.path.relative_path_from(repository)
-        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", sha, relative_formula_path)
+        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", git_ref, relative_formula_path)
       end
 
       def artifact_cache_valid?(formula)
-        return false if previous_github_sha.blank?
-        return false unless no_diff?(formula, previous_github_sha)
+        return false if (sha = previous_github_sha).blank?
+        return false unless no_diff?(formula, sha)
 
         formula.recursive_dependencies.all? do |dep|
-          no_diff?(dep.to_formula, previous_github_sha)
+          no_diff?(dep.to_formula, sha)
         end
       end
 
