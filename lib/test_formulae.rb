@@ -28,7 +28,8 @@ module Homebrew
         return if (github_event_path = ENV.fetch("GITHUB_EVENT_PATH", nil)).blank?
 
         github_event_payload = JSON.parse(File.read(github_event_path))
-        return if github_event_payload.dig("pull_request", "head", "repo", "owner", "login") != "Homebrew"
+        head_repo_owner = github_event_payload.dig("pull_request", "head", "repo", "owner", "login")
+        return if head_repo_owner != ENV.fetch("GITHUB_REPOSITORY_OWNER")
 
         event_payload = JSON.parse(cached_event_json.read) if cached_event_json.present?
         event_payload ||= github_event_payload
