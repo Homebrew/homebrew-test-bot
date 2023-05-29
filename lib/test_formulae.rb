@@ -25,10 +25,13 @@ module Homebrew
         return if tap.blank?
         return unless repository.directory?
         return if ENV["GITHUB_ACTIONS"].blank?
+        return if (github_event_path = ENV.fetch("GITHUB_EVENT_PATH", nil)).blank?
 
-        event_path = cached_event_json
-        event_path ||= Pathname(ENV.fetch("GITHUB_EVENT_PATH"))
-        event_payload = JSON.parse(event_path.read)
+        github_event_payload = JSON.parse(File.read(github_event_path))
+        return if github_event_payload.dig("pull_request", "head", "repo", "owner", "login") != "Homebrew"
+
+        event_payload = JSON.parse(cached_event_json.read) if cached_event_json.present?
+        event_payload ||= github_event_payload
 
         event_payload.fetch("before", nil)
       end
