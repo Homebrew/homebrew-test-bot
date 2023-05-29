@@ -29,7 +29,9 @@ module Homebrew
 
         github_event_payload = JSON.parse(File.read(github_event_path))
         head_repo_owner = github_event_payload.dig("pull_request", "head", "repo", "owner", "login")
-        return if head_repo_owner != ENV.fetch("GITHUB_REPOSITORY_OWNER")
+        head_from_fork = head_repo_owner != ENV.fetch("GITHUB_REPOSITORY_OWNER")
+        maintainer_fork = JSON.parse(HOMEBREW_MAINTAINER_JSON.read).include?(head_repo_owner)
+        return if head_from_fork && !maintainer_fork
 
         event_payload = JSON.parse(cached_event_json.read) if cached_event_json.present?
         event_payload ||= github_event_payload
