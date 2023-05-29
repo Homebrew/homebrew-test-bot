@@ -33,6 +33,8 @@ module Homebrew
         maintainer_fork = JSON.parse(HOMEBREW_MAINTAINER_JSON.read).include?(head_repo_owner)
         return if head_from_fork && !maintainer_fork
 
+        # If we have a cached event payload, then we failed to get the artifact we wanted
+        # from `GITHUB_EVENT_PATH`, so use the cached payload to check for a SHA1.
         event_payload = JSON.parse(cached_event_json.read) if cached_event_json.present?
         event_payload ||= github_event_payload
 
@@ -67,7 +69,7 @@ module Homebrew
         }
       GRAPHQL
 
-      def download_artifact_from_previous_run!(name)
+      def download_artifact_from_previous_run!(artifact_name)
         return if (sha = previous_github_sha).blank?
 
         repo = ENV.fetch("GITHUB_REPOSITORY")
@@ -104,7 +106,8 @@ module Homebrew
         return if response.fetch("total_count").zero?
 
         artifacts = response.fetch("artifacts")
-        wanted_artifact = artifacts.find { |artifact| artifact.fetch("name") == name }
+        wanted_artifact = artifacts.find { |artifact| artifact.fetch("name") == artifact_name }
+        # If we didn't find the artifact that we wanted, fall back to the `event_payload` artifact.
         wanted_artifact ||= artifacts.find { |artifact| artifact.fetch("name") == "event_payload" }
         return if wanted_artifact.blank?
 
@@ -119,9 +122,11 @@ module Homebrew
           GitHub.download_artifact(download_url, run_id)
         end
 
-        return if wanted_artifact_name == name
+        return if wanted_artifact_name == artifact_name
 
-        download_artifact_from_previous_run!(name)
+        # If we made it here, then we downloaded an `event_payload` artifact.
+        # We can now use this `event_payload` artifact to attempt to download the artifact we wanted.
+        download_artifact_from_previous_run!(artifact_name)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
       end
