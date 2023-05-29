@@ -30,7 +30,7 @@ module Homebrew
         github_event_payload = JSON.parse(File.read(github_event_path))
         head_repo_owner = github_event_payload.dig("pull_request", "head", "repo", "owner", "login")
         head_from_fork = head_repo_owner != ENV.fetch("GITHUB_REPOSITORY_OWNER")
-        maintainer_fork = JSON.parse(HOMEBREW_MAINTAINER_JSON.read).include?(head_repo_owner)
+        maintainer_fork = tap.official? && JSON.parse(HOMEBREW_MAINTAINER_JSON.read).include?(head_repo_owner)
         return if head_from_fork && !maintainer_fork
 
         # If we have a cached event payload, then we failed to get the artifact we wanted
