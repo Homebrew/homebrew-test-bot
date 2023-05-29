@@ -69,6 +69,35 @@ module Homebrew
         }
       GRAPHQL
 
+      def artifact_metadata(check_suite_nodes, event_name, workflow_name, check_run_name, artifact_name)
+        candidate_nodes = check_suite_nodes.select do |node|
+          next false if node.fetch("status") != "COMPLETED"
+
+          workflow_run = node.fetch("workflowRun")
+          next false if workflow_run.fetch("event") != event_name
+          next false if workflow_run.dig("workflow", "name") != workflow_name
+
+          check_run_nodes = node.dig("checkRuns", "nodes")
+          next false if check_run_nodes.blank?
+
+          check_run_nodes.any? do |check_run_node|
+            check_run_node.fetch("name") == check_run_name && check_run_node.fetch("status") == "COMPLETED"
+          end
+        end
+        return if candidate_nodes.blank?
+
+        run_id = candidate_nodes.max_by { |node| Time.parse(node.fetch("updatedAt")) }
+                                .dig("workflowRun", "databaseId")
+        return if run_id.blank?
+
+        url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
+        response = GitHub::API.open_rest(url)
+        return if response.fetch("total_count").zero?
+
+        artifacts = response.fetch("artifacts")
+        artifacts.find { |artifact| artifact.fetch("name") == artifact_name }
+      end
+
       def download_artifact_from_previous_run!(artifact_name)
         return if (sha = previous_github_sha).blank?
 
@@ -81,34 +110,10 @@ module Homebrew
         check_suite_nodes = response.dig("node", "checkSuites", "nodes")
         return if check_suite_nodes.blank?
 
-        formulae_tests_nodes = check_suite_nodes.select do |node|
-          next false if node.fetch("status") != "COMPLETED"
-
-          workflow_run = node.fetch("workflowRun")
-          next false if workflow_run.fetch("event") != "pull_request"
-          next false if workflow_run.dig("workflow", "name") != "CI"
-
-          check_run_nodes = node.dig("checkRuns", "nodes")
-          next false if check_run_nodes.blank?
-
-          check_run_nodes.any? do |check_run_node|
-            check_run_node.fetch("name") == "conclusion" && check_run_node.fetch("status") == "COMPLETED"
-          end
-        end
-        return if formulae_tests_nodes.blank?
-
-        run_id = formulae_tests_nodes.max_by { |node| Time.parse(node.fetch("updatedAt")) }
-                                     .dig("workflowRun", "databaseId")
-        return if run_id.blank?
-
-        url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
-        response = GitHub::API.open_rest(url)
-        return if response.fetch("total_count").zero?
-
-        artifacts = response.fetch("artifacts")
-        wanted_artifact = artifacts.find { |artifact| artifact.fetch("name") == artifact_name }
+        wanted_artifact = artifact_metadata(check_suite_nodes, "pull_request", "CI", "conclusion", artifact_name)
         # If we didn't find the artifact that we wanted, fall back to the `event_payload` artifact.
-        wanted_artifact ||= artifacts.find { |artifact| artifact.fetch("name") == "event_payload" }
+        wanted_artifact ||= artifact_metadata(check_suite_nodes, "pull_request_target", "Triage tasks",
+                                              "upload-metadata", "event_payload")
         return if wanted_artifact.blank?
 
         wanted_artifact_name = wanted_artifact.fetch("name")
@@ -116,10 +121,11 @@ module Homebrew
 
         ohai "Downloading #{wanted_artifact_name} from #{sha}"
         download_url = wanted_artifact.fetch("archive_download_url")
+        artifact_id = wanted_artifact.fetch("id")
 
         artifact_cache.mkpath
         artifact_cache.cd do
-          GitHub.download_artifact(download_url, run_id)
+          GitHub.download_artifact(download_url, artifact_id)
         end
 
         return if wanted_artifact_name == artifact_name
