@@ -113,18 +113,18 @@ jobs:
                         --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
 
       - name: Output brew test-bot failures
-        if: runner.os == 'macOS'
         run: |
           cat steps_output.txt
           rm steps_output.txt
 
       - name: Output brew bottle output
-        if: runner.os == 'macOS'
         run: |
           cat bottle_output.txt
           rm bottle_output.txt
 
       - run: brew test-bot --only-cleanup-after
+
+      - run: rm -rvf *.bottle*.tar.gz
 
       - run: brew test-bot --only-setup --dry-run
 
