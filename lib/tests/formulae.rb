@@ -11,24 +11,34 @@ module Homebrew
         super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
 
         @built_formulae = []
+        @bottle_checksums = {}
         @bottle_output_path = output_paths[:bottle]
         @linkage_output_path = output_paths[:linkage]
         @skipped_or_failed_formulae_output_path = output_paths[:skipped_or_failed_formulae]
       end
 
       def run!(args:)
+        verify_local_bottles
+
+        with_env(HOMEBREW_DISABLE_LOAD_FORMULA: "1") do
+          download_artifact_from_previous_run!("bottles")
+        end
+        @bottle_checksums.merge!(
+          bottle_glob("*", artifact_cache, bottle_tag: "*").to_h { |bottle| [bottle.realpath, bottle.sha256] },
+        )
+
         # #run! modifies `@testing_formulae`, so we need to track this separately.
         @testing_formulae_count = @testing_formulae.count
 
-        download_artifact_from_previous_run!("bottles")
-
         sorted_formulae.each do |f|
           formula!(f, args: args)
+          verify_local_bottles
           puts
         end
 
         @deleted_formulae.each do |f|
           deleted_formula!(f)
+          verify_local_bottles
           puts
         end
 
@@ -40,6 +50,7 @@ module Homebrew
 
         @skipped_or_failed_formulae_output_path.write(@skipped_or_failed_formulae.join(","))
       ensure
+        verify_local_bottles
         artifact_cache.rmtree if artifact_cache.exist?
       end
 
@@ -169,6 +180,46 @@ module Homebrew
         end
       end
 
+      def verify_local_bottles
+        # Setting `HOMEBREW_DISABLE_LOAD_FORMULA` probably doesn't do anything here but let's set it just to be safe.
+        with_env(HOMEBREW_DISABLE_LOAD_FORMULA: "1") do
+          missing_bottles = @bottle_checksums.keys.reject do |bottle_path|
+            next true if bottle_path.exist?
+
+            onoe "Missing bottle: #{bottle_path}"
+            false
+          end
+
+          mismatched_checksums = @bottle_checksums.reject do |bottle_path, expected_sha256|
+            next true unless bottle_path.exist?
+            next true if (actual_sha256 = bottle_path.sha256) == expected_sha256
+
+            onoe <<~ERROR
+              Bottle checksum mismatch for #{bottle_path}!
+                Expected: #{expected_sha256}
+                Actual:   #{actual_sha256}
+            ERROR
+            false
+          end
+
+          unexpected_bottles = bottle_glob("**/*", bottle_tag: "*").reject do |local_bottle|
+            next true if @bottle_checksums.key?(local_bottle.realpath)
+
+            onoe "Unexpected bottle: #{local_bottle}"
+            false
+          end
+
+          return if missing_bottles.blank? && mismatched_checksums.blank? && unexpected_bottles.blank?
+
+          # Delete these files so we don't end up uploading them.
+          files_to_delete = mismatched_checksums.keys + unexpected_bottles
+          files_to_delete += files_to_delete.select(&:symlink?).map(&:realpath)
+          FileUtils.rm_rf files_to_delete
+
+          exit 1
+        end
+      end
+
       def bottle_reinstall_formula(formula, new_formula, args:)
         unless build_bottle?(formula, args: args)
           @bottle_filename = nil
@@ -192,21 +243,27 @@ module Homebrew
         bottle_args << "--force-core-tap" if @test_default_formula
         bottle_args << "--root-url=#{root_url}" if root_url
         bottle_args << "--only-json-tab" if args.only_json_tab?
-        test "brew", "bottle", *bottle_args
 
+        verify_local_bottles
+        test "brew", "bottle", *bottle_args
         bottle_step = steps.last
+
         if !bottle_step.passed? || !bottle_step.output?
           failed formula.full_name, "bottling failed" unless args.dry_run?
           return
         end
 
+        @bottle_filename = Pathname.new(
+          bottle_step.output
+                     .gsub(%r{.*(\./\S+#{HOMEBREW_BOTTLES_EXTNAME_REGEX}).*}om, '\1'),
+        )
+        @bottle_checksums[@bottle_filename.realpath] = @bottle_filename.sha256
+
+        @bottle_json_filename =
+          @bottle_filename.to_s.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
+
         @bottle_output_path.write(bottle_step.output, mode: "a")
 
-        @bottle_filename =
-          bottle_step.output
-                     .gsub(%r{.*(\./\S+#{HOMEBREW_BOTTLES_EXTNAME_REGEX}).*}om, '\1')
-        @bottle_json_filename =
-          @bottle_filename.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
         bottle_merge_args =
           ["--merge", "--write", "--no-commit", "--no-all-checks", @bottle_json_filename]
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
@@ -224,7 +281,7 @@ module Homebrew
           formula.name,
           formula.version,
         )
-        download_strategy.resolved_basename = File.basename(@bottle_filename)
+        download_strategy.resolved_basename = @bottle_filename.basename.to_s
         download_strategy.cached_location.parent.mkpath
         FileUtils.ln @bottle_filename, download_strategy.cached_location, force: true
         FileUtils.ln_s download_strategy.cached_location.relative_path_from(download_strategy.symlink_location),
@@ -461,9 +518,15 @@ module Homebrew
         end
 
         if formula_installed_from_bottle
-          Pathname.pwd.install bottle_glob(formula_name,
-                                           artifact_cache,
-                                           ".{json,tar.gz}")
+          moved_artifacts = bottle_glob(formula_name, artifact_cache, ".{json,tar.gz}")
+          Pathname.pwd.install moved_artifacts
+
+          moved_artifacts.each do |artifact|
+            next if artifact.extname == ".json"
+
+            @bottle_checksums[artifact.basename.realpath] = @bottle_checksums.fetch(artifact)
+            @bottle_checksums.delete(artifact)
+          end
         else
           bottle_reinstall_formula(formula, new_formula, args: args)
         end
@@ -502,9 +565,11 @@ module Homebrew
         # Move bottle and don't test dependents if the formula linkage or test failed.
         if failed_linkage_or_test_messages.present?
           if @bottle_filename
-            failed_dir = "#{File.dirname(@bottle_filename)}/failed"
-            FileUtils.mkdir failed_dir unless File.directory? failed_dir
+            failed_dir = (@bottle_filename.dirname/"failed").mkpath
             FileUtils.mv [@bottle_filename, @bottle_json_filename], failed_dir
+            @bottle_checksums[(failed_dir/@bottle_filename.basename).realpath] =
+              @bottle_checksums.fetch(@bottle_filename)
+            @bottle_checksums.delete(@bottle_filename)
           end
 
           if ignore_failures
