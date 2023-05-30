@@ -69,7 +69,7 @@ module Homebrew
         }
       GRAPHQL
 
-      def artifact_metadata(check_suite_nodes, event_name, workflow_name, check_run_name, artifact_name)
+      def artifact_metadata(check_suite_nodes, repo, event_name, workflow_name, check_run_name, artifact_name)
         candidate_nodes = check_suite_nodes.select do |node|
           next false if node.fetch("status") != "COMPLETED"
 
@@ -110,10 +110,11 @@ module Homebrew
         check_suite_nodes = response.dig("node", "checkSuites", "nodes")
         return if check_suite_nodes.blank?
 
-        wanted_artifact = artifact_metadata(check_suite_nodes, "pull_request", "CI", "conclusion", artifact_name)
+        wanted_artifact = artifact_metadata(check_suite_nodes, repo, "pull_request",
+                                            "CI", "conclusion", artifact_name)
         # If we didn't find the artifact that we wanted, fall back to the `event_payload` artifact.
-        wanted_artifact ||= artifact_metadata(check_suite_nodes, "pull_request_target", "Triage tasks",
-                                              "upload-metadata", "event_payload")
+        wanted_artifact ||= artifact_metadata(check_suite_nodes, repo, "pull_request_target",
+                                              "Triage tasks", "upload-metadata", "event_payload")
         return if wanted_artifact.blank?
 
         wanted_artifact_name = wanted_artifact.fetch("name")
