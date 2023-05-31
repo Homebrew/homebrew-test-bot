@@ -148,7 +148,7 @@ module Homebrew
         end
 
         relative_formula_path = formula.path.relative_path_from(repository)
-        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", git_ref, relative_formula_path)
+        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", git_ref, "--", relative_formula_path)
       end
 
       def artifact_cache_valid?(formula)
