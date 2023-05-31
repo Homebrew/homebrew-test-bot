@@ -154,7 +154,7 @@ module Homebrew
       def git_revision_from_local_bottle_json(formula)
         return if (local_bottle_json = bottle_glob(formula, artifact_cache, ".json").first).blank?
 
-        local_bottle_hash = JSON.parse(local_bottle_json)
+        local_bottle_hash = JSON.parse(local_bottle_json.read)
         local_bottle_hash.dig(formula.name, "formula", "tap_git_revision")
       end
 
