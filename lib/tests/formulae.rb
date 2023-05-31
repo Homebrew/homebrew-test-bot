@@ -222,7 +222,7 @@ module Homebrew
           files_to_delete += files_to_delete.select(&:symlink?).map(&:realpath)
           FileUtils.rm_rf files_to_delete
 
-          exit 1
+          test "false" # ensure that `test-bot` exits with an error.
         end
       end
 
