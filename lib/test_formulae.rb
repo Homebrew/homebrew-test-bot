@@ -143,8 +143,8 @@ module Homebrew
 
         @fetched_refs ||= []
         if @fetched_refs.exclude?(git_ref)
-          test git, "-C", repository, "fetch", "origin", git_ref
-          @fetched_refs << git_ref
+          test git, "-C", repository, "fetch", "origin", git_ref, ignore_failures: true
+          @fetched_refs << git_ref if steps.last.passed?
         end
 
         relative_formula_path = formula.path.relative_path_from(repository)
