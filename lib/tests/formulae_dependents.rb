@@ -55,7 +55,7 @@ module Homebrew
         #     To link this version, run:
         #       brew link formula
         unlink_conflicts formula
-        test "brew", "link", formula_name
+        test "brew", "link", formula_name unless formula.keg_only?
 
         # Install formula dependencies. These may not be installed.
         test "brew", "install", "--only-dependencies", formula_name,

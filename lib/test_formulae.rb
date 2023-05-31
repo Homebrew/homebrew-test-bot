@@ -173,8 +173,8 @@ module Homebrew
         end
       end
 
-      def bottle_glob(formula_name, bottle_dir, ext = ".tar.gz")
-        bottle_dir.glob("#{formula_name}--*.#{Utils::Bottles.tag}.bottle*#{ext}")
+      def bottle_glob(formula_name, bottle_dir = Pathname.pwd, ext = ".tar.gz", bottle_tag: Utils::Bottles.tag.to_s)
+        bottle_dir.glob("#{formula_name}--*.#{bottle_tag}.bottle*#{ext}")
       end
 
       def install_formula_from_bottle(formula_name, testing_formulae_dependents:, dry_run:, bottle_dir: Pathname.pwd)
