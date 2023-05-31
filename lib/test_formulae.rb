@@ -151,8 +151,21 @@ module Homebrew
         system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", git_ref, "--", relative_formula_path)
       end
 
-      def artifact_cache_valid?(formula)
-        return false if (sha = previous_github_sha).blank?
+      def git_revision_from_local_bottle_json(formula)
+        return if (local_bottle_json = bottle_glob(formula, artifact_cache, ".json").first).blank?
+
+        local_bottle_hash = JSON.parse(local_bottle_json)
+        local_bottle_hash.dig(formula.name, "formula", "tap_git_revision")
+      end
+
+      def artifact_cache_valid?(formula, formulae_dependents: false)
+        sha = if formulae_dependents
+          previous_github_sha
+        else
+          git_revision_from_local_bottle_json(formula)
+        end
+
+        return false if sha.blank?
         return false unless no_diff?(formula, sha)
 
         formula.recursive_dependencies.all? do |dep|
