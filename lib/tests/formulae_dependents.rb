@@ -169,10 +169,11 @@ module Homebrew
       end
 
       def install_dependent(dependent, testable_dependents, args:, build_from_source: false)
-        if @skip_candidates.include?(dependent.full_name) && artifact_cache_valid?(dependent)
+        if @skip_candidates.include?(dependent.full_name) &&
+           artifact_cache_valid?(dependent, formulae_dependents: true)
           @tested_dependents_list.write(dependent.full_name, mode: "a")
           @tested_dependents_list.write("\n", mode: "a")
-          skipped dependent.name, "#{dependent.full_name} has been tested at #{previous_github_sha}!"
+          skipped dependent.name, "#{dependent.full_name} has been tested at #{previous_github_sha}"
           return
         end
 

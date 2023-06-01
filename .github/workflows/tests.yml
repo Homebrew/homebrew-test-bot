@@ -97,8 +97,6 @@ jobs:
         id: formulae-detect
 
       - id: brew-test-bot-formulae
-        env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           brew test-bot \
             --only-formulae \
@@ -106,11 +104,15 @@ jobs:
             --only-json-tab \
             --skip-dependents \
             --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }}
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - run: |
           brew test-bot --only-formulae-dependents --junit \
                         --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }} \
                         --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Output brew test-bot failures
         run: |
@@ -124,7 +126,7 @@ jobs:
 
       - run: brew test-bot --only-cleanup-after
 
-      - run: rm -rvf *.bottle*.tar.gz
+      - run: rm -rvf *.bottle*.{json,tar.gz}
 
       - run: brew test-bot --only-setup --dry-run
 

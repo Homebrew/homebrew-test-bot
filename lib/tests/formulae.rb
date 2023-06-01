@@ -24,7 +24,9 @@ module Homebrew
           download_artifact_from_previous_run!("bottles")
         end
         @bottle_checksums.merge!(
-          bottle_glob("*", artifact_cache, bottle_tag: "*").to_h { |bottle| [bottle.realpath, bottle.sha256] },
+          bottle_glob("*", artifact_cache, ".{json,tar.gz}", bottle_tag: "*").to_h do |bottle_file|
+            [bottle_file.realpath, bottle_file.sha256]
+          end,
         )
 
         # #run! modifies `@testing_formulae`, so we need to track this separately.
@@ -186,7 +188,8 @@ module Homebrew
           missing_bottles = @bottle_checksums.keys.reject do |bottle_path|
             next true if bottle_path.exist?
 
-            onoe "Missing bottle: #{bottle_path}"
+            what = (bottle_path.extname == ".json") ? "JSON" : "tarball"
+            onoe "Missing bottle #{what}: #{bottle_path}"
             false
           end
 
@@ -202,10 +205,13 @@ module Homebrew
             false
           end
 
-          unexpected_bottles = bottle_glob("**/*", bottle_tag: "*").reject do |local_bottle|
+          unexpected_bottles = bottle_glob(
+            "**/*", Pathname.pwd, ".{json,tar.gz}", bottle_tag: "*"
+          ).reject do |local_bottle|
             next true if @bottle_checksums.key?(local_bottle.realpath)
 
-            onoe "Unexpected bottle: #{local_bottle}"
+            what = (local_bottle.extname == ".json") ? "JSON" : "tarball"
+            onoe "Unexpected bottle #{what}: #{local_bottle}"
             false
           end
 
@@ -216,7 +222,7 @@ module Homebrew
           files_to_delete += files_to_delete.select(&:symlink?).map(&:realpath)
           FileUtils.rm_rf files_to_delete
 
-          exit 1
+          test "false" # ensure that `test-bot` exits with an error.
         end
       end
 
@@ -257,10 +263,12 @@ module Homebrew
           bottle_step.output
                      .gsub(%r{.*(\./\S+#{HOMEBREW_BOTTLES_EXTNAME_REGEX}).*}om, '\1'),
         )
-        @bottle_checksums[@bottle_filename.realpath] = @bottle_filename.sha256
+        @bottle_json_filename = Pathname.new(
+          @bottle_filename.to_s.gsub(/\.(\d+\.)?tar\.gz$/, ".json"),
+        )
 
-        @bottle_json_filename =
-          @bottle_filename.to_s.gsub(/\.(\d+\.)?tar\.gz$/, ".json")
+        @bottle_checksums[@bottle_filename.realpath] = @bottle_filename.sha256
+        @bottle_checksums[@bottle_json_filename.realpath] = @bottle_json_filename.sha256
 
         @bottle_output_path.write(bottle_step.output, mode: "a")
 
@@ -271,7 +279,7 @@ module Homebrew
         test "brew", "bottle", *bottle_merge_args
         test "brew", "uninstall", "--force", formula.full_name
 
-        bottle_json = JSON.parse(File.read(@bottle_json_filename))
+        bottle_json = JSON.parse(@bottle_json_filename.read)
         root_url = bottle_json.dig(formula.full_name, "bottle", "root_url")
         filename = bottle_json.dig(formula.full_name, "bottle", "tags").values.first["filename"]
 
@@ -518,14 +526,13 @@ module Homebrew
         end
 
         if formula_installed_from_bottle
-          moved_artifacts = bottle_glob(formula_name, artifact_cache, ".{json,tar.gz}")
+          moved_artifacts = bottle_glob(formula_name, artifact_cache, ".{json,tar.gz}").map(&:realpath)
           Pathname.pwd.install moved_artifacts
 
-          moved_artifacts.each do |artifact|
-            next if artifact.extname == ".json"
-
-            @bottle_checksums[artifact.basename.realpath] = @bottle_checksums.fetch(artifact)
-            @bottle_checksums.delete(artifact)
+          moved_artifacts.each do |old_location|
+            new_location = old_location.basename.realpath
+            @bottle_checksums[new_location] = @bottle_checksums.fetch(old_location)
+            @bottle_checksums.delete(old_location)
           end
         else
           bottle_reinstall_formula(formula, new_formula, args: args)
@@ -565,11 +572,15 @@ module Homebrew
         # Move bottle and don't test dependents if the formula linkage or test failed.
         if failed_linkage_or_test_messages.present?
           if @bottle_filename
-            failed_dir = (@bottle_filename.dirname/"failed").mkpath
-            FileUtils.mv [@bottle_filename, @bottle_json_filename], failed_dir
-            @bottle_checksums[(failed_dir/@bottle_filename.basename).realpath] =
-              @bottle_checksums.fetch(@bottle_filename)
-            @bottle_checksums.delete(@bottle_filename)
+            failed_dir = @bottle_filename.dirname/"failed"
+            moved_artifacts = [@bottle_filename, @bottle_json_filename].map(&:realpath)
+            failed_dir.install moved_artifacts
+
+            moved_artifacts.each do |old_location|
+              new_location = (failed_dir/old_location.basename).realpath
+              @bottle_checksums[new_location] = @bottle_checksums.fetch(old_location)
+              @bottle_checksums.delete(old_location)
+            end
           end
 
           if ignore_failures

@@ -15,22 +15,30 @@ module Homebrew
 
       protected
 
+      def cached_event_json
+        return unless (event_json = artifact_cache/"event.json").exist?
+
+        event_json
+      end
+
       def previous_github_sha
         return if tap.blank?
         return unless repository.directory?
         return if ENV["GITHUB_ACTIONS"].blank?
+        return if (github_event_path = ENV.fetch("GITHUB_EVENT_PATH", nil)).blank?
 
-        @previous_sha ||= begin
-          event_path = ENV.fetch("GITHUB_EVENT_PATH")
-          event_payload = JSON.parse(File.read(event_path))
+        github_event_payload = JSON.parse(File.read(github_event_path))
+        head_repo_owner = github_event_payload.dig("pull_request", "head", "repo", "owner", "login")
+        head_from_fork = head_repo_owner != ENV.fetch("GITHUB_REPOSITORY_OWNER")
+        maintainer_fork = tap.official? && JSON.parse(HOMEBREW_MAINTAINER_JSON.read).include?(head_repo_owner)
+        return if head_from_fork && !maintainer_fork
 
-          before = event_payload.fetch("before", "")
-          test git, "-C", repository, "fetch", "origin", before if before.present?
+        # If we have a cached event payload, then we failed to get the artifact we wanted
+        # from `GITHUB_EVENT_PATH`, so use the cached payload to check for a SHA1.
+        event_payload = JSON.parse(cached_event_json.read) if cached_event_json.present?
+        event_payload ||= github_event_payload
 
-          before
-        end
-
-        @previous_sha
+        event_payload.fetch("before", nil)
       end
 
       GRAPHQL_QUERY = <<~GRAPHQL
@@ -61,11 +69,40 @@ module Homebrew
         }
       GRAPHQL
 
-      def download_artifact_from_previous_run!(name)
-        return if previous_github_sha.blank?
+      def artifact_metadata(check_suite_nodes, repo, event_name, workflow_name, check_run_name, artifact_name)
+        candidate_nodes = check_suite_nodes.select do |node|
+          next false if node.fetch("status") != "COMPLETED"
+
+          workflow_run = node.fetch("workflowRun")
+          next false if workflow_run.fetch("event") != event_name
+          next false if workflow_run.dig("workflow", "name") != workflow_name
+
+          check_run_nodes = node.dig("checkRuns", "nodes")
+          next false if check_run_nodes.blank?
+
+          check_run_nodes.any? do |check_run_node|
+            check_run_node.fetch("name") == check_run_name && check_run_node.fetch("status") == "COMPLETED"
+          end
+        end
+        return if candidate_nodes.blank?
+
+        run_id = candidate_nodes.max_by { |node| Time.parse(node.fetch("updatedAt")) }
+                                .dig("workflowRun", "databaseId")
+        return if run_id.blank?
+
+        url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
+        response = GitHub::API.open_rest(url)
+        return if response.fetch("total_count").zero?
+
+        artifacts = response.fetch("artifacts")
+        artifacts.find { |artifact| artifact.fetch("name") == artifact_name }
+      end
+
+      def download_artifact_from_previous_run!(artifact_name)
+        return if (sha = previous_github_sha).blank?
 
         repo = ENV.fetch("GITHUB_REPOSITORY")
-        url = GitHub.url_to("repos", repo, "commits", previous_github_sha)
+        url = GitHub.url_to("repos", repo, "commits", sha)
         response = GitHub::API.open_rest(url)
         node_id = response.fetch("node_id")
 
@@ -73,57 +110,66 @@ module Homebrew
         check_suite_nodes = response.dig("node", "checkSuites", "nodes")
         return if check_suite_nodes.blank?
 
-        formulae_tests_nodes = check_suite_nodes.select do |node|
-          next false if node.fetch("status") != "COMPLETED"
-
-          workflow_run = node.fetch("workflowRun")
-          next false if workflow_run.fetch("event") != "pull_request"
-          next false if workflow_run.dig("workflow", "name") != "CI"
-
-          check_run_nodes = node.dig("checkRuns", "nodes")
-          next false if check_run_nodes.blank?
-
-          check_run_nodes.any? do |check_run_node|
-            check_run_node.fetch("name") == "conclusion" && check_run_node.fetch("status") == "COMPLETED"
-          end
-        end
-        return if formulae_tests_nodes.blank?
-
-        run_id = formulae_tests_nodes.max_by { |node| Time.parse(node.fetch("updatedAt")) }
-                                     .dig("workflowRun", "databaseId")
-        return if run_id.blank?
-
-        url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
-        response = GitHub::API.open_rest(url)
-        return if response.fetch("total_count").zero?
-
-        wanted_artifact = response.fetch("artifacts").find { |artifact| artifact.fetch("name") == name }
+        wanted_artifact = artifact_metadata(check_suite_nodes, repo, "pull_request",
+                                            "CI", "conclusion", artifact_name)
+        # If we didn't find the artifact that we wanted, fall back to the `event_payload` artifact.
+        wanted_artifact ||= artifact_metadata(check_suite_nodes, repo, "pull_request_target",
+                                              "Triage tasks", "upload-metadata", "event_payload")
         return if wanted_artifact.blank?
 
-        ohai "Downloading #{name} from #{previous_github_sha}"
+        wanted_artifact_name = wanted_artifact.fetch("name")
+        cached_event_json&.unlink if wanted_artifact_name == "event_payload"
+
+        ohai "Downloading #{wanted_artifact_name} from #{sha}"
         download_url = wanted_artifact.fetch("archive_download_url")
+        artifact_id = wanted_artifact.fetch("id")
 
         artifact_cache.mkpath
         artifact_cache.cd do
-          GitHub.download_artifact(download_url, run_id)
+          GitHub.download_artifact(download_url, artifact_id)
         end
+
+        return if wanted_artifact_name == artifact_name
+
+        # If we made it here, then we downloaded an `event_payload` artifact.
+        # We can now use this `event_payload` artifact to attempt to download the artifact we wanted.
+        download_artifact_from_previous_run!(artifact_name)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
       end
 
-      def no_diff?(formula, sha)
+      def no_diff?(formula, git_ref)
         return false unless repository.directory?
 
+        @fetched_refs ||= []
+        if @fetched_refs.exclude?(git_ref)
+          test git, "-C", repository, "fetch", "origin", git_ref, ignore_failures: true
+          @fetched_refs << git_ref if steps.last.passed?
+        end
+
         relative_formula_path = formula.path.relative_path_from(repository)
-        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", sha, relative_formula_path)
+        system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", git_ref, "--", relative_formula_path)
       end
 
-      def artifact_cache_valid?(formula)
-        return false if previous_github_sha.blank?
-        return false unless no_diff?(formula, previous_github_sha)
+      def git_revision_from_local_bottle_json(formula)
+        return if (local_bottle_json = bottle_glob(formula, artifact_cache, ".json").first).blank?
+
+        local_bottle_hash = JSON.parse(local_bottle_json.read)
+        local_bottle_hash.dig(formula.name, "formula", "tap_git_revision")
+      end
+
+      def artifact_cache_valid?(formula, formulae_dependents: false)
+        sha = if formulae_dependents
+          previous_github_sha
+        else
+          git_revision_from_local_bottle_json(formula)
+        end
+
+        return false if sha.blank?
+        return false unless no_diff?(formula, sha)
 
         formula.recursive_dependencies.all? do |dep|
-          no_diff?(dep.to_formula, previous_github_sha)
+          no_diff?(dep.to_formula, sha)
         end
       end
 

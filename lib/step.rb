@@ -17,7 +17,7 @@ module Homebrew
       @ignore_failures = ignore_failures
       @repository = repository
 
-      @name = command[1].delete("-")
+      @name = command[1]&.delete("-")
       @status = :running
       @output = nil
     end
