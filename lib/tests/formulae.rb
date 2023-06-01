@@ -215,7 +215,7 @@ module Homebrew
             false
           end
 
-          return if missing_bottles.blank? && mismatched_checksums.blank? && unexpected_bottles.blank?
+          return true if missing_bottles.blank? && mismatched_checksums.blank? && unexpected_bottles.blank?
 
           # Delete these files so we don't end up uploading them.
           files_to_delete = mismatched_checksums.keys + unexpected_bottles
@@ -223,6 +223,8 @@ module Homebrew
           FileUtils.rm_rf files_to_delete
 
           test "false" # ensure that `test-bot` exits with an error.
+
+          false
         end
       end
 
@@ -499,6 +501,7 @@ module Homebrew
 
         install_step_passed = formula_installed_from_bottle =
           artifact_cache_valid?(formula) &&
+          verify_local_bottles && # Checking the artifact cache loads formulae, so do this check second.
           install_formula_from_bottle(formula_name,
                                       bottle_dir:                  artifact_cache,
                                       testing_formulae_dependents: false,
