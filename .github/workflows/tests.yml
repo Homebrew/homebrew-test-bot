@@ -111,8 +111,6 @@ jobs:
           brew test-bot --only-formulae-dependents --junit \
                         --testing-formulae=${{ steps.formulae-detect.outputs.testing_formulae }} \
                         --skipped-or-failed-formulae=${{ steps.brew-test-bot-formulae.outputs.skipped_or_failed_formulae }}
-        env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Output brew test-bot failures
         run: |
@@ -131,5 +129,3 @@ jobs:
       - run: brew test-bot --only-setup --dry-run
 
       - run: brew test-bot testbottest --only-formulae --dry-run
-        env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

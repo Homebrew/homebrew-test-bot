@@ -104,6 +104,7 @@ module Homebrew
       end
 
       def download_artifact_from_previous_run!(artifact_name)
+        return if GitHub::API.credentials_type == :none
         return if (sha = previous_github_sha).blank?
 
         repo = ENV.fetch("GITHUB_REPOSITORY")
