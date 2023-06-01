@@ -21,14 +21,19 @@ module Homebrew
         event_json
       end
 
+      def github_event_payload
+        return if (github_event_path = ENV.fetch("GITHUB_EVENT_PATH", nil)).blank?
+
+        JSON.parse(File.read(github_event_path))
+      end
+
       def previous_github_sha
         return if tap.blank?
         return unless repository.directory?
         return if ENV["GITHUB_ACTIONS"].blank?
-        return if (github_event_path = ENV.fetch("GITHUB_EVENT_PATH", nil)).blank?
+        return if (payload = github_event_payload).blank?
 
-        github_event_payload = JSON.parse(File.read(github_event_path))
-        head_repo_owner = github_event_payload.dig("pull_request", "head", "repo", "owner", "login")
+        head_repo_owner = payload.dig("pull_request", "head", "repo", "owner", "login")
         head_from_fork = head_repo_owner != ENV.fetch("GITHUB_REPOSITORY_OWNER")
         maintainer_fork = tap.official? && JSON.parse(HOMEBREW_MAINTAINER_JSON.read).include?(head_repo_owner)
         return if head_from_fork && !maintainer_fork
@@ -36,7 +41,7 @@ module Homebrew
         # If we have a cached event payload, then we failed to get the artifact we wanted
         # from `GITHUB_EVENT_PATH`, so use the cached payload to check for a SHA1.
         event_payload = JSON.parse(cached_event_json.read) if cached_event_json.present?
-        event_payload ||= github_event_payload
+        event_payload ||= payload
 
         event_payload.fetch("before", nil)
       end
@@ -102,6 +107,12 @@ module Homebrew
         return if (sha = previous_github_sha).blank?
 
         repo = ENV.fetch("GITHUB_REPOSITORY")
+        pull_number = github_event_payload.dig("pull_request", "number")
+        return if pull_number.blank?
+
+        pr_labels = GitHub.pull_request_labels(*repo.split("/"), pull_number)
+        return if pr_labels.include?("workflows") # Avoid cache poisoning.
+
         url = GitHub.url_to("repos", repo, "commits", sha)
         response = GitHub::API.open_rest(url)
         node_id = response.fetch("node_id")
