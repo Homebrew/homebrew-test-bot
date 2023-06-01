@@ -103,7 +103,8 @@ module Homebrew
         artifacts.find { |artifact| artifact.fetch("name") == artifact_name }
       end
 
-      def download_artifact_from_previous_run!(artifact_name)
+      def download_artifact_from_previous_run!(artifact_name, dry_run:)
+        return if dry_run
         return if GitHub::API.credentials_type == :none
         return if (sha = previous_github_sha).blank?
 
@@ -145,7 +146,7 @@ module Homebrew
 
         # If we made it here, then we downloaded an `event_payload` artifact.
         # We can now use this `event_payload` artifact to attempt to download the artifact we wanted.
-        download_artifact_from_previous_run!(artifact_name)
+        download_artifact_from_previous_run!(artifact_name, dry_run: dry_run)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
       end
