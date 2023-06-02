@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "utils/github/artifacts"
-
 module Homebrew
   module Tests
     class Formulae < TestFormulae

@@ -137,6 +137,8 @@ module Homebrew
         download_url = wanted_artifact.fetch("archive_download_url")
         artifact_id = wanted_artifact.fetch("id")
 
+        require "utils/github/artifacts"
+
         artifact_cache.mkpath
         artifact_cache.cd do
           GitHub.download_artifact(download_url, artifact_id)
@@ -149,6 +151,8 @@ module Homebrew
         download_artifact_from_previous_run!(artifact_name, dry_run: dry_run)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
+      rescue LoadError # TODO: Remove when GitHub Actions is on Homebrew 4.0.19+.
+        nil
       end
 
       def no_diff?(formula, git_ref)
