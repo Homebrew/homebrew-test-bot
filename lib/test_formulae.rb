@@ -46,34 +46,6 @@ module Homebrew
         event_payload.fetch("before", nil)
       end
 
-      GRAPHQL_QUERY = <<~GRAPHQL
-        query ($node_id: ID!) {
-          node(id: $node_id) {
-            ... on Commit {
-              checkSuites(last: 100) {
-                nodes {
-                  status
-                  updatedAt
-                  workflowRun {
-                    databaseId
-                    event
-                    workflow {
-                      name
-                    }
-                  }
-                  checkRuns(last: 100) {
-                    nodes {
-                      name
-                      status
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      GRAPHQL
-
       def artifact_metadata(check_suite_nodes, repo, event_name, workflow_name, check_run_name, artifact_name)
         candidate_nodes = check_suite_nodes.select do |node|
           next false if node.fetch("status") != "COMPLETED"
@@ -103,30 +75,63 @@ module Homebrew
         artifacts.find { |artifact| artifact.fetch("name") == artifact_name }
       end
 
+      GRAPHQL_QUERY = <<~GRAPHQL
+        query ($owner: String!, $repo: String!, $commit: GitObjectID!) {
+          repository(owner: $owner, name: $repo) {
+            object(oid: $commit) {
+              ... on Commit {
+                checkSuites(last: 100) {
+                  nodes {
+                    status
+                    updatedAt
+                    workflowRun {
+                      databaseId
+                      event
+                      workflow {
+                        name
+                      }
+                    }
+                    checkRuns(last: 100) {
+                      nodes {
+                        name
+                        status
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      GRAPHQL
+
       def download_artifact_from_previous_run!(artifact_name, dry_run:)
         return if dry_run
         return if GitHub::API.credentials_type == :none
         return if (sha = previous_github_sha).blank?
 
-        repo = ENV.fetch("GITHUB_REPOSITORY")
         pull_number = github_event_payload.dig("pull_request", "number")
         return if pull_number.blank?
 
-        pr_labels = GitHub.pull_request_labels(*repo.split("/"), pull_number)
+        github_repository = ENV.fetch("GITHUB_REPOSITORY")
+        owner, repo = *github_repository.split("/")
+        pr_labels = GitHub.pull_request_labels(owner, repo, pull_number)
         return if pr_labels.include?("workflows") # Avoid cache poisoning.
 
-        url = GitHub.url_to("repos", repo, "commits", sha)
-        response = GitHub::API.open_rest(url)
-        node_id = response.fetch("node_id")
+        variables = {
+          owner:  owner,
+          repo:   repo,
+          commit: sha,
+        }
 
-        response = GitHub::API.open_graphql(GRAPHQL_QUERY, variables: { node_id: node_id })
-        check_suite_nodes = response.dig("node", "checkSuites", "nodes")
+        response = GitHub::API.open_graphql(GRAPHQL_QUERY, variables: variables)
+        check_suite_nodes = response.dig("repository", "object", "checkSuites", "nodes")
         return if check_suite_nodes.blank?
 
-        wanted_artifact = artifact_metadata(check_suite_nodes, repo, "pull_request",
+        wanted_artifact = artifact_metadata(check_suite_nodes, github_repository, "pull_request",
                                             "CI", "conclusion", artifact_name)
         # If we didn't find the artifact that we wanted, fall back to the `event_payload` artifact.
-        wanted_artifact ||= artifact_metadata(check_suite_nodes, repo, "pull_request_target",
+        wanted_artifact ||= artifact_metadata(check_suite_nodes, github_repository, "pull_request_target",
                                               "Triage tasks", "upload-metadata", "event_payload")
         return if wanted_artifact.blank?
 
