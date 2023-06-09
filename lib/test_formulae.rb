@@ -173,18 +173,17 @@ module Homebrew
         system(git, "-C", repository, "diff", "--no-ext-diff", "--quiet", git_ref, "--", relative_formula_path)
       end
 
-      def git_revision_from_local_bottle_json(formula)
-        return if (local_bottle_json = bottle_glob(formula, artifact_cache, ".json").first).blank?
+      def local_bottle_hash(formula, bottle_dir:)
+        return if (local_bottle_json = bottle_glob(formula, bottle_dir, ".json").first).blank?
 
-        local_bottle_hash = JSON.parse(local_bottle_json.read)
-        local_bottle_hash.dig(formula.name, "formula", "tap_git_revision")
+        JSON.parse(local_bottle_json.read)
       end
 
       def artifact_cache_valid?(formula, formulae_dependents: false)
         sha = if formulae_dependents
           previous_github_sha
         else
-          git_revision_from_local_bottle_json(formula)
+          local_bottle_hash(formula, bottle_dir: artifact_cache)&.dig(formula.name, "formula", "tap_git_revision")
         end
 
         return false if sha.blank?
@@ -215,7 +214,22 @@ module Homebrew
         install_args += %w[--ignore-dependencies --skip-post-install] if testing_formulae_dependents
         test "brew", "install", *install_args, bottle_filename
         install_step = steps.last
-        return install_step.passed? unless testing_formulae_dependents
+
+        if !dry_run && install_step.passed?
+          bottle_hash = local_bottle_hash(formula_name, bottle_dir: bottle_dir)
+          bottle_revision = bottle_hash.dig(formula_name, "formula", "tap_git_revision")
+          bottle_message = "Installed bottle built at #{bottle_revision}"
+
+          ohai bottle_message
+          if ENV["GITHUB_ACTIONS"].present?
+            puts GitHub::Actions::Annotation.new(
+              :notice,
+              bottle_message,
+              file: bottle_hash.dig(formula_name, "formula", "tap_git_path"),
+            )
+          end
+        end
+        return install_step.passed? if !testing_formulae_dependents || !install_step.passed?
 
         test "brew", "unlink", formula_name
         puts
