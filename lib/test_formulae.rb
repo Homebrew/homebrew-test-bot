@@ -215,18 +215,19 @@ module Homebrew
         test "brew", "install", *install_args, bottle_filename
         install_step = steps.last
 
-        if !dry_run && install_step.passed?
+        if !dry_run && !testing_formulae_dependents && install_step.passed?
           bottle_hash = local_bottle_hash(formula_name, bottle_dir: bottle_dir)
           bottle_revision = bottle_hash.dig(formula_name, "formula", "tap_git_revision")
           bottle_message = "Installed bottle built at #{bottle_revision}"
 
-          ohai bottle_message
           if ENV["GITHUB_ACTIONS"].present?
             puts GitHub::Actions::Annotation.new(
               :notice,
               bottle_message,
               file: bottle_hash.dig(formula_name, "formula", "tap_git_path"),
             )
+          else
+            ohai bottle_message
           end
         end
         return install_step.passed? if !testing_formulae_dependents || !install_step.passed?
