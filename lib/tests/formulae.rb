@@ -124,10 +124,9 @@ module Homebrew
         end
 
         info_header "Determining dependencies..."
-        installed = Utils.safe_popen_read("brew", "list", "--formula").split("\n")
+        installed = Utils.safe_popen_read("brew", "list", "--formula", "--full-name").split("\n")
         dependencies =
-          Utils.safe_popen_read("brew", "deps", "--include-build",
-                                "--include-test", formula_name)
+          Utils.safe_popen_read("brew", "deps", "--include-build", "--include-test", "--full-name", formula_name)
                .split("\n")
         installed_dependencies = installed & dependencies
         installed_dependencies.each do |name|
