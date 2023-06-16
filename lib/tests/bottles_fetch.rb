@@ -19,14 +19,13 @@ module Homebrew
       private
 
       def fetch_bottles!(formula_name, args:)
-        cleanup_during!(args: args)
-
         test_header(:BottlesFetch, method: "fetch_bottles!(#{formula_name})")
 
         formula = Formula[formula_name]
         tags = formula.bottle_specification.collector.tags
 
         tags.each do |tag|
+          cleanup_during!(args: args)
           test "brew", "fetch", "--retry", "--formulae", "--bottle-tag=#{tag}", formula_name
         end
       end
