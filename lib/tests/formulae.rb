@@ -441,6 +441,18 @@ module Homebrew
         # Online checks are a bit flaky and less useful for PRs that modify multiple formulae.
         skip_online_checks = args.skip_online_checks? || (@testing_formulae_count > 5)
 
+        # Skip online checks for formulae being migrated to `openssl@3`
+        # TODO: Remove when OpenSSL 3 migration is complete.
+        skip_online_checks ||= if (event_payload = github_event_payload).present?
+          base_info = event_payload.dig("pull_request", "base").to_h # handle `nil`
+
+          openssl_migration_branch = base_info["ref"] == "openssl-migration-staging"
+          homebrew_owned_repo = base_info.dig("repo", "owner", "login") == "Homebrew"
+          homebrew_core_pr = base_info.dig("repo", "name") == "homebrew-core"
+
+          openssl_migration_branch && homebrew_owned_repo && homebrew_core_pr
+        end
+
         fetch_args = [formula_name]
         fetch_args << build_flag
         fetch_args << "--force" if args.cleanup?
