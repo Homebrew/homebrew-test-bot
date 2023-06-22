@@ -309,7 +309,7 @@ module Homebrew
       def build_bottle?(formula, args:)
         # Build and runtime dependencies must be bottled on the current OS,
         # but accept an older compatible bottle for test dependencies.
-        return false if formula.deps.any? do |dep|
+        return false if formula.effective_deps.any? do |dep|
           !bottled_or_built?(
             dep.to_formula,
             @built_formulae - @skipped_or_failed_formulae,
@@ -399,7 +399,7 @@ module Homebrew
 
         test "brew", "deps", "--tree", "--annotate", "--include-build", "--include-test", named_args: formula_name
 
-        deps_without_compatible_bottles = formula.deps.map(&:to_formula)
+        deps_without_compatible_bottles = formula.effective_deps.map(&:to_formula)
         deps_without_compatible_bottles.reject! do |dep|
           bottled_or_built?(dep, @built_formulae - @skipped_or_failed_formulae)
         end
@@ -476,7 +476,7 @@ module Homebrew
           return
         end
 
-        deps |= formula.deps.to_a.reject(&:optional?)
+        deps |= formula.effective_deps.to_a.reject(&:optional?)
         reqs |= formula.requirements.to_a.reject(&:optional?)
 
         tap_needed_taps(deps)

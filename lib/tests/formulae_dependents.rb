@@ -113,10 +113,11 @@ module Homebrew
 
         dependents = dependents.zip(dependents.map do |f|
           if args.skip_recursive_dependents?
-            f.deps
+            f.effective_deps
           else
             begin
               Dependency.expand(f, cache_key: "test-bot-dependents") do |_, dependency|
+                Dependency.prune if dependency.uses_from_macos? && dependency.use_macos_install?
                 Dependency.keep_but_prune_recursive_deps if dependency.build? || dependency.test?
               end
             rescue TapFormulaUnavailableError => e
@@ -190,7 +191,7 @@ module Homebrew
 
         cleanup_during!(@dependent_testing_formulae, args: args)
 
-        required_dependent_deps = dependent.deps.reject(&:optional?)
+        required_dependent_deps = dependent.effective_deps.reject(&:optional?)
         bottled_on_current_version = bottled?(dependent, no_older_versions: true)
         dependent_was_previously_installed = dependent.latest_version_installed?
 
@@ -297,7 +298,7 @@ module Homebrew
            !bottled_on_current_version &&
            !dependent_was_previously_installed &&
            all_tests_passed &&
-           dependent.deps.all? { |d| bottled?(d.to_formula, no_older_versions: true) }
+           required_dependent_deps.all? { |d| bottled?(d.to_formula, no_older_versions: true) }
           os_string = if OS.mac?
             str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
             str << " on Apple Silicon" if Hardware::CPU.arm?

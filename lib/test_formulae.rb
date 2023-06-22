@@ -250,7 +250,7 @@ module Homebrew
         # up the dep tree when we encounter an `:all` bottle because
         # a formula is not bottled unless its dependencies are.
         if formula.bottle_specification.tag?(Utils::Bottles.tag(:all))
-          formula.deps.all? { |dep| bottled?(dep.to_formula, no_older_versions: no_older_versions) }
+          formula.effective_deps.all? { |dep| bottled?(dep.to_formula, no_older_versions: no_older_versions) }
         else
           formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: no_older_versions)
         end
