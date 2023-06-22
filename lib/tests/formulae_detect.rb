@@ -44,6 +44,11 @@ module Homebrew
             url = "https://github.com/#{github_repository}/pull/#{pr}/checks"
           end
         elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args: args))
+          unless canonical_formula_name.include?("/")
+            ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1"
+            CoreTap.ensure_installed!
+          end
+
           @testing_formulae = [canonical_formula_name]
         else
           raise UsageError,
@@ -170,7 +175,9 @@ module Homebrew
       end
 
       def safe_formula_canonical_name(formula_name, args:)
-        Formulary.factory(formula_name).full_name
+        Homebrew.with_no_api_env do
+          Formulary.factory(formula_name).full_name
+        end
       rescue TapFormulaUnavailableError => e
         raise if e.tap.installed?
 

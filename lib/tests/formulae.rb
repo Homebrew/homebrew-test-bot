@@ -16,6 +16,8 @@ module Homebrew
       end
 
       def run!(args:)
+        test_header(:Formulae)
+
         verify_local_bottles
 
         with_env(HOMEBREW_DISABLE_LOAD_FORMULA: "1") do
