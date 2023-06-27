@@ -11,6 +11,9 @@ module Homebrew
 
         @skipped_or_failed_formulae = []
         @artifact_cache = Pathname("artifact-cache")
+        # Let's keep track of the artifacts we've already downloaded
+        # to avoid repeatedly trying to download the same thing.
+        @downloaded_artifacts = Hash.new { |h, k| h[k] = [] }
       end
 
       protected
@@ -136,6 +139,12 @@ module Homebrew
         return if wanted_artifact.blank?
 
         wanted_artifact_name = wanted_artifact.fetch("name")
+        if @downloaded_artifacts[sha].include?(wanted_artifact_name)
+          opoo "Already tried #{wanted_artifact_name} from #{sha}, giving up"
+          return
+        end
+
+        @downloaded_artifacts[sha] << wanted_artifact_name
         cached_event_json&.unlink if wanted_artifact_name == "event_payload"
 
         ohai "Downloading #{wanted_artifact_name} from #{sha}"
