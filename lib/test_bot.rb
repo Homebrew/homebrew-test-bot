@@ -68,10 +68,12 @@ module Homebrew
       if args.local?
         home = "#{Dir.pwd}/home"
         logs = "#{Dir.pwd}/logs"
+        gitconfig = "#{Dir.home}/.gitconfig"
         ENV["HOMEBREW_HOME"] = ENV["HOME"] = home
         ENV["HOMEBREW_LOGS"] = logs
         FileUtils.mkdir_p home
         FileUtils.mkdir_p logs
+        FileUtils.cp gitconfig, home if File.exist?(gitconfig)
       end
 
       tap = resolve_test_tap(args.tap)
