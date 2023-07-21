@@ -155,7 +155,7 @@ module Homebrew
 
         artifact_cache.mkpath
         artifact_cache.cd do
-          GitHub.download_artifact(download_url, artifact_id)
+          GitHub.download_artifact(download_url, artifact_id.to_s)
         end
 
         return if wanted_artifact_name == artifact_name
