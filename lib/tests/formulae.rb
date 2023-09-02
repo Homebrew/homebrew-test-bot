@@ -393,12 +393,6 @@ module Homebrew
           return
         end
 
-        test "brew", "audit", "--strict", "--only=gcc_dependency", formula_name
-        if steps.last.failed?
-          skipped formula_name, "#{formula_name} should not have a Linux-only GCC dependency!"
-          return
-        end
-
         test "brew", "deps", "--tree", "--annotate", "--include-build", "--include-test", named_args: formula_name
 
         deps_without_compatible_bottles = formula.deps.map(&:to_formula)
