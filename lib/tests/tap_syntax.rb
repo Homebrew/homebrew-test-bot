@@ -9,15 +9,17 @@ module Homebrew
 
         test "brew", "style", tap.name
 
-        return if tap.formula_files.blank? && tap.cask_files.blank?
+        if tap.core_tap? || tap.core_cask_tap?
+          if %w[push merge_group].include?(ENV["GITHUB_EVENT_NAME"])
+            test "brew", "readall", "--aliases", tap.name
+            test "brew", "audit", "--tap=#{tap.name}"
+          end
 
-        test "brew", "readall", "--aliases", tap.name
-        test "brew", "audit", "--tap=#{tap.name}"
-
-        return if %w[push merge_group].exclude?(ENV["GITHUB_EVENT_NAME"])
-        return if !tap.core_tap? && !tap.name.start_with?("homebrew/cask")
-
-        test_api_generation
+          test_api_generation
+        elsif tap.formula_files.present? || tap.cask_files.present?
+          test "brew", "readall", "--aliases", tap.name
+          test "brew", "audit", "--tap=#{tap.name}"
+        end
       end
 
       private
