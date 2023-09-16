@@ -9,11 +9,10 @@ module Homebrew
         info_header "Skipped or failed formulae:"
         puts skipped_or_failed_formulae
 
-        @source_tested_dependents = []
-        @bottle_tested_dependents = []
+        @tested_formulae = []
         @tested_dependents_list = Pathname("tested-dependents-#{Utils::Bottles.tag}.txt")
 
-        @dependent_testing_formulae = @testing_formulae - skipped_or_failed_formulae
+        @dependent_testing_formulae = sorted_formulae - skipped_or_failed_formulae
 
         install_formulae_if_needed_from_bottles!(args: args)
 
@@ -45,6 +44,7 @@ module Homebrew
         cleanup_during!(@dependent_testing_formulae, args: args)
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
+        @tested_formulae << formula_name
 
         formula = Formulary.factory(formula_name)
 
@@ -70,19 +70,12 @@ module Homebrew
           dependents_for_formula(formula, formula_name, args: args)
 
         source_dependents.each do |dependent|
-          next if @source_tested_dependents.include?(dependent)
-
           install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
           install_dependent(dependent, testable_dependents, args: args) if bottled?(dependent)
-          @source_tested_dependents << dependent
         end
 
         bottled_dependents.each do |dependent|
-          # Testing a dependent from source also tests the bottle (if available).
-          next if @bottle_tested_dependents.include?(dependent) || @source_tested_dependents.include?(dependent)
-
           install_dependent(dependent, testable_dependents, args: args)
-          @bottle_tested_dependents << dependent
         end
       end
 
@@ -128,6 +121,13 @@ module Homebrew
             end
           end.reject(&:optional?)
         end)
+
+        # Defer formulae which could be tested later
+        # i.e. formulae that also depend on something else yet to be built in this test run.
+        dependents.select! do |_, deps|
+          still_to_test = @dependent_testing_formulae - @tested_formulae
+          (deps.map { |d| d.to_formula.full_name } & still_to_test).empty?
+        end
 
         # Split into dependents that we could potentially be building from source and those
         # we should not. The criteria is that a dependent must have bottled dependencies, and

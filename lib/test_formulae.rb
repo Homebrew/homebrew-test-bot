@@ -362,6 +362,46 @@ module Homebrew
 
         test "brew", "uninstall", "--force", "--ignore-dependencies", *uninstallable_formulae
       end
+
+      def sorted_formulae
+        changed_formulae_dependents = {}
+
+        @testing_formulae.each do |formula|
+          begin
+            formula_dependencies =
+              Utils.popen_read("brew", "deps", "--full-name",
+                               "--include-build",
+                               "--include-test", formula)
+                   .split("\n")
+            # deps can fail if deps are not tapped
+            unless $CHILD_STATUS.success?
+              Formulary.factory(formula).recursive_dependencies
+              # If we haven't got a TapFormulaUnavailableError, then something else is broken
+              raise "Failed to determine dependencies for '#{formula}'."
+            end
+          rescue TapFormulaUnavailableError => e
+            raise if e.tap.installed?
+
+            e.tap.clear_cache
+            safe_system "brew", "tap", e.tap.name
+            retry
+          end
+
+          unchanged_dependencies = formula_dependencies - @testing_formulae
+          changed_dependencies = formula_dependencies - unchanged_dependencies
+          changed_dependencies.each do |changed_formula|
+            changed_formulae_dependents[changed_formula] ||= 0
+            changed_formulae_dependents[changed_formula] += 1
+          end
+        end
+
+        changed_formulae = changed_formulae_dependents.sort do |a1, a2|
+          a2[1].to_i <=> a1[1].to_i
+        end
+        changed_formulae.map!(&:first)
+        unchanged_formulae = @testing_formulae - changed_formulae
+        changed_formulae + unchanged_formulae
+      end
     end
   end
 end
