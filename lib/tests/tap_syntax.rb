@@ -11,13 +11,13 @@ module Homebrew
 
         if tap.core_tap? || tap.core_cask_tap?
           if %w[push merge_group].include?(ENV["GITHUB_EVENT_NAME"])
-            test "brew", "readall", "--aliases", tap.name
+            test "brew", "readall", "--aliases", "--os=all", "--arch=all", tap.name
             test "brew", "audit", "--tap=#{tap.name}"
           end
 
           test_api_generation
         elsif tap.formula_files.present? || tap.cask_files.present?
-          test "brew", "readall", "--aliases", tap.name
+          test "brew", "readall", "--aliases", "--os=all", "--arch=all", tap.name
           test "brew", "audit", "--tap=#{tap.name}"
         end
       end
