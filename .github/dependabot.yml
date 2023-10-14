@@ -6,8 +6,8 @@ updates:
     interval: daily
   open-pull-requests-limit: 10
   allow:
-  - dependency-type: direct
-  - dependency-type: indirect
+    - dependency-type: all
+  versioning-strategy: lockfile-only
 - package-ecosystem: github-actions
   directory: "/"
   schedule:

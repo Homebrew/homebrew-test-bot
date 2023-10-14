@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-require "rexml/document"
-require "rexml/xmldecl"
-require "rexml/cdata"
-
 module Homebrew
   # Creates Junit report with only required by BuildPulse attributes
   # See https://github.com/Homebrew/homebrew-test-bot/pull/621#discussion_r658712640
@@ -14,6 +10,10 @@ module Homebrew
 
     def build(filters: nil)
       filters ||= []
+
+      require "rexml/document"
+      require "rexml/xmldecl"
+      require "rexml/cdata"
 
       @xml_document = REXML::Document.new
       @xml_document << REXML::XMLDecl.new
