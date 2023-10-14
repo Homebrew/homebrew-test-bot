@@ -194,6 +194,19 @@ module Homebrew
         bottled_on_current_version = bottled?(dependent, no_older_versions: true)
         dependent_was_previously_installed = dependent.latest_version_installed?
 
+        dependent_dependencies = Dependency.expand(
+          dependent,
+          cache_key: "test-bot-dependent-dependencies-#{dependent.full_name}",
+        ) do |dep_dependent, dependency|
+          next if !dependency.build? && !dependency.test? && !dependency.optional?
+          next if dependency.test? &&
+                  dep_dependent == dependent &&
+                  !dependency.optional? &&
+                  testable_dependents.include?(dependent)
+
+          Dependency.prune
+        end
+
         unless dependent_was_previously_installed
           build_args = []
 
@@ -206,20 +219,7 @@ module Homebrew
             build_args << "--build-from-source"
           end
 
-          dependent_dependencies = Dependency.expand(
-            dependent,
-            cache_key: "test-bot-dependent-dependencies-#{dependent.full_name}",
-          ) do |dep_dependent, dependency|
-            next if !dependency.build? && !dependency.test? && !dependency.optional?
-            next if dependency.test? &&
-                    dep_dependent == dependent &&
-                    !dependency.optional? &&
-                    testable_dependents.include?(dependent)
-
-            Dependency.prune
-          end
           missing_deps = dependent_dependencies.reject(&:satisfied?).map(&:name)
-
           test "brew", "fetch", *build_args, "--retry", dependent.full_name, *missing_deps
           return if steps.last.failed?
 
