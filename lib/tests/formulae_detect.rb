@@ -11,6 +11,7 @@ module Homebrew
         @argument = argument
         @added_formulae = []
         @deleted_formulae = []
+        @formulae_to_fetch = []
       end
 
       def run!(args:)
@@ -22,6 +23,7 @@ module Homebrew
           f.puts "testing_formulae=#{@testing_formulae.join(",")}"
           f.puts "added_formulae=#{@added_formulae.join(",")}"
           f.puts "deleted_formulae=#{@deleted_formulae.join(",")}"
+          f.puts "formulae_to_fetch=#{@formulae_to_fetch.join(",")}"
         end
       end
 
@@ -165,12 +167,33 @@ module Homebrew
         modified_formulae.uniq!
         @deleted_formulae.uniq!
 
+        # We only need to do a fetch test on formulae that have had a change in the pkg version or bottle block.
+        # These fetch tests only happen in merge queues.
+        @formulae_to_fetch = if diff_start_sha1 == diff_end_sha1 || ENV["GITHUB_EVENT_NAME"] != "merge_group"
+          []
+        else
+          require "formula_versions"
+
+          @testing_formulae.reject do |formula_name|
+            latest_formula = Formula[formula_name]
+
+            # nil = formula not found, false = bottles changed, true = bottles not changed
+            equal_bottles = FormulaVersions.new(latest_formula).formula_at_revision(diff_start_sha1) do |old_formula|
+              old_formula.pkg_version == latest_formula.pkg_version &&
+                old_formula.bottle_specification == latest_formula.bottle_specification
+            end
+
+            equal_bottles # only exclude the true case (bottles not changed)
+          end
+        end
+
         puts <<-EOS
 
-    testing_formulae  #{@testing_formulae.join(" ").presence || "(none)"}
-    added_formulae    #{@added_formulae.join(" ").presence   || "(none)"}
-    modified_formulae #{modified_formulae.join(" ").presence || "(none)"}
-    deleted_formulae  #{@deleted_formulae.join(" ").presence || "(none)"}
+    testing_formulae  #{@testing_formulae.join(" ").presence  || "(none)"}
+    added_formulae    #{@added_formulae.join(" ").presence    || "(none)"}
+    modified_formulae #{modified_formulae.join(" ").presence  || "(none)"}
+    deleted_formulae  #{@deleted_formulae.join(" ").presence  || "(none)"}
+    formulae_to_fetch #{@formulae_to_fetch.join(" ").presence || "(none)"}
         EOS
       end
 
