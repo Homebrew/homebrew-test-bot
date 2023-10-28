@@ -95,7 +95,7 @@ module Homebrew
       steps_output_path.unlink if steps_output_path.exist?
       steps_output_path.write(steps_output)
 
-      if args.junit?
+      if args.junit? && (no_only_args?(args) || args.only_formulae? || args.only_formulae_dependents?)
         junit_filters = %w[audit test]
         junit = ::Homebrew::Junit.new(tests)
         junit.build(filters: junit_filters)
