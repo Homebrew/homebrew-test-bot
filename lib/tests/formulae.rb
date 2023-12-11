@@ -439,7 +439,7 @@ module Homebrew
         audit_args = [formula_name]
         audit_args << "--online" unless skip_online_checks
         if new_formula
-          audit_args << "--new-formula"
+          audit_args << "--new"
         else
           audit_args << "--git" << "--skip-style"
         end
