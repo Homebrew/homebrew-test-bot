@@ -438,6 +438,7 @@ module Homebrew
 
         audit_args = [formula_name]
         audit_args << "--online" unless skip_online_checks
+        audit_args << "--except=stable_version" if args.skip_stable_version_audit?
         if new_formula
           audit_args << "--new"
         else

@@ -59,6 +59,8 @@ module Homebrew
              description: "Don't test livecheck."
       switch "--skip-recursive-dependents",
              description: "Only test the direct dependents."
+      switch "--skip-stable-version-audit",
+             description: "Don't audit the stable version."
       switch "--only-cleanup-before",
              description: "Only run the pre-cleanup step. Needs `--cleanup`."
       switch "--only-setup",
