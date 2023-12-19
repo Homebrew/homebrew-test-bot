@@ -166,8 +166,6 @@ module Homebrew
         download_artifact_from_previous_run!(artifact_name, dry_run: dry_run)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
-      rescue LoadError # TODO: Remove when GitHub Actions is on Homebrew 4.0.19+.
-        nil
       end
 
       def no_diff?(formula, git_ref)
