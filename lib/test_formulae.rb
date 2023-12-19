@@ -119,7 +119,8 @@ module Homebrew
         github_repository = ENV.fetch("GITHUB_REPOSITORY")
         owner, repo = *github_repository.split("/")
         pr_labels = GitHub.pull_request_labels(owner, repo, pull_number)
-        return if pr_labels.include?("workflows") # Avoid cache poisoning.
+        # Also disable bottle cache for PRs modifying workflows to avoid cache poisoning.
+        return if pr_labels.include?("CI-no-bottle-cache") || pr_labels.include?("workflows")
 
         variables = {
           owner:  owner,
