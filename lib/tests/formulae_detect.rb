@@ -146,7 +146,6 @@ module Homebrew
 
         if args.test_default_formula?
           # Build the default test formula.
-          @test_default_formula = true
           modified_formulae << "homebrew/test-bot/testbottest"
         end
 
