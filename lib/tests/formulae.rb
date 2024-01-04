@@ -540,7 +540,7 @@ module Homebrew
           # they can be unavoidable but we still want to know about them.
           test "brew", "linkage", "--cached", "--test", "--strict",
                named_args:      formula_name,
-               ignore_failures: !args.test_default_formula? && true
+               ignore_failures: !args.test_default_formula?
         end
 
         test "brew", "linkage", "--cached", formula_name
