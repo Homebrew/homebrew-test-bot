@@ -148,7 +148,7 @@ module Homebrew
           test "brew", "fetch", "--retry", "--build-from-source",
                *changed_dependencies
 
-          ignore_failures = changed_dependencies.any? do |dep|
+          ignore_failures = !args.test_default_formula? && changed_dependencies.any? do |dep|
             !bottled?(Formulary.factory(dep), no_older_versions: true)
           end
 
@@ -236,7 +236,7 @@ module Homebrew
         root_url = args.root_url
 
         # GitHub Releases url
-        root_url ||= if tap.present? && !tap.core_tap? && !@test_default_formula
+        root_url ||= if tap.present? && !tap.core_tap? && !args.test_default_formula?
           "#{tap.default_remote}/releases/download/#{formula.name}-#{formula.pkg_version}"
         end
 
@@ -247,7 +247,7 @@ module Homebrew
         bottle_args = ["--verbose", "--json", formula.full_name]
         bottle_args << "--keep-old" if args.keep_old? && !new_formula
         bottle_args << "--skip-relocation" if args.skip_relocation?
-        bottle_args << "--force-core-tap" if @test_default_formula
+        bottle_args << "--force-core-tap" if args.test_default_formula?
         bottle_args << "--root-url=#{root_url}" if root_url
         bottle_args << "--only-json-tab" if args.only_json_tab?
 
@@ -394,7 +394,7 @@ module Homebrew
         end
 
         new_formula = @added_formulae.include?(formula_name)
-        ignore_failures = !bottled_on_current_version && !new_formula
+        ignore_failures = !args.test_default_formula? && !bottled_on_current_version && !new_formula
 
         deps = []
         reqs = []
@@ -540,7 +540,7 @@ module Homebrew
           # they can be unavoidable but we still want to know about them.
           test "brew", "linkage", "--cached", "--test", "--strict",
                named_args:      formula_name,
-               ignore_failures: true
+               ignore_failures: !args.test_default_formula?
         end
 
         test "brew", "linkage", "--cached", formula_name

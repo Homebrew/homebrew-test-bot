@@ -235,7 +235,7 @@ module Homebrew
           test "brew", "install", *build_args,
                named_args:      dependent.full_name,
                env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
-               ignore_failures: build_from_source && !bottled_on_current_version
+               ignore_failures: !args.test_default_formula? && build_from_source && !bottled_on_current_version
           install_step = steps.last
 
           return unless install_step.passed?
@@ -249,7 +249,7 @@ module Homebrew
         test "brew", "install", "--only-dependencies", dependent.full_name
         test "brew", "linkage", "--test",
              named_args:      dependent.full_name,
-             ignore_failures: !bottled_on_current_version
+             ignore_failures: !args.test_default_formula? && !bottled_on_current_version
         linkage_step = steps.last
 
         if linkage_step.passed? && !build_from_source
@@ -257,7 +257,7 @@ module Homebrew
           # they can be unavoidable but we still want to know about them.
           test "brew", "linkage", "--cached", "--test", "--strict",
                named_args:      dependent.full_name,
-               ignore_failures: true
+               ignore_failures: !args.test_default_formula?
         end
 
         if testable_dependents.include? dependent
@@ -279,7 +279,7 @@ module Homebrew
           test "brew", "test", "--retry", "--verbose",
                named_args:      dependent.full_name,
                env:             env,
-               ignore_failures: !bottled_on_current_version
+               ignore_failures: !args.test_default_formula? && !bottled_on_current_version
           test_step = steps.last
         end
 
