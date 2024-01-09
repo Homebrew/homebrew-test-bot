@@ -32,6 +32,6 @@ RSpec.configure do |config|
   RSpec::Support::ObjectFormatter.default_instance.max_formatted_output_length = nil
 
   config.around do |example|
-    Bundler.with_clean_env { example.run }
+    Bundler.with_original_env { example.run }
   end
 end
