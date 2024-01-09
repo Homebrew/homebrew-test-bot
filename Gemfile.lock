@@ -53,6 +53,3 @@ DEPENDENCIES
   activesupport
   rspec
   simplecov
-
-BUNDLED WITH
-   2.4.10
