@@ -61,6 +61,8 @@ module Homebrew
              description: "Only test the direct dependents."
       switch "--skip-stable-version-audit",
              description: "Don't audit the stable version."
+      switch "--skip-revision-audit",
+             description: "Don't audit the revision."
       switch "--only-cleanup-before",
              description: "Only run the pre-cleanup step. Needs `--cleanup`."
       switch "--only-setup",
