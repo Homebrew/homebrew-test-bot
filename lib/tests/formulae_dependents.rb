@@ -124,9 +124,9 @@ module Homebrew
 
         # Defer formulae which could be tested later
         # i.e. formulae that also depend on something else yet to be built in this test run.
-        dependents.select! do |_, deps|
+        dependents.reject! do |_, deps|
           still_to_test = @dependent_testing_formulae - @tested_formulae
-          !deps.map { |d| d.to_formula.full_name }.intersect?(still_to_test)
+          deps.map { |d| d.to_formula.full_name }.intersect?(still_to_test)
         end
 
         # Split into dependents that we could potentially be building from source and those
