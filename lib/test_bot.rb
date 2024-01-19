@@ -20,7 +20,7 @@ module Homebrew
 
     GIT = "/usr/bin/git"
 
-    HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}.freeze
+    HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
     def resolve_test_tap(tap = nil)
       return Tap.fetch(tap) if tap
