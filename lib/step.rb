@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
+require "system_command"
+
 module Homebrew
   # Wraps command invocations. Instantiated by Test#test.
   # Handles logging and pretty-printing.
   class Step
+    include SystemCommand::Mixin
+
     attr_reader :command, :name, :status, :output, :start_time, :end_time
 
     # Instantiates a Step object.
