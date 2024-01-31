@@ -7,7 +7,7 @@ require_relative "test_cleanup"
 require_relative "test_formulae"
 require_relative "tests/cleanup_after"
 require_relative "tests/cleanup_before"
-require_relative "tests/formulae_detect"
+require_relative "tests/packages_detect"
 require_relative "tests/formulae_dependents"
 require_relative "tests/bottles_fetch"
 require_relative "tests/formulae"
@@ -112,6 +112,7 @@ module Homebrew
                  args.only_tap_syntax? ||
                  args.only_formulae? ||
                  args.only_formulae_detect? ||
+                 args.only_casks_detect? ||
                  args.only_formulae_dependents? ||
                  args.only_bottles_fetch? ||
                  args.only_cleanup_after?
@@ -141,12 +142,19 @@ module Homebrew
       no_formulae_flags = args.testing_formulae.nil? &&
                           args.added_formulae.nil? &&
                           args.deleted_formulae.nil?
-      if no_formulae_flags && (no_only_args || args.only_formulae? || args.only_formulae_detect?)
-        tests[:formulae_detect] = Tests::FormulaeDetect.new(argument, tap:,
-                                                                      git:,
+      if no_formulae_flags &&
+         (no_only_args || args.only_formulae? || args.only_formulae_detect?)
+        tests[:formulae_detect] = Tests::PackagesDetect.new(argument, tap:       tap,
+                                                                      git:       git,
                                                                       dry_run:   args.dry_run?,
                                                                       fail_fast: args.fail_fast?,
                                                                       verbose:   args.verbose?)
+      elsif (no_only_args || args.only_casks_detect?)
+        tests[:casks_detect] = Tests::PackagesDetect.new(argument, tap:       tap,
+                                                                   git:       git,
+                                                                   dry_run:   args.dry_run?,
+                                                                   fail_fast: args.fail_fast?,
+                                                                   verbose:   args.verbose?)
       end
 
       if no_only_args || args.only_formulae?
@@ -200,6 +208,11 @@ module Homebrew
       begin
         tests[:setup]&.run!(args:)
         tests[:tap_syntax]&.run!(args:)
+
+        if (detect_test = tests[:casks_detect])
+          detect_test.run!(args:)
+          return
+        end
 
         testing_formulae, added_formulae, deleted_formulae = if (detect_test = tests[:formulae_detect])
           detect_test.run!(args:)
