@@ -2,20 +2,23 @@
 
 module Homebrew
   module Tests
-    class FormulaeDetect < Test
-      attr_reader :testing_formulae, :added_formulae, :deleted_formulae
+    class PackagesDetect < Test
+      attr_reader :testing_formulae, :added_formulae, :deleted_formulae, 
+                  :testing_casks, :added_casks, :deleted_casks
 
       def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:)
         super(tap:, git:, dry_run:, fail_fast:, verbose:)
 
         @argument = argument
         @added_formulae = []
+        @added_casks = []
         @deleted_formulae = []
+        @deleted_casks = []
         @formulae_to_fetch = []
       end
 
       def run!(args:)
-        detect_formulae!(args:)
+        detect_packages!(args:)
 
         return unless ENV["GITHUB_ACTIONS"]
 
@@ -24,13 +27,17 @@ module Homebrew
           f.puts "added_formulae=#{@added_formulae.join(",")}"
           f.puts "deleted_formulae=#{@deleted_formulae.join(",")}"
           f.puts "formulae_to_fetch=#{@formulae_to_fetch.join(",")}"
+
+          f.puts "testing_casks=#{@testing_casks.join(",")}"
+          f.puts "added_casks=#{@added_casks.join(",")}"
+          f.puts "deleted_casks=#{@deleted_casks.join(",")}"
         end
       end
 
       private
 
-      def detect_formulae!(args:)
-        test_header(:FormulaeDetect, method: :detect_formulae!)
+      def detect_packages!(args:)
+        test_header(:PackagesDetect, method: :detect_packages!)
 
         url = nil
         origin_ref = "origin/master"
@@ -40,6 +47,7 @@ module Homebrew
 
         if @argument == "HEAD"
           @testing_formulae = []
+          @testing_casks = []
           # Use GitHub Actions variables for pull request jobs.
           if github_ref.present? && github_repository.present? &&
              %r{refs/pull/(?<pr>\d+)/merge} =~ github_ref
@@ -101,7 +109,7 @@ module Homebrew
         diff_start_sha1 = current_sha1 if diff_start_sha1.blank?
         diff_end_sha1 = current_sha1 if diff_end_sha1.blank?
 
-        diff_start_sha1 = diff_end_sha1 if @testing_formulae.present?
+        diff_start_sha1 = diff_end_sha1 if @testing_formulae.present? || @testing_casks.present?
 
         if tap
           tap_origin_ref_revision_args =
@@ -127,34 +135,50 @@ module Homebrew
         EOS
 
         modified_formulae = []
+        modified_casks = []
 
         if tap && diff_start_sha1 != diff_end_sha1
           formula_path = tap.formula_dir.to_s
           @added_formulae +=
-            diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
+            diff_packages(diff_start_sha1, diff_end_sha1, formula_path, "A")
           modified_formulae +=
-            diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
+            diff_packages(diff_start_sha1, diff_end_sha1, formula_path, "M")
           @deleted_formulae +=
-            diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
+            diff_packages(diff_start_sha1, diff_end_sha1, formula_path, "D")
+
+          cask_path = tap.cask_dir.to_s
+          @added_casks += @added_formulae +
+                             diff_packages(diff_start_sha1, diff_end_sha1, cask_path, "A")
+          modified_casks += modified_formulae +
+                               diff_packages(diff_start_sha1, diff_end_sha1, cask_path, "M")
+          @deleted_casks += @deleted_formulae +
+                               diff_packages(diff_start_sha1, diff_end_sha1, cask_path, "D")
         end
 
-        # If a formula is both added and deleted: it's actually modified.
+        # If a package is both added and deleted: it's actually modified.
         added_and_deleted_formulae = @added_formulae & @deleted_formulae
         @added_formulae -= added_and_deleted_formulae
         @deleted_formulae -= added_and_deleted_formulae
         modified_formulae += added_and_deleted_formulae
 
+        added_and_deleted_casks = @added_casks & @deleted_casks
+        @added_casks -= added_and_deleted_casks
+        @deleted_casks -= added_and_deleted_casks
+        modified_casks += added_and_deleted_casks
+
         if args.test_default_formula?
           # Build the default test formula.
           modified_formulae << "homebrew/test-bot/testbottest"
+          modified_casks << "homebrew/test-bot/testbottest"
         end
 
         @testing_formulae += @added_formulae + modified_formulae
+        @testing_casks += @added_casks + modified_casks
 
         # TODO: Remove `GITHUB_EVENT_NAME` check when formulae detection
         #       is fixed for branch jobs.
-        if @testing_formulae.blank? &&
-           @deleted_formulae.blank? &&
+        if @testing_casks.blank? &&
+           @deleted_casks.blank? &&
            diff_start_sha1 == diff_end_sha1 &&
            (ENV["GITHUB_EVENT_NAME"] != "push")
           raise UsageError, "Did not find any formulae or commits to test!"
@@ -165,6 +189,10 @@ module Homebrew
         @added_formulae.uniq!
         modified_formulae.uniq!
         @deleted_formulae.uniq!
+        @testing_casks.uniq!
+        @added_casks.uniq!
+        modified_casks.uniq!
+        @deleted_casks.uniq!
 
         # We only need to do a fetch test on formulae that have had a change in the pkg version or bottle block.
         # These fetch tests only happen in merge queues.
@@ -193,6 +221,11 @@ module Homebrew
     modified_formulae #{modified_formulae.join(" ").presence  || "(none)"}
     deleted_formulae  #{@deleted_formulae.join(" ").presence  || "(none)"}
     formulae_to_fetch #{@formulae_to_fetch.join(" ").presence || "(none)"}
+
+    testing_casks  #{@testing_casks.join(" ").presence  || "(none)"}
+    added_casks    #{@added_casks.join(" ").presence    || "(none)"}
+    modified_casks #{modified_casks.join(" ").presence  || "(none)"}
+    deleted_casks  #{@deleted_casks.join(" ").presence  || "(none)"}
         EOS
       end
 
@@ -221,7 +254,7 @@ module Homebrew
         rev_parse("HEAD")
       end
 
-      def diff_formulae(start_revision, end_revision, path, filter)
+      def diff_packages(start_revision, end_revision, path, filter)
         return unless tap
 
         Utils.safe_popen_read(
@@ -230,10 +263,16 @@ module Homebrew
           start_revision, end_revision, "--", path
         ).lines.filter_map do |line|
           file = Pathname.new line.chomp
-          next unless tap.formula_file?(file)
 
-          tap.formula_file_to_name(file)
-        end
+          name = nil
+          if tap.formula_file?(file)
+            name = tap.formula_file_to_name(file)
+          elsif tap.cask_file?(file)
+            name = file.basename(".rb").to_s
+          end
+
+          name
+        end.compact
       end
     end
   end
