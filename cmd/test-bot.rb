@@ -59,6 +59,8 @@ module Homebrew
              description: "Don't test livecheck."
       switch "--skip-recursive-dependents",
              description: "Only test the direct dependents."
+      switch "--skip-checksum-only-audit",
+             description: "Don't audit checksum-only changes."
       switch "--skip-stable-version-audit",
              description: "Don't audit the stable version."
       switch "--skip-revision-audit",
