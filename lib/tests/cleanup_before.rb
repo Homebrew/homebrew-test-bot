@@ -38,6 +38,8 @@ module Homebrew
 
             delete_or_move frameworks, sudo: true
           end
+
+          test "brew", "cleanup", "--prune-prefix"
         end
 
         # Keep all "brew" invocations after cleanup_shared
