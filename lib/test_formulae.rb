@@ -39,7 +39,7 @@ module Homebrew
         head_repo_owner = payload.dig("pull_request", "head", "repo", "owner", "login")
         head_from_fork = head_repo_owner != ENV.fetch("GITHUB_REPOSITORY_OWNER")
         maintainer_fork = tap.official? && JSON.parse(HOMEBREW_MAINTAINER_JSON.read).include?(head_repo_owner)
-        return if head_from_fork && !maintainer_fork
+        return if head_from_fork && !maintainer_fork && head_repo_owner != "BrewTestBot"
 
         # If we have a cached event payload, then we failed to get the artifact we wanted
         # from `GITHUB_EVENT_PATH`, so use the cached payload to check for a SHA1.
