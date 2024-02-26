@@ -10,7 +10,7 @@ PROJECT_ROOT = Pathname(__dir__).parent.freeze
 STUB_PATH = (PROJECT_ROOT/"spec/stub").freeze
 $LOAD_PATH.unshift(STUB_PATH)
 
-Dir.glob("#{PROJECT_ROOT}/lib/**/*.rb").sort.each do |file|
+Dir.glob("#{PROJECT_ROOT}/lib/**/*.rb").each do |file|
   require file
 end
 
