@@ -44,10 +44,10 @@ module Homebrew
     def test(*arguments, named_args: nil, env: {}, verbose: @verbose, ignore_failures: false)
       step = Step.new(
         arguments,
-        named_args:      named_args,
-        env:             env,
-        verbose:         verbose,
-        ignore_failures: ignore_failures,
+        named_args:,
+        env:,
+        verbose:,
+        ignore_failures:,
         repository:      @repository,
       )
       step.run(dry_run: @dry_run, fail_fast: @fail_fast)

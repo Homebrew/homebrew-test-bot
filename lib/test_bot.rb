@@ -134,7 +134,7 @@ module Homebrew
       ENV["HOMEBREW_GIT_EMAIL"] = args.git_email ||
                                   "1589480+BrewTestBot@users.noreply.github.com"
 
-      Homebrew.failed = !TestRunner.run!(tap, git: GIT, args: args)
+      Homebrew.failed = !TestRunner.run!(tap, git: GIT, args:)
     end
   end
 end

@@ -53,17 +53,17 @@ module Homebrew
 
       test_bot_args.each do |argument|
         skip_cleanup_after = argument != test_bot_args.last
-        current_tests = build_tests(argument, tap:                 tap,
-                                              git:                 git,
-                                              output_paths:        output_paths,
-                                              skip_setup:          skip_setup,
-                                              skip_cleanup_before: skip_cleanup_before,
-                                              skip_cleanup_after:  skip_cleanup_after,
-                                              args:                args)
+        current_tests = build_tests(argument, tap:,
+                                              git:,
+                                              output_paths:,
+                                              skip_setup:,
+                                              skip_cleanup_before:,
+                                              skip_cleanup_after:,
+                                              args:)
         skip_setup = true
         skip_cleanup_before = true
         tests += current_tests.values
-        run_tests(current_tests, args: args)
+        run_tests(current_tests, args:)
       end
 
       failed_steps = tests.map(&:failed_steps)
@@ -140,25 +140,25 @@ module Homebrew
                           args.added_formulae.nil? &&
                           args.deleted_formulae.nil?
       if no_formulae_flags && (no_only_args || args.only_formulae? || args.only_formulae_detect?)
-        tests[:formulae_detect] = Tests::FormulaeDetect.new(argument, tap:       tap,
-                                                                      git:       git,
+        tests[:formulae_detect] = Tests::FormulaeDetect.new(argument, tap:,
+                                                                      git:,
                                                                       dry_run:   args.dry_run?,
                                                                       fail_fast: args.fail_fast?,
                                                                       verbose:   args.verbose?)
       end
 
       if no_only_args || args.only_formulae?
-        tests[:formulae] = Tests::Formulae.new(tap:          tap,
-                                               git:          git,
+        tests[:formulae] = Tests::Formulae.new(tap:,
+                                               git:,
                                                dry_run:      args.dry_run?,
                                                fail_fast:    args.fail_fast?,
                                                verbose:      args.verbose?,
-                                               output_paths: output_paths)
+                                               output_paths:)
       end
 
       if !args.skip_dependents? && (no_only_args || args.only_formulae? || args.only_formulae_dependents?)
-        tests[:formulae_dependents] = Tests::FormulaeDependents.new(tap:       tap,
-                                                                    git:       git,
+        tests[:formulae_dependents] = Tests::FormulaeDependents.new(tap:,
+                                                                    git:,
                                                                     dry_run:   args.dry_run?,
                                                                     fail_fast: args.fail_fast?,
                                                                     verbose:   args.verbose?)
@@ -166,16 +166,16 @@ module Homebrew
 
       if args.cleanup?
         if !skip_cleanup_before && (no_only_args || args.only_cleanup_before?)
-          tests[:cleanup_before] = Tests::CleanupBefore.new(tap:       tap,
-                                                            git:       git,
+          tests[:cleanup_before] = Tests::CleanupBefore.new(tap:,
+                                                            git:,
                                                             dry_run:   args.dry_run?,
                                                             fail_fast: args.fail_fast?,
                                                             verbose:   args.verbose?)
         end
 
         if !skip_cleanup_after && (no_only_args || args.only_cleanup_after?)
-          tests[:cleanup_after] = Tests::CleanupAfter.new(tap:       tap,
-                                                          git:       git,
+          tests[:cleanup_after] = Tests::CleanupAfter.new(tap:,
+                                                          git:,
                                                           dry_run:   args.dry_run?,
                                                           fail_fast: args.fail_fast?,
                                                           verbose:   args.verbose?)
@@ -183,8 +183,8 @@ module Homebrew
       end
 
       if args.only_bottles_fetch?
-        tests[:bottles_fetch] = Tests::BottlesFetch.new(tap:       tap,
-                                                        git:       git,
+        tests[:bottles_fetch] = Tests::BottlesFetch.new(tap:,
+                                                        git:,
                                                         dry_run:   args.dry_run?,
                                                         fail_fast: args.fail_fast?,
                                                         verbose:   args.verbose?)
@@ -194,13 +194,13 @@ module Homebrew
     end
 
     def run_tests(tests, args:)
-      tests[:cleanup_before]&.run!(args: args)
+      tests[:cleanup_before]&.run!(args:)
       begin
-        tests[:setup]&.run!(args: args)
-        tests[:tap_syntax]&.run!(args: args)
+        tests[:setup]&.run!(args:)
+        tests[:tap_syntax]&.run!(args:)
 
         testing_formulae, added_formulae, deleted_formulae = if (detect_test = tests[:formulae_detect])
-          detect_test.run!(args: args)
+          detect_test.run!(args:)
 
           [
             detect_test.testing_formulae,
@@ -220,7 +220,7 @@ module Homebrew
           formulae_test.added_formulae = added_formulae
           formulae_test.deleted_formulae = deleted_formulae
 
-          formulae_test.run!(args: args)
+          formulae_test.run!(args:)
 
           formulae_test.skipped_or_failed_formulae
         elsif args.skipped_or_failed_formulae.present?
@@ -235,16 +235,16 @@ module Homebrew
           dependents_test.testing_formulae = testing_formulae
           dependents_test.skipped_or_failed_formulae = skipped_or_failed_formulae
 
-          dependents_test.run!(args: args)
+          dependents_test.run!(args:)
         end
 
         if (fetch_test = tests[:bottles_fetch])
           fetch_test.testing_formulae = testing_formulae
 
-          fetch_test.run!(args: args)
+          fetch_test.run!(args:)
         end
       ensure
-        tests[:cleanup_after]&.run!(args: args)
+        tests[:cleanup_after]&.run!(args:)
       end
     end
   end

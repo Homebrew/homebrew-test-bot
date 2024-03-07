@@ -6,7 +6,7 @@ module Homebrew
       attr_reader :testing_formulae, :added_formulae, :deleted_formulae
 
       def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:)
-        super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
+        super(tap:, git:, dry_run:, fail_fast:, verbose:)
 
         @argument = argument
         @added_formulae = []
@@ -15,7 +15,7 @@ module Homebrew
       end
 
       def run!(args:)
-        detect_formulae!(args: args)
+        detect_formulae!(args:)
 
         return unless ENV["GITHUB_ACTIONS"]
 
@@ -45,7 +45,7 @@ module Homebrew
              %r{refs/pull/(?<pr>\d+)/merge} =~ github_ref
             url = "https://github.com/#{github_repository}/pull/#{pr}/checks"
           end
-        elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args: args))
+        elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args:))
           unless canonical_formula_name.include?("/")
             ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1"
             CoreTap.ensure_installed!
