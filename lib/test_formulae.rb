@@ -123,12 +123,12 @@ module Homebrew
         return if pr_labels.include?("CI-no-bottle-cache") || pr_labels.include?("workflows")
 
         variables = {
-          owner:  owner,
-          repo:   repo,
+          owner:,
+          repo:,
           commit: sha,
         }
 
-        response = GitHub::API.open_graphql(GRAPHQL_QUERY, variables: variables)
+        response = GitHub::API.open_graphql(GRAPHQL_QUERY, variables:)
         check_suite_nodes = response.dig("repository", "object", "checkSuites", "nodes")
         return if check_suite_nodes.blank?
 
@@ -163,7 +163,7 @@ module Homebrew
 
         # If we made it here, then we downloaded an `event_payload` artifact.
         # We can now use this `event_payload` artifact to attempt to download the artifact we wanted.
-        download_artifact_from_previous_run!(artifact_name, dry_run: dry_run)
+        download_artifact_from_previous_run!(artifact_name, dry_run:)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
       end
@@ -224,7 +224,7 @@ module Homebrew
         install_step = steps.last
 
         if !dry_run && !testing_formulae_dependents && install_step.passed?
-          bottle_hash = local_bottle_hash(formula_name, bottle_dir: bottle_dir)
+          bottle_hash = local_bottle_hash(formula_name, bottle_dir:)
           bottle_revision = bottle_hash.dig(formula_name, "formula", "tap_git_revision")
           bottle_header = "Installed previously built bottle for #{formula_name} from:"
           bottle_message = if @fetched_refs&.include?(bottle_revision)
@@ -258,14 +258,14 @@ module Homebrew
         # up the dep tree when we encounter an `:all` bottle because
         # a formula is not bottled unless its dependencies are.
         if formula.bottle_specification.tag?(Utils::Bottles.tag(:all))
-          formula.deps.all? { |dep| bottled?(dep.to_formula, no_older_versions: no_older_versions) }
+          formula.deps.all? { |dep| bottled?(dep.to_formula, no_older_versions:) }
         else
-          formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions: no_older_versions)
+          formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions:)
         end
       end
 
       def bottled_or_built?(formula, built_formulae, no_older_versions: false)
-        bottled?(formula, no_older_versions: no_older_versions) || built_formulae.include?(formula.full_name)
+        bottled?(formula, no_older_versions:) || built_formulae.include?(formula.full_name)
       end
 
       def downloads_using_homebrew_curl?(formula)

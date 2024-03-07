@@ -14,7 +14,7 @@ module Homebrew
 
         @dependent_testing_formulae = sorted_formulae - skipped_or_failed_formulae
 
-        install_formulae_if_needed_from_bottles!(args: args)
+        install_formulae_if_needed_from_bottles!(args:)
 
         download_artifact_from_previous_run!("dependents", dry_run: args.dry_run?)
         @skip_candidates = if (tested_dependents_cache = artifact_cache/@tested_dependents_list).exist?
@@ -24,7 +24,7 @@ module Homebrew
         end
 
         @dependent_testing_formulae.each do |formula_name|
-          dependent_formulae!(formula_name, args: args)
+          dependent_formulae!(formula_name, args:)
           puts
         end
       end
@@ -41,7 +41,7 @@ module Homebrew
       end
 
       def dependent_formulae!(formula_name, args:)
-        cleanup_during!(@dependent_testing_formulae, args: args)
+        cleanup_during!(@dependent_testing_formulae, args:)
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
         @tested_formulae << formula_name
@@ -67,15 +67,15 @@ module Homebrew
         return if steps.last.failed?
 
         source_dependents, bottled_dependents, testable_dependents =
-          dependents_for_formula(formula, formula_name, args: args)
+          dependents_for_formula(formula, formula_name, args:)
 
         source_dependents.each do |dependent|
-          install_dependent(dependent, testable_dependents, build_from_source: true, args: args)
-          install_dependent(dependent, testable_dependents, args: args) if bottled?(dependent)
+          install_dependent(dependent, testable_dependents, build_from_source: true, args:)
+          install_dependent(dependent, testable_dependents, args:) if bottled?(dependent)
         end
 
         bottled_dependents.each do |dependent|
-          install_dependent(dependent, testable_dependents, args: args)
+          install_dependent(dependent, testable_dependents, args:)
         end
       end
 
@@ -188,7 +188,7 @@ module Homebrew
           return
         end
 
-        cleanup_during!(@dependent_testing_formulae, args: args)
+        cleanup_during!(@dependent_testing_formulae, args:)
 
         required_dependent_deps = dependent.deps.reject(&:optional?)
         bottled_on_current_version = bottled?(dependent, no_older_versions: true)
@@ -278,7 +278,7 @@ module Homebrew
           end
           test "brew", "test", "--retry", "--verbose",
                named_args:      dependent.full_name,
-               env:             env,
+               env:,
                ignore_failures: !args.test_default_formula? && !bottled_on_current_version
           test_step = steps.last
         end

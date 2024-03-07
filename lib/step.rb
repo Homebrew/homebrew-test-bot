@@ -88,7 +88,7 @@ module Homebrew
         :error
       end
 
-      annotation = GitHub::Actions::Annotation.new(type, message, title: title, file: file, line: line)
+      annotation = GitHub::Actions::Annotation.new(type, message, title:, file:, line:)
       puts annotation
     end
 
@@ -151,7 +151,7 @@ module Homebrew
 
       executable, *args = command
 
-      result = system_command executable, args:         args,
+      result = system_command executable, args:,
                                           print_stdout: @verbose,
                                           print_stderr: @verbose,
                                           env:          @env

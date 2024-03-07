@@ -11,7 +11,7 @@ module Homebrew
         puts
 
         testing_formulae.each do |formula_name|
-          fetch_bottles!(formula_name, args: args)
+          fetch_bottles!(formula_name, args:)
           puts
         end
       end
@@ -25,7 +25,7 @@ module Homebrew
         tags = formula.bottle_specification.collector.tags
 
         tags.each do |tag|
-          cleanup_during!(args: args)
+          cleanup_during!(args:)
           test "brew", "fetch", "--retry", "--formulae", "--bottle-tag=#{tag}", formula_name
         end
       end

@@ -6,7 +6,7 @@ module Homebrew
       attr_writer :testing_formulae, :added_formulae, :deleted_formulae
 
       def initialize(tap:, git:, dry_run:, fail_fast:, verbose:, output_paths:)
-        super(tap: tap, git: git, dry_run: dry_run, fail_fast: fail_fast, verbose: verbose)
+        super(tap:, git:, dry_run:, fail_fast:, verbose:)
 
         @built_formulae = []
         @bottle_checksums = {}
@@ -33,7 +33,7 @@ module Homebrew
         @testing_formulae_count = @testing_formulae.count
 
         sorted_formulae.each do |f|
-          formula!(f, args: args)
+          formula!(f, args:)
           verify_local_bottles
           puts
         end
@@ -156,12 +156,12 @@ module Homebrew
           # checksum problems. We have to install all `changed_dependencies`
           # in one `brew install` command to make sure they are installed in
           # the right order.
-          test "brew", "install", "--build-from-source",
+          test("brew", "install", "--build-from-source",
                named_args:      changed_dependencies,
-               ignore_failures: ignore_failures
+               ignore_failures:)
           # Run postinstall on them because the tested formula might depend on
           # this step
-          test "brew", "postinstall", named_args: changed_dependencies, ignore_failures: ignore_failures
+          test "brew", "postinstall", named_args: changed_dependencies, ignore_failures:
         end
 
         runtime_or_test_dependencies =
@@ -228,7 +228,7 @@ module Homebrew
       end
 
       def bottle_reinstall_formula(formula, new_formula, args:)
-        unless build_bottle?(formula, args: args)
+        unless build_bottle?(formula, args:)
           @bottle_filename = nil
           return
         end
@@ -366,7 +366,7 @@ module Homebrew
       end
 
       def formula!(formula_name, args:)
-        cleanup_during!(@testing_formulae, args: args)
+        cleanup_during!(@testing_formulae, args:)
 
         test_header(:Formulae, method: "formula!(#{formula_name})")
 
@@ -399,7 +399,7 @@ module Homebrew
         deps = []
         reqs = []
 
-        build_flag = if build_bottle?(formula, args: args)
+        build_flag = if build_bottle?(formula, args:)
           "--build-bottle"
         else
           if ENV["GITHUB_ACTIONS"].present?
@@ -465,7 +465,7 @@ module Homebrew
         install_curl_if_needed(formula)
         install_mercurial_if_needed(deps, reqs)
         install_subversion_if_needed(deps, reqs)
-        setup_formulae_deps_instances(formula, formula_name, args: args)
+        setup_formulae_deps_instances(formula, formula_name, args:)
 
         test "brew", "uninstall", "--force", formula_name if formula.latest_version_installed?
 
@@ -499,10 +499,10 @@ module Homebrew
                                       dry_run:                     args.dry_run?)
 
         install_step_passed ||= begin
-          test "brew", "install", *install_args,
+          test("brew", "install", *install_args,
                named_args:      formula_name,
                env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
-               ignore_failures: ignore_failures
+               ignore_failures:)
           steps.last.passed?
         end
 
@@ -530,10 +530,10 @@ module Homebrew
             @bottle_checksums.delete(old_location)
           end
         else
-          bottle_reinstall_formula(formula, new_formula, args: args)
+          bottle_reinstall_formula(formula, new_formula, args:)
         end
         @built_formulae << formula.full_name
-        test "brew", "linkage", "--test", named_args: formula_name, ignore_failures: ignore_failures
+        test("brew", "linkage", "--test", named_args: formula_name, ignore_failures:)
         failed_linkage_or_test_messages ||= []
         failed_linkage_or_test_messages << "linkage failed" unless steps.last.passed?
 
@@ -560,7 +560,7 @@ module Homebrew
 
           # Intentionally not passing --retry here to avoid papering over
           # flaky tests when a formula isn't being pulled in as a dependent.
-          test "brew", "test", "--verbose", named_args: formula_name, env: env, ignore_failures: ignore_failures
+          test("brew", "test", "--verbose", named_args: formula_name, env:, ignore_failures:)
           failed_linkage_or_test_messages << "test failed" unless steps.last.passed?
         end
 
