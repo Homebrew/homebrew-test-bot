@@ -52,6 +52,7 @@ module Homebrew
       )
       step.run(dry_run: @dry_run, fail_fast: @fail_fast)
       @steps << step
+      Utils::Analytics.report_test_bot_test(step.command_short, step.passed?)
       step
     end
   end
