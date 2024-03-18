@@ -509,7 +509,7 @@ module Homebrew
         livecheck(formula) if !args.skip_livecheck? && !skip_online_checks
 
         test "brew", "style", "--formula", formula_name
-        test "brew", "audit", *audit_args unless formula.deprecated?
+        test "brew", "audit", "--formula", *audit_args unless formula.deprecated?
         unless install_step_passed
           if ignore_failures
             skipped formula_name, "install failed"
