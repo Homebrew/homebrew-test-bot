@@ -144,14 +144,14 @@ module Homebrew
                           args.deleted_formulae.nil?
       if no_formulae_flags &&
          (no_only_args || args.only_formulae? || args.only_formulae_detect?)
-        tests[:formulae_detect] = Tests::PackagesDetect.new(argument, tap:       tap,
-                                                                      git:       git,
+        tests[:formulae_detect] = Tests::PackagesDetect.new(argument, tap:,
+                                                                      git:,
                                                                       dry_run:   args.dry_run?,
                                                                       fail_fast: args.fail_fast?,
                                                                       verbose:   args.verbose?)
-      elsif (no_only_args || args.only_casks_detect?)
-        tests[:casks_detect] = Tests::PackagesDetect.new(argument, tap:       tap,
-                                                                   git:       git,
+      elsif no_only_args || args.only_casks_detect?
+        tests[:casks_detect] = Tests::PackagesDetect.new(argument, tap:,
+                                                                   git:,
                                                                    dry_run:   args.dry_run?,
                                                                    fail_fast: args.fail_fast?,
                                                                    verbose:   args.verbose?)
