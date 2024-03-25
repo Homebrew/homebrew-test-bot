@@ -43,6 +43,8 @@ module Homebrew
                           "passing output as raw bytes instead of re-encoding in UTF-8."
       switch "--test-default-formula",
              description: "Use a default testing formula when not building a tap and no other formulae are specified."
+      switch "--test-default-cask",
+             description: "Use a default testing cask when not building a tap and no other formulae are specified."
       flag   "--root-url=",
              description: "Use the specified <URL> as the root of the bottle's URL instead of Homebrew's default."
       flag   "--git-name=",
@@ -75,6 +77,8 @@ module Homebrew
              description: "Only run the formulae steps."
       switch "--only-formulae-detect",
              description: "Only run the formulae detection steps."
+      switch "--only-casks-detect",
+             description: "Only run the casks detection steps."
       switch "--only-formulae-dependents",
              description: "Only run the formulae dependents steps."
       switch "--only-bottles-fetch",
