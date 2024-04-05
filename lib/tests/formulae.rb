@@ -427,10 +427,11 @@ module Homebrew
         audit_args = [formula_name]
         audit_args << "--online" unless skip_online_checks
         audit_args << "--except=unconfirmed_checksum_change" if args.skip_checksum_only_audit?
+        audit_args << "--except=github_repository,gitlab_repository,bitbucket_repository" if args.skip_repository_audit?
         audit_args << "--except=stable_version" if args.skip_stable_version_audit?
         audit_args << "--except=revision" if args.skip_revision_audit?
         if new_formula
-          audit_args << "--new" unless args.skip_repository_audit?
+          audit_args << "--new"
         else
           audit_args << "--git" << "--skip-style"
         end
