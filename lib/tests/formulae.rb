@@ -430,7 +430,7 @@ module Homebrew
         audit_args << "--except=stable_version" if args.skip_stable_version_audit?
         audit_args << "--except=revision" if args.skip_revision_audit?
         if new_formula
-          audit_args << "--new"
+          audit_args << "--new" unless args.skip_repository_audit?
         else
           audit_args << "--git" << "--skip-style"
         end
