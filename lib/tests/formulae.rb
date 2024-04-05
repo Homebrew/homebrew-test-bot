@@ -424,8 +424,11 @@ module Homebrew
         fetch_args << build_flag
         fetch_args << "--force" if args.cleanup?
 
+        repo_audits = "github_repository,gitlab_repository,bitbucket_repository"
+
         audit_args = [formula_name]
         audit_args << "--online" unless skip_online_checks
+        audit_args << "--except=#{repo_audits}" if args.skip_repository_audit?
         audit_args << "--except=unconfirmed_checksum_change" if args.skip_checksum_only_audit?
         audit_args << "--except=stable_version" if args.skip_stable_version_audit?
         audit_args << "--except=revision" if args.skip_revision_audit?
