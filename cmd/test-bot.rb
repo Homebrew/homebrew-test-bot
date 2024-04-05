@@ -71,6 +71,9 @@ module Homebrew
              description: "Only run the local system setup check step."
       switch "--only-tap-syntax",
              description: "Only run the tap syntax check step."
+      switch "--stable",
+             depends_on:  "--only-tap-syntax",
+             description: "Only run the tap syntax checks needed on stable brew."
       switch "--only-formulae",
              description: "Only run the formulae steps."
       switch "--only-formulae-detect",
