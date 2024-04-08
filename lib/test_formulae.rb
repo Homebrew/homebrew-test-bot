@@ -339,8 +339,17 @@ module Homebrew
 
         test_header(:TestFormulae, method: :cleanup_during!)
 
+        # HOMEBREW_LOGS can be a subdirectory of HOMEBREW_CACHE.
+        # Preserve the logs in that case.
+        logs_are_in_cache = HOMEBREW_LOGS.ascend { |path| break true if path == HOMEBREW_CACHE }
+
+        test "mv", HOMEBREW_LOGS.to_s, (tmpdir = Dir.mktmpdir) if logs_are_in_cache
         FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
         test "rm", "-rf", HOMEBREW_CACHE.to_s
+        if logs_are_in_cache
+          FileUtils.mkdir_p HOMEBREW_LOGS.parent
+          test "mv", "#{tmpdir}/#{HOMEBREW_LOGS.basename}", HOMEBREW_LOGS.to_s
+        end
 
         if @cleaned_up_during.blank?
           @cleaned_up_during = true
