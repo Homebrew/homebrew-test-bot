@@ -346,8 +346,10 @@ module Homebrew
         test "mv", HOMEBREW_LOGS.to_s, (tmpdir = Dir.mktmpdir) if logs_are_in_cache
         FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
         test "rm", "-rf", HOMEBREW_CACHE.to_s
-        FileUtils.mkdir_p HOMEBREW_LOGS.parent
-        test "mv", "#{tmpdir}/#{HOMEBREW_LOGS.basename}", HOMEBREW_LOGS.to_s if logs_are_in_cache
+        if logs_are_in_cache
+          FileUtils.mkdir_p HOMEBREW_LOGS.parent
+          test "mv", "#{tmpdir}/#{HOMEBREW_LOGS.basename}", HOMEBREW_LOGS.to_s
+        end
 
         if @cleaned_up_during.blank?
           @cleaned_up_during = true
