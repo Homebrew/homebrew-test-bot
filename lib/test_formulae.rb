@@ -342,11 +342,12 @@ module Homebrew
         # HOMEBREW_LOGS can be a subdirectory of HOMEBREW_CACHE.
         # Preserve the logs in that case.
         logs_are_in_cache = HOMEBREW_LOGS.ascend { |path| break true if path == HOMEBREW_CACHE }
+        should_save_logs = logs_are_in_cache && HOMEBREW_LOGS.exist?
 
-        test "mv", HOMEBREW_LOGS.to_s, (tmpdir = Dir.mktmpdir) if logs_are_in_cache
+        test "mv", HOMEBREW_LOGS.to_s, (tmpdir = Dir.mktmpdir) if should_save_logs
         FileUtils.chmod_R "u+rw", HOMEBREW_CACHE, force: true
         test "rm", "-rf", HOMEBREW_CACHE.to_s
-        if logs_are_in_cache
+        if should_save_logs
           FileUtils.mkdir_p HOMEBREW_LOGS.parent
           test "mv", "#{tmpdir}/#{HOMEBREW_LOGS.basename}", HOMEBREW_LOGS.to_s
         end
