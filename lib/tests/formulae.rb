@@ -21,7 +21,7 @@ module Homebrew
         verify_local_bottles
 
         with_env(HOMEBREW_DISABLE_LOAD_FORMULA: "1") do
-          download_artifact_from_previous_run!("bottles", dry_run: args.dry_run?)
+          download_artifacts_from_previous_run!("bottles{,-*}", dry_run: args.dry_run?)
         end
         @bottle_checksums.merge!(
           bottle_glob("*", artifact_cache, ".{json,tar.gz}", bottle_tag: "*").to_h do |bottle_file|
