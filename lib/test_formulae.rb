@@ -49,7 +49,7 @@ module Homebrew
         event_payload.fetch("before", nil)
       end
 
-      def artifact_metadata(check_suite_nodes, repo, event_name, workflow_name, check_run_name, artifact_name)
+      def artifact_metadata(check_suite_nodes, repo, event_name, workflow_name, check_run_name, artifact_pattern)
         candidate_nodes = check_suite_nodes.select do |node|
           next false if node.fetch("status") != "COMPLETED"
 
@@ -64,18 +64,20 @@ module Homebrew
             check_run_node.fetch("name") == check_run_name && check_run_node.fetch("status") == "COMPLETED"
           end
         end
-        return if candidate_nodes.blank?
+        return [] if candidate_nodes.blank?
 
         run_id = candidate_nodes.max_by { |node| Time.parse(node.fetch("updatedAt")) }
                                 .dig("workflowRun", "databaseId")
-        return if run_id.blank?
+        return [] if run_id.blank?
 
         url = GitHub.url_to("repos", repo, "actions", "runs", run_id, "artifacts")
         response = GitHub::API.open_rest(url)
-        return if response.fetch("total_count").zero?
+        return [] if response.fetch("total_count").zero?
 
         artifacts = response.fetch("artifacts")
-        artifacts.find { |artifact| artifact.fetch("name") == artifact_name }
+        artifacts.select do |artifact|
+          File.fnmatch?(artifact_pattern, artifact.fetch("name"), File::FNM_EXTGLOB)
+        end
       end
 
       GRAPHQL_QUERY = <<~GRAPHQL
@@ -108,7 +110,7 @@ module Homebrew
         }
       GRAPHQL
 
-      def download_artifact_from_previous_run!(artifact_name, dry_run:)
+      def download_artifacts_from_previous_run!(artifact_pattern, dry_run:)
         return if dry_run
         return if GitHub::API.credentials_type == :none
         return if (sha = previous_github_sha).blank?
@@ -132,38 +134,47 @@ module Homebrew
         check_suite_nodes = response.dig("repository", "object", "checkSuites", "nodes")
         return if check_suite_nodes.blank?
 
-        wanted_artifact = artifact_metadata(check_suite_nodes, github_repository, "pull_request",
-                                            "CI", "conclusion", artifact_name)
-        # If we didn't find the artifact that we wanted, fall back to the `event_payload` artifact.
-        wanted_artifact ||= artifact_metadata(check_suite_nodes, github_repository, "pull_request_target",
-                                              "Triage tasks", "upload-metadata", "event_payload")
-        return if wanted_artifact.blank?
+        wanted_artifacts = artifact_metadata(check_suite_nodes, github_repository, "pull_request",
+                                             "CI", "conclusion", artifact_pattern)
+        wanted_artifacts_pattern = artifact_pattern
+        if wanted_artifacts.empty?
+          # If we didn't find the artifacts that we wanted, fall back to the `event_payload` artifact.
+          wanted_artifacts = artifact_metadata(check_suite_nodes, github_repository, "pull_request_target",
+                                               "Triage tasks", "upload-metadata", "event_payload")
+          wanted_artifacts_pattern = "event_payload"
+        end
+        return if wanted_artifacts.empty?
 
-        wanted_artifact_name = wanted_artifact.fetch("name")
-        if @downloaded_artifacts[sha].include?(wanted_artifact_name)
-          opoo "Already tried #{wanted_artifact_name} from #{sha}, giving up"
+        if (attempted_artifact = wanted_artifacts.find do |artifact|
+              @downloaded_artifacts[sha].include?(artifact.fetch("name"))
+            end)
+          opoo "Already tried #{attempted_artifact.fetch("name")} from #{sha}, giving up"
           return
         end
 
-        @downloaded_artifacts[sha] << wanted_artifact_name
-        cached_event_json&.unlink if wanted_artifact_name == "event_payload"
-
-        ohai "Downloading #{wanted_artifact_name} from #{sha}"
-        download_url = wanted_artifact.fetch("archive_download_url")
-        artifact_id = wanted_artifact.fetch("id")
+        cached_event_json&.unlink if File.fnmatch?(wanted_artifacts_pattern, "event_payload", File::FNM_EXTGLOB)
 
         require "utils/github/artifacts"
 
+        ohai "Downloading artifacts matching pattern #{wanted_artifacts_pattern} from #{sha}"
         artifact_cache.mkpath
         artifact_cache.cd do
-          GitHub.download_artifact(download_url, artifact_id.to_s)
+          wanted_artifacts.each do |artifact|
+            name = artifact.fetch("name")
+            ohai "Downloading artifact #{name} from #{sha}"
+            @downloaded_artifacts[sha] << name
+
+            download_url = artifact.fetch("archive_download_url")
+            artifact_id = artifact.fetch("id")
+            GitHub.download_artifact(download_url, artifact_id.to_s)
+          end
         end
 
-        return if wanted_artifact_name == artifact_name
+        return if wanted_artifacts_pattern == artifact_pattern
 
         # If we made it here, then we downloaded an `event_payload` artifact.
         # We can now use this `event_payload` artifact to attempt to download the artifact we wanted.
-        download_artifact_from_previous_run!(artifact_name, dry_run:)
+        download_artifacts_from_previous_run!(artifact_pattern, dry_run:)
       rescue GitHub::API::AuthenticationFailedError => e
         opoo e
       end
