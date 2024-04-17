@@ -145,12 +145,6 @@ module Homebrew
         end
         return if wanted_artifacts.empty?
 
-        if @downloaded_artifacts[sha].include?(wanted_artifacts_pattern)
-          opoo "Already tried #{wanted_artifacts_pattern} from #{sha}, giving up"
-          return
-        end
-
-        @downloaded_artifacts[sha] << wanted_artifacts_pattern
         cached_event_json&.unlink if File.fnmatch?(wanted_artifacts_pattern, "event_payload", File::FNM_EXTGLOB)
 
         ohai "Downloading artifacts matching pattern #{wanted_artifacts_pattern} from #{sha}"
@@ -158,6 +152,15 @@ module Homebrew
         artifact_cache.mkpath
         artifact_cache.cd do
           wanted_artifacts.each do |artifact|
+            name = artifact.fetch("name")
+            if @downloaded_artifacts[sha].include?(name)
+              opoo "Already tried #{name} from #{sha}, giving up"
+              return
+            end
+
+            ohai "Downloading artifact #{name} from #{sha}"
+            @downloaded_artifacts[sha] << name
+
             download_url = artifact.fetch("archive_download_url")
             artifact_id = artifact.fetch("id")
             GitHub.download_artifact(download_url, artifact_id.to_s)
