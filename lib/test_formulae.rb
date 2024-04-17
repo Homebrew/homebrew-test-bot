@@ -151,17 +151,15 @@ module Homebrew
         end
 
         @downloaded_artifacts[sha] << wanted_artifacts_pattern
-        cached_event_json&.unlink if wanted_artifacts_pattern == "event_payload"
+        cached_event_json&.unlink if File.fnmatch?(wanted_artifacts_pattern, "event_payload", File::FNM_EXTGLOB)
 
         ohai "Downloading artifacts matching pattern #{wanted_artifacts_pattern} from #{sha}"
-        wanted_artifacts.each do |artifact|
-          download_url = artifact.fetch("archive_download_url")
-          artifact_id = artifact.fetch("id")
-
-          require "utils/github/artifacts"
-
-          artifact_cache.mkpath
-          artifact_cache.cd do
+        require "utils/github/artifacts"
+        artifact_cache.mkpath
+        artifact_cache.cd do
+          wanted_artifacts.each do |artifact|
+            download_url = artifact.fetch("archive_download_url")
+            artifact_id = artifact.fetch("id")
             GitHub.download_artifact(download_url, artifact_id.to_s)
           end
         end
