@@ -145,14 +145,14 @@ module Homebrew
         end
         return if wanted_artifacts.empty?
 
-        cached_event_json&.unlink if File.fnmatch?(wanted_artifacts_pattern, "event_payload", File::FNM_EXTGLOB)
-
         if (attempted_artifact = wanted_artifacts.find do |artifact|
               @downloaded_artifacts[sha].include?(artifact.fetch("name"))
             end)
           opoo "Already tried #{attempted_artifact.fetch("name")} from #{sha}, giving up"
           return
         end
+
+        cached_event_json&.unlink if File.fnmatch?(wanted_artifacts_pattern, "event_payload", File::FNM_EXTGLOB)
 
         require "utils/github/artifacts"
 
