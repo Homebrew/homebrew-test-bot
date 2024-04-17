@@ -147,17 +147,20 @@ module Homebrew
 
         cached_event_json&.unlink if File.fnmatch?(wanted_artifacts_pattern, "event_payload", File::FNM_EXTGLOB)
 
-        ohai "Downloading artifacts matching pattern #{wanted_artifacts_pattern} from #{sha}"
+        if (attempted_artifact = wanted_artifacts.find do |artifact|
+              @downloaded_artifacts[sha].include?(artifact.fetch("name"))
+            end)
+          opoo "Already tried #{attempted_artifact.fetch("name")} from #{sha}, giving up"
+          return
+        end
+
         require "utils/github/artifacts"
+
+        ohai "Downloading artifacts matching pattern #{wanted_artifacts_pattern} from #{sha}"
         artifact_cache.mkpath
         artifact_cache.cd do
           wanted_artifacts.each do |artifact|
             name = artifact.fetch("name")
-            if @downloaded_artifacts[sha].include?(name)
-              opoo "Already tried #{name} from #{sha}, giving up"
-              return
-            end
-
             ohai "Downloading artifact #{name} from #{sha}"
             @downloaded_artifacts[sha] << name
 
