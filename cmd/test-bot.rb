@@ -53,14 +53,17 @@ module Homebrew
              description: "Publish the uploaded bottles."
       switch "--skip-online-checks",
              description: "Don't pass `--online` to `brew audit` and skip `brew livecheck`."
+      switch "--skip-new",
+             description: "Don't pass `--new` to `brew audit` for new formulae."
+      switch "--skip-new-strict",
+             depends_on:  "--skip-new",
+             description: "Don't pass `--strict` to `brew audit` for new formulae."
       switch "--skip-dependents",
              description: "Don't test any dependents."
       switch "--skip-livecheck",
              description: "Don't test livecheck."
       switch "--skip-recursive-dependents",
              description: "Only test the direct dependents."
-      switch "--skip-repository-audit",
-             description: "Don't audit the repository."
       switch "--skip-checksum-only-audit",
              description: "Don't audit checksum-only changes."
       switch "--skip-stable-version-audit",
