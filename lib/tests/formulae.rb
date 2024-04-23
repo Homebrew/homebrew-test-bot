@@ -21,7 +21,12 @@ module Homebrew
         verify_local_bottles
 
         with_env(HOMEBREW_DISABLE_LOAD_FORMULA: "1") do
-          download_artifacts_from_previous_run!("bottles{,_*}", dry_run: args.dry_run?)
+          bottle_specifier = if OS.linux?
+            "{linux,ubuntu}"
+          else
+            "#{MacOS.version}#{"-arm64" if Hardware::CPU.arm?}"
+          end
+          download_artifacts_from_previous_run!("bottles{,_#{bottle_specifier}*}", dry_run: args.dry_run?)
         end
         @bottle_checksums.merge!(
           bottle_glob("*", artifact_cache, ".{json,tar.gz}", bottle_tag: "*").to_h do |bottle_file|
