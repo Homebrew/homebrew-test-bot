@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "utils/analytics"
+
 module Homebrew
   class Test
     def failed_steps
@@ -52,6 +54,11 @@ module Homebrew
       )
       step.run(dry_run: @dry_run, fail_fast: @fail_fast)
       @steps << step
+
+      if ENV["HOMEBREW_TEST_BOT_ANALYTICS"].present?
+        ::Utils::Analytics.report_test_bot_test(step.command_short, step.passed?)
+      end
+
       step
     end
   end

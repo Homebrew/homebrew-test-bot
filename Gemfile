@@ -6,4 +6,5 @@ group :test do
   gem "activesupport"
   gem "rspec"
   gem "simplecov"
+  gem "sorbet-runtime"
 end
