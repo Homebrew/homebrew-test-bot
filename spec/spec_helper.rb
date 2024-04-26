@@ -6,6 +6,12 @@ SimpleCov.start do
   minimum_coverage 10
 end
 
+# Setup Sorbet for usage in stubs.
+require "sorbet-runtime"
+class Module
+  include T::Sig
+end
+
 PROJECT_ROOT = Pathname(__dir__).parent.freeze
 STUB_PATH = (PROJECT_ROOT/"spec/stub").freeze
 $LOAD_PATH.unshift(STUB_PATH)
