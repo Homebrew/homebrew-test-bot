@@ -499,14 +499,14 @@ module Homebrew
           test("brew", "install", *install_args,
                named_args:      formula_name,
                env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
-               ignore_failures:)
+               ignore_failures:, report_analytics: true)
           steps.last.passed?
         end
 
         livecheck(formula) if !args.skip_livecheck? && !skip_online_checks
 
-        test "brew", "style", "--formula", formula_name
-        test "brew", "audit", "--formula", *audit_args unless formula.deprecated?
+        test "brew", "style", "--formula", formula_name, report_analytics: true
+        test "brew", "audit", "--formula", *audit_args, report_analytics: true unless formula.deprecated?
         unless install_step_passed
           if ignore_failures
             skipped formula_name, "install failed"
@@ -530,7 +530,7 @@ module Homebrew
           bottle_reinstall_formula(formula, new_formula, args:)
         end
         @built_formulae << formula.full_name
-        test("brew", "linkage", "--test", named_args: formula_name, ignore_failures:)
+        test("brew", "linkage", "--test", named_args: formula_name, ignore_failures:, report_analytics: true)
         failed_linkage_or_test_messages ||= []
         failed_linkage_or_test_messages << "linkage failed" unless steps.last.passed?
 
@@ -557,7 +557,7 @@ module Homebrew
 
           # Intentionally not passing --retry here to avoid papering over
           # flaky tests when a formula isn't being pulled in as a dependent.
-          test("brew", "test", "--verbose", named_args: formula_name, env:, ignore_failures:)
+          test("brew", "test", "--verbose", named_args: formula_name, env:, ignore_failures:, report_analytics: true)
           failed_linkage_or_test_messages << "test failed" unless steps.last.passed?
         end
 

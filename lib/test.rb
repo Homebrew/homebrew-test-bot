@@ -43,7 +43,7 @@ module Homebrew
       puts Formatter.headline(text, color: :cyan)
     end
 
-    def test(*arguments, named_args: nil, env: {}, verbose: @verbose, ignore_failures: false)
+    def test(*arguments, named_args: nil, env: {}, verbose: @verbose, ignore_failures: false, report_analytics: false)
       step = Step.new(
         arguments,
         named_args:,
@@ -55,7 +55,7 @@ module Homebrew
       step.run(dry_run: @dry_run, fail_fast: @fail_fast)
       @steps << step
 
-      if ENV["HOMEBREW_TEST_BOT_ANALYTICS"].present?
+      if ENV["HOMEBREW_TEST_BOT_ANALYTICS"].present? && report_analytics
         ::Utils::Analytics.report_test_bot_test(step.command_short, step.passed?)
       end
 
