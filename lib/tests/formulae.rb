@@ -434,7 +434,7 @@ module Homebrew
         if new_formula
           if !args.skip_new?
             audit_args << "--new"
-          elsif !args.skip_strict?
+          elsif !args.skip_new_strict?
             audit_args << "--strict"
           end
         else
