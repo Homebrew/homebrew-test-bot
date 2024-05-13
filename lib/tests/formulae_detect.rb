@@ -48,7 +48,7 @@ module Homebrew
         elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args:))
           unless canonical_formula_name.include?("/")
             ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1"
-            CoreTap.ensure_installed!
+            CoreTap.instance.ensure_installed!
           end
 
           @testing_formulae = [canonical_formula_name]
