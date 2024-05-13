@@ -530,17 +530,9 @@ module Homebrew
           bottle_reinstall_formula(formula, new_formula, args:)
         end
         @built_formulae << formula.full_name
-        test("brew", "linkage", "--test", named_args: formula_name, ignore_failures:, report_analytics: true)
+        test("brew", "linkage", "--test", "--strict", named_args: formula_name, ignore_failures:, report_analytics: true)
         failed_linkage_or_test_messages ||= []
         failed_linkage_or_test_messages << "linkage failed" unless steps.last.passed?
-
-        if steps.last.passed?
-          # Check for opportunistic linkage. Ignore failures because
-          # they can be unavoidable but we still want to know about them.
-          test "brew", "linkage", "--cached", "--test", "--strict",
-               named_args:      formula_name,
-               ignore_failures: !args.test_default_formula?
-        end
 
         test "brew", "linkage", "--cached", formula_name
         @linkage_output_path.write(Formatter.headline(steps.last.command_trimmed, color: :blue), mode: "a")
