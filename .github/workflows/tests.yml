@@ -98,7 +98,7 @@ jobs:
 
       - run: brew test-bot --only-cleanup-after
 
-      - run: rm -rvf *.bottle*.{json,tar.gz}
+      - run: rm -rvf -- *.bottle*.{json,tar.gz}
 
       - run: brew test-bot --only-setup --dry-run
 
