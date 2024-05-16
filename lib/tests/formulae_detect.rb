@@ -173,7 +173,7 @@ module Homebrew
         else
           require "formula_versions"
 
-          @testing_formulae.reject do |formula_name|
+          testing_formulae_to_fetch = @testing_formulae.reject do |formula_name|
             latest_formula = Formula[formula_name]
 
             # nil = formula not found, false = bottles changed, true = bottles not changed
@@ -184,6 +184,8 @@ module Homebrew
 
             equal_bottles # only exclude the true case (bottles not changed)
           end
+
+          @added_formulae + testing_formulae_to_fetch
         end
 
         puts <<-EOS
