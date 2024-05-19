@@ -83,6 +83,8 @@ module Homebrew
              description: "Only run the formulae steps."
       switch "--only-formulae-detect",
              description: "Only run the formulae detection steps."
+      switch "--only-dependents-detect",
+             description: "Only run the dependents detection steps."
       switch "--only-formulae-dependents",
              description: "Only run the formulae dependents steps."
       switch "--only-bottles-fetch",
@@ -98,6 +100,12 @@ module Homebrew
                   description: "Use these added formulae rather than running the formulae detection steps."
       comma_array "--deleted-formulae=",
                   description: "Use these deleted formulae rather than running the formulae detection steps."
+      comma_array "--source-dependents=",
+                  description: "Use these source dependents rather than running the dependent detection steps."
+      comma_array "--bottled-dependents=",
+                  description: "Use these bottled dependents rather than running the dependent detection steps."
+      comma_array "--testable-dependents=",
+                  description: "Use these testable depenents rather than running the dependent detection steps."
       comma_array "--skipped-or-failed-formulae=",
                   description: "Use these skipped or failed formulae from formulae steps for a " \
                                "formulae dependents step."
