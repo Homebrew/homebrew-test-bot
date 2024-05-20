@@ -24,7 +24,7 @@ module Homebrew
           bottle_specifier = if OS.linux?
             "{linux,ubuntu}"
           else
-            "#{MacOS.version}#{"-arm64" if Hardware::CPU.arm?}"
+            "{macos-#{MacOS.version},#{MacOS.version}-#{Hardware::CPU.arch}}"
           end
           download_artifacts_from_previous_run!("bottles{,_#{bottle_specifier}*}", dry_run: args.dry_run?)
         end
