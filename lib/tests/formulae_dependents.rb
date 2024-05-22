@@ -19,7 +19,7 @@ module Homebrew
         artifact_specifier = if OS.linux?
           "{linux,ubuntu}"
         else
-          "#{MacOS.version}#{"-arm64" if Hardware::CPU.arm?}"
+          "{macos-#{MacOS.version},#{MacOS.version}-#{Hardware::CPU.arch}}"
         end
         download_artifacts_from_previous_run!("dependents{,_#{artifact_specifier}*}", dry_run: args.dry_run?)
         @skip_candidates = if (tested_dependents_cache = artifact_cache/@tested_dependents_list).exist?
