@@ -53,3 +53,9 @@ DEPENDENCIES
   rspec
   simplecov
   sorbet-runtime
+
+RUBY VERSION
+   ruby 3.3.1p55
+
+BUNDLED WITH
+   2.5.9
