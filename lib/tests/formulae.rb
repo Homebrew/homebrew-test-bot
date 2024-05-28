@@ -76,7 +76,7 @@ module Homebrew
       def install_ca_certificates_if_needed
         return if DevelopmentTools.ca_file_handles_most_https_certificates?
 
-        test "brew", "install", "ca-certificates",
+        test "brew", "install", "--formulae", "ca-certificates",
              env: { "HOMEBREW_DEVELOPER" => nil }
       end
 
@@ -87,7 +87,7 @@ module Homebrew
           CompilerSelector.select_for(formula)
         rescue CompilerSelectionError => e
           unless installed_gcc
-            test "brew", "install", "gcc",
+            test "brew", "install", "--formula", "gcc",
                  env: { "HOMEBREW_DEVELOPER" => nil }
             installed_gcc = true
             DevelopmentTools.clear_version_cache
@@ -133,7 +133,11 @@ module Homebrew
         info_header "Determining dependencies..."
         installed = Utils.safe_popen_read("brew", "list", "--formula", "--full-name").split("\n")
         dependencies =
-          Utils.safe_popen_read("brew", "deps", "--include-build", "--include-test", "--full-name", formula_name)
+          Utils.safe_popen_read("brew", "deps", "--formula",
+                                                "--include-build",
+                                                "--include-test",
+                                                "--full-name",
+                                                formula_name)
                .split("\n")
         installed_dependencies = installed & dependencies
         installed_dependencies.each do |name|
@@ -146,11 +150,11 @@ module Homebrew
 
         dependencies -= installed
         @unchanged_dependencies = dependencies - @testing_formulae
-        test "brew", "fetch", "--retry", *@unchanged_dependencies unless @unchanged_dependencies.empty?
+        test "brew", "fetch", "--formulae", "--retry", *@unchanged_dependencies unless @unchanged_dependencies.empty?
 
         changed_dependencies = dependencies - @unchanged_dependencies
         unless changed_dependencies.empty?
-          test "brew", "fetch", "--retry", "--build-from-source",
+          test "brew", "fetch", "--formulae", "--retry", "--build-from-source",
                *changed_dependencies
 
           ignore_failures = !args.test_default_formula? && changed_dependencies.any? do |dep|
@@ -161,7 +165,7 @@ module Homebrew
           # checksum problems. We have to install all `changed_dependencies`
           # in one `brew install` command to make sure they are installed in
           # the right order.
-          test("brew", "install", "--build-from-source",
+          test("brew", "install", "--formulae", "--build-from-source",
                named_args:      changed_dependencies,
                ignore_failures:)
           # Run postinstall on them because the tested formula might depend on
@@ -170,7 +174,7 @@ module Homebrew
         end
 
         runtime_or_test_dependencies =
-          Utils.safe_popen_read("brew", "deps", "--include-test", formula_name)
+          Utils.safe_popen_read("brew", "deps", "--formula", "--include-test", formula_name)
                .split("\n")
         build_dependencies = dependencies - runtime_or_test_dependencies
         @unchanged_build_dependencies = build_dependencies - @testing_formulae
@@ -283,12 +287,12 @@ module Homebrew
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
 
         test "brew", "bottle", *bottle_merge_args
-        test "brew", "uninstall", "--force", formula.full_name
+        test "brew", "uninstall", "--formula", "--force", formula.full_name
 
         @testing_formulae.delete(formula.name)
 
         unless @unchanged_build_dependencies.empty?
-          test "brew", "uninstall", "--force", *@unchanged_build_dependencies
+          test "brew", "uninstall", "--formulae", "--force", *@unchanged_build_dependencies
           @unchanged_dependencies -= @unchanged_build_dependencies
         end
 
@@ -448,8 +452,8 @@ module Homebrew
         install_ca_certificates_if_needed
 
         if (messages = unsatisfied_requirements_messages(formula))
-          test "brew", "fetch", "--retry", *fetch_args
-          test "brew", "audit", *audit_args
+          test "brew", "fetch", "--formula", "--retry", *fetch_args
+          test "brew", "audit", "--formula", *audit_args
 
           skipped formula_name, messages
           return
@@ -464,9 +468,9 @@ module Homebrew
         install_subversion_if_needed(deps, reqs)
         setup_formulae_deps_instances(formula, formula_name, args:)
 
-        test "brew", "uninstall", "--force", formula_name if formula.latest_version_installed?
+        test "brew", "uninstall", "--formula", "--force", formula_name if formula.latest_version_installed?
 
-        install_args = ["--verbose"]
+        install_args = ["--verbose", "--formula"]
         install_args << build_flag
 
         # Don't care about e.g. bottle failures for dependencies.
@@ -480,7 +484,7 @@ module Homebrew
 
         info_header "Starting tests for #{formula_name}"
 
-        test "brew", "fetch", "--retry", *fetch_args
+        test "brew", "fetch", "--formula", "--retry", *fetch_args
 
         env = {}
         env["HOMEBREW_GIT_PATH"] = nil if deps.any? do |d|
@@ -547,7 +551,7 @@ module Homebrew
         @linkage_output_path.write("\n", mode: "a")
         @linkage_output_path.write(steps.last.output, mode: "a")
 
-        test "brew", "install", "--only-dependencies", "--include-test", formula_name
+        test "brew", "install", "--formula", "--only-dependencies", "--include-test", formula_name
 
         if formula.test_defined?
           env = {}
@@ -584,13 +588,14 @@ module Homebrew
       ensure
         cleanup_bottle_etc_var(formula) if args.cleanup?
 
-        test "brew", "uninstall", "--force", *@unchanged_dependencies if @unchanged_dependencies.present?
+        test "brew", "uninstall", "--formulae", "--force", *@unchanged_dependencies if @unchanged_dependencies.present?
       end
 
       def deleted_formula!(formula_name)
         test_header(:Formulae, method: "deleted_formula!(#{formula_name})")
 
         test "brew", "uses",
+             "--formula",
              "--eval-all",
              "--include-build",
              "--include-optional",
