@@ -24,6 +24,8 @@ module Homebrew
         formula = Formula[formula_name]
         tags = formula.bottle_specification.collector.tags
 
+        odie "#{formula_name} is missing bottles! Did you mean to use `brew pr-publish`?" if tags.blank?
+
         tags.each do |tag|
           cleanup_during!(args:)
           test "brew", "fetch", "--retry", "--formulae", "--bottle-tag=#{tag}", formula_name
