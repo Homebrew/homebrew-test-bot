@@ -22,6 +22,8 @@ module Homebrew
         test_header(:BottlesFetch, method: "fetch_bottles!(#{formula_name})")
 
         formula = Formula[formula_name]
+        return if formula.disabled?
+
         tags = formula.bottle_specification.collector.tags
 
         odie "#{formula_name} is missing bottles! Did you mean to use `brew pr-publish`?" if tags.blank?
