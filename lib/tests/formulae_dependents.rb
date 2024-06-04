@@ -74,6 +74,9 @@ module Homebrew
         source_dependents, bottled_dependents, testable_dependents =
           dependents_for_formula(formula, formula_name, args:)
 
+        print_dependents(source_dependents, bottled_dependents, testable_dependents)
+        return if args.only_dependents_detect?
+
         source_dependents.each do |dependent|
           install_dependent(dependent, testable_dependents, build_from_source: true, args:)
           install_dependent(dependent, testable_dependents, args:) if bottled?(dependent)
@@ -85,6 +88,12 @@ module Homebrew
       end
 
       def dependents_for_formula(formula, formula_name, args:)
+        source_dependents = Array(args.source_dependents).map { |dep| Formulary.factory(dep) }
+        bottled_dependents = Array(args.bottled_dependents).map { |dep| Formulary.factory(dep) }
+        testable_dependents = Array(args.testable_dependents).map { |dep| Formulary.factory(dep) }
+        dep_array = [source_dependents, bottled_dependents, testable_dependents]
+        return dep_array if dep_array.any?(&:present?)
+
         info_header "Determining dependents..."
 
         uses_args = %w[--formula --eval-all]
@@ -161,6 +170,10 @@ module Homebrew
         bottled_dependents = dependents.select { |dep| bottled?(dep) }
         testable_dependents += bottled_dependents.select(&:test_defined?)
 
+        [source_dependents, bottled_dependents, testable_dependents]
+      end
+
+      def print_dependents(source_dependents, bottled_dependents, testable_dependents)
         info_header "Source dependents:"
         puts source_dependents
 
@@ -170,7 +183,13 @@ module Homebrew
         info_header "Testable dependents:"
         puts testable_dependents
 
-        [source_dependents, bottled_dependents, testable_dependents]
+        return unless ENV["GITHUB_ACTIONS"].present?
+
+        File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
+          f.puts "source_dependents=#{source_dependents.map(&:full_name).join(",")}"
+          f.puts "bottled_dependents=#{bottled_dependents.map(&:full_name).join(",")}"
+          f.puts "testable_dependents=#{testable_dependents.map(&:full_name).join(",")}"
+        end
       end
 
       def install_dependent(dependent, testable_dependents, args:, build_from_source: false)
