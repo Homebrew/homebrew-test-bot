@@ -339,7 +339,7 @@ module Homebrew
       end
 
       def cleanup_during!(keep_formulae = [], args:)
-        return unless args.cleanup?
+        return unless cleanup?(args)
         return unless HOMEBREW_CACHE.exist?
 
         free_gb = Utils.safe_popen_read({ "BLOCKSIZE" => (1000 ** 3).to_s }, "df", HOMEBREW_CACHE.to_s)
