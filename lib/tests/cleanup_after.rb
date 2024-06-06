@@ -18,7 +18,7 @@ module Homebrew
 
         # Keep all "brew" invocations after cleanup_shared
         # (which cleans up Homebrew/brew)
-        return unless args.local?
+        return unless local?(args)
 
         FileUtils.rm_rf ENV.fetch("HOMEBREW_HOME")
         FileUtils.rm_rf ENV.fetch("HOMEBREW_LOGS")

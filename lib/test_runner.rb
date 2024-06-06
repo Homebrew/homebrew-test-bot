@@ -164,7 +164,7 @@ module Homebrew
                                                                     verbose:   args.verbose?)
       end
 
-      if args.cleanup?
+      if Homebrew::TestBot.cleanup?(args)
         if !skip_cleanup_before && (no_only_args || args.only_cleanup_before?)
           tests[:cleanup_before] = Tests::CleanupBefore.new(tap:,
                                                             git:,

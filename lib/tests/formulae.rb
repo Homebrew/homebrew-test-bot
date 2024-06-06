@@ -431,7 +431,7 @@ module Homebrew
 
         fetch_args = [formula_name]
         fetch_args << build_flag
-        fetch_args << "--force" if args.cleanup?
+        fetch_args << "--force" if cleanup?(args)
 
         audit_args = [formula_name]
         audit_args << "--online" unless skip_online_checks
@@ -586,7 +586,7 @@ module Homebrew
           end
         end
       ensure
-        cleanup_bottle_etc_var(formula) if args.cleanup?
+        cleanup_bottle_etc_var(formula) if cleanup?(args)
 
         test "brew", "uninstall", "--formulae", "--force", *@unchanged_dependencies if @unchanged_dependencies.present?
       end

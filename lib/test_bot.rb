@@ -22,6 +22,15 @@ module Homebrew
 
     HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
+
+    def cleanup?(args)
+      args.cleanup? || ENV["GITHUB_ACTIONS"].present?
+    end
+
+    def local?(args)
+      args.local? || ENV["GITHUB_ACTIONS"].present?
+    end
+
     def resolve_test_tap(tap = nil)
       return Tap.fetch(tap) if tap
 
@@ -47,7 +56,7 @@ module Homebrew
       $stdout.sync = true
       $stderr.sync = true
 
-      if Pathname.pwd == HOMEBREW_PREFIX && args.cleanup?
+      if Pathname.pwd == HOMEBREW_PREFIX && cleanup?(args)
         raise UsageError, "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
       end
 
@@ -66,7 +75,7 @@ module Homebrew
       # https://github.com/Homebrew/brew/issues/14274
       ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 
-      if args.local?
+      if local?(args)
         home = "#{Dir.pwd}/home"
         logs = "#{Dir.pwd}/logs"
         gitconfig = "#{Dir.home}/.gitconfig"

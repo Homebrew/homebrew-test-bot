@@ -14,6 +14,16 @@ module Homebrew
 
     attr_reader :steps
 
+    protected
+
+    def cleanup?(args)
+      Homebrew::TestBot.cleanup?(args)
+    end
+
+    def local?(args)
+      Homebrew::TestBot.local?(args)
+    end
+
     private
 
     attr_reader :tap, :git, :repository
