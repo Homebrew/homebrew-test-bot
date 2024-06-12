@@ -22,7 +22,6 @@ module Homebrew
 
     HOMEBREW_TAP_REGEX = %r{^([\w-]+)/homebrew-([\w-]+)$}
 
-
     def cleanup?(args)
       args.cleanup? || ENV["GITHUB_ACTIONS"].present?
     end
