@@ -134,10 +134,10 @@ module Homebrew
         installed = Utils.safe_popen_read("brew", "list", "--formula", "--full-name").split("\n")
         dependencies =
           Utils.safe_popen_read("brew", "deps", "--formula",
-                                                "--include-build",
-                                                "--include-test",
-                                                "--full-name",
-                                                formula_name)
+                                "--include-build",
+                                "--include-test",
+                                "--full-name",
+                                formula_name)
                .split("\n")
         installed_dependencies = installed & dependencies
         installed_dependencies.each do |name|
@@ -588,7 +588,9 @@ module Homebrew
       ensure
         cleanup_bottle_etc_var(formula) if cleanup?(args)
 
-        test "brew", "uninstall", "--formulae", "--force", *@unchanged_dependencies if @unchanged_dependencies.present?
+        if @unchanged_dependencies.present?
+          test "brew", "uninstall", "--formulae", "--force", *@unchanged_dependencies
+        end
       end
 
       def deleted_formula!(formula_name)
