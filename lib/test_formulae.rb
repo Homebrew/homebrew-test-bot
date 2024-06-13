@@ -54,6 +54,7 @@ module Homebrew
           next false if node.fetch("status") != "COMPLETED"
 
           workflow_run = node.fetch("workflowRun")
+          next false if workflow_run.blank?
           next false if workflow_run.fetch("event") != event_name
           next false if workflow_run.dig("workflow", "name") != workflow_name
 
