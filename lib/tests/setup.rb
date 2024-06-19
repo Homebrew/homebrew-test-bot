@@ -6,7 +6,7 @@ module Homebrew
       def run!(args:)
         test_header(:Setup)
 
-        test "brew", "install-bundler-gems", "--add-groups=ast,audit,bootsnap,bottle,formula_test,livecheck,style"
+        test "brew", "install-bundler-gems", "--add-groups=ast,audit,bottle,formula_test,livecheck,style"
 
         # Always output `brew config` output even when it doesn't fail.
         test "brew", "config", verbose: true
