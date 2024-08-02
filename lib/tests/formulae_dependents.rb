@@ -87,9 +87,12 @@ module Homebrew
       def dependents_for_formula(formula, formula_name, args:)
         info_header "Determining dependents..."
 
+        # Always skip recursive dependents on Intel. It's really slow.
+        skip_recursive_dependents = args.skip_recursive_dependents? || (OS.mac? && Hardware::CPU.intel?)
+
         uses_args = %w[--formula --eval-all]
         uses_include_test_args = [*uses_args, "--include-test"]
-        uses_include_test_args << "--recursive" unless args.skip_recursive_dependents?
+        uses_include_test_args << "--recursive" unless skip_recursive_dependents
         dependents = with_env(HOMEBREW_STDERR: "1") do
           Utils.safe_popen_read("brew", "uses", *uses_include_test_args, formula_name)
                .split("\n")
@@ -110,7 +113,7 @@ module Homebrew
         dependents = dependents.map { |d| Formulary.factory(d) }
 
         dependents = dependents.zip(dependents.map do |f|
-          if args.skip_recursive_dependents?
+          if skip_recursive_dependents
             f.deps
           else
             begin
