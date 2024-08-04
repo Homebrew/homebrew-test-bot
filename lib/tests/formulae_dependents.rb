@@ -53,6 +53,11 @@ module Homebrew
 
         formula = Formulary.factory(formula_name)
 
+        source_dependents, bottled_dependents, testable_dependents =
+          dependents_for_formula(formula, formula_name, args:)
+
+        return if source_dependents.blank? && bottled_dependents.blank? && testable_dependents.blank?
+
         # If we installed this from a bottle, then the formula isn't linked.
         # If the formula isn't linked, `brew install --only-dependences` does
         # nothing with the message:
@@ -70,9 +75,6 @@ module Homebrew
         # Restore etc/var files that may have been nuked in the build stage.
         test "brew", "postinstall", formula_name
         return if steps.last.failed?
-
-        source_dependents, bottled_dependents, testable_dependents =
-          dependents_for_formula(formula, formula_name, args:)
 
         source_dependents.each do |dependent|
           install_dependent(dependent, testable_dependents, build_from_source: true, args:)
