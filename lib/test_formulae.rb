@@ -1,8 +1,11 @@
+# typed: true
 # frozen_string_literal: true
 
 module Homebrew
   module Tests
     class TestFormulae < Test
+      include Kernel
+
       attr_accessor :skipped_or_failed_formulae
       attr_reader :artifact_cache
 
@@ -10,7 +13,7 @@ module Homebrew
         super
 
         @skipped_or_failed_formulae = []
-        @artifact_cache = Pathname("artifact-cache")
+        @artifact_cache = Pathname.new("artifact-cache")
         # Let's keep track of the artifacts we've already downloaded
         # to avoid repeatedly trying to download the same thing.
         @downloaded_artifacts = Hash.new { |h, k| h[k] = [] }

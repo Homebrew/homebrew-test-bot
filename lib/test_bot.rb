@@ -1,3 +1,4 @@
+# typed: true
 # frozen_string_literal: true
 
 require_relative "step"
@@ -16,6 +17,8 @@ require "utils/bottles"
 
 module Homebrew
   module TestBot
+    include Kernel
+
     module_function
 
     GIT = "/usr/bin/git"

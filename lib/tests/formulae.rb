@@ -1,3 +1,4 @@
+# typed: true
 # frozen_string_literal: true
 
 module Homebrew
@@ -81,7 +82,7 @@ module Homebrew
       end
 
       def install_gcc_if_needed(formula, deps)
-        installed_gcc = false
+        installed_gcc = T.let(false, T::Boolean)
         begin
           deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
           CompilerSelector.select_for(formula)

@@ -1,3 +1,4 @@
+# typed: true
 # frozen_string_literal: true
 
 require_relative "junit"
@@ -15,6 +16,8 @@ require_relative "tests/tap_syntax"
 
 module Homebrew
   module TestRunner
+    include Kernel
+
     module_function
 
     def ensure_blank_file_exists!(file)
@@ -26,13 +29,13 @@ module Homebrew
     end
 
     def run!(tap, git:, args:)
-      tests = []
+      tests = T.let([], T::Array[Homebrew::Test])
       skip_setup = args.skip_setup?
-      skip_cleanup_before = false
+      skip_cleanup_before = T.let(false, T::Boolean)
 
-      bottle_output_path = Pathname("bottle_output.txt")
-      linkage_output_path = Pathname("linkage_output.txt")
-      @skipped_or_failed_formulae_output_path = Pathname("skipped_or_failed_formulae-#{Utils::Bottles.tag}.txt")
+      bottle_output_path = Pathname.new("bottle_output.txt")
+      linkage_output_path = Pathname.new("linkage_output.txt")
+      @skipped_or_failed_formulae_output_path = Pathname.new("skipped_or_failed_formulae-#{Utils::Bottles.tag}.txt")
 
       if no_only_args?(args) || args.only_formulae?
         ensure_blank_file_exists!(bottle_output_path)
@@ -91,7 +94,7 @@ module Homebrew
       end
       puts steps_output
 
-      steps_output_path = Pathname("steps_output.txt")
+      steps_output_path = Pathname.new("steps_output.txt")
       steps_output_path.unlink if steps_output_path.exist?
       steps_output_path.write(steps_output)
 
@@ -209,9 +212,9 @@ module Homebrew
           ]
         else
           [
-            Array(args.testing_formulae),
-            Array(args.added_formulae),
-            Array(args.deleted_formulae),
+            args.testing_formulae.to_a,
+            args.added_formulae.to_a,
+            args.deleted_formulae.to_a,
           ]
         end
 
@@ -224,7 +227,7 @@ module Homebrew
 
           formulae_test.skipped_or_failed_formulae
         elsif args.skipped_or_failed_formulae.present?
-          Array(args.skipped_or_failed_formulae)
+          Array.new(args.skipped_or_failed_formulae)
         elsif @skipped_or_failed_formulae_output_path.exist?
           @skipped_or_failed_formulae_output_path.read.chomp.split(",")
         else
