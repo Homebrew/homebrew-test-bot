@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
-module Tap
-  module_function
-
-  def fetch(*)
+class Tap
+  def self.fetch(*)
     OpenStruct.new(name: "Homebrew/homebrew-core")
   end
 
-  def map
+  def self.map
     []
   end
 end
