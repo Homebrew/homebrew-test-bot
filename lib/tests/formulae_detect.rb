@@ -207,8 +207,7 @@ module Homebrew
         retry unless steps.last.failed?
         onoe e
         puts e.backtrace if args.debug?
-      rescue FormulaUnavailableError, TapFormulaAmbiguityError,
-             TapFormulaWithOldnameAmbiguityError => e
+      rescue FormulaUnavailableError, TapFormulaAmbiguityError => e
         onoe e
         puts e.backtrace if args.debug?
       end
