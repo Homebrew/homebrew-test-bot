@@ -16,8 +16,6 @@ require_relative "tests/tap_syntax"
 
 module Homebrew
   module TestRunner
-    include Kernel
-
     module_function
 
     def ensure_blank_file_exists!(file)

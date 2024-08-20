@@ -4,8 +4,6 @@
 module Homebrew
   module Tests
     class TestFormulae < Test
-      include Kernel
-
       attr_accessor :skipped_or_failed_formulae
       attr_reader :artifact_cache
 
