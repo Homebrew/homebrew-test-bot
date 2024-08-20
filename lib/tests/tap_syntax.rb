@@ -3,17 +3,15 @@
 module Homebrew
   module Tests
     class TapSyntax < Test
-      # Eventually these should be all `tap.official?` taps except core & cask?
-      SORBET_TAPS = %w[
-        homebrew/command-not-found
-        homebrew/services
-      ].freeze
-
       def run!(args:)
         test_header(:TapSyntax)
         return unless tap.installed?
 
-        test "brew", "typecheck", tap.name if SORBET_TAPS.include?(tap.name)
+        # Run `brew typecheck` if this tap is typed.
+        # TODO: consider in future if we want to allow unsupported taps here.
+        if tap.official? && quiet_system(git, "-C", tap.path.to_s, "grep", "-qE", "^# typed: (true|strict|strong)$")
+          test "brew", "typecheck", tap.name
+        end
 
         test "brew", "style", tap.name unless args.stable?
 
