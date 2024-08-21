@@ -43,7 +43,7 @@ module Homebrew
           @testing_formulae = []
           # Use GitHub Actions variables for pull request jobs.
           if github_ref.present? && github_repository.present? &&
-             %r{refs/pull/(?:\d+)/merge} =~ github_ref
+             %r{refs/pull/(\d+)/merge} =~ github_ref
             url = "https://github.com/#{github_repository}/pull/#{Regexp.last_match(1)}/checks"
           end
         elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args:))
