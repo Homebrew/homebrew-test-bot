@@ -1,3 +1,4 @@
+# typed: true
 # frozen_string_literal: true
 
 module Homebrew
@@ -42,8 +43,8 @@ module Homebrew
           @testing_formulae = []
           # Use GitHub Actions variables for pull request jobs.
           if github_ref.present? && github_repository.present? &&
-             %r{refs/pull/(?<pr>\d+)/merge} =~ github_ref
-            url = "https://github.com/#{github_repository}/pull/#{pr}/checks"
+             %r{refs/pull/(\d+)/merge} =~ github_ref
+            url = "https://github.com/#{github_repository}/pull/#{Regexp.last_match(1)}/checks"
           end
         elsif (canonical_formula_name = safe_formula_canonical_name(@argument, args:))
           unless canonical_formula_name.include?("/")
@@ -207,8 +208,7 @@ module Homebrew
         retry unless steps.last.failed?
         onoe e
         puts e.backtrace if args.debug?
-      rescue FormulaUnavailableError, TapFormulaAmbiguityError,
-             TapFormulaWithOldnameAmbiguityError => e
+      rescue FormulaUnavailableError, TapFormulaAmbiguityError => e
         onoe e
         puts e.backtrace if args.debug?
       end
