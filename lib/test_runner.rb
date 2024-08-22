@@ -133,6 +133,7 @@ module Homebrew
       if no_only_args || args.only_tap_syntax?
         tests[:tap_syntax] = Tests::TapSyntax.new(tap:       tap || CoreTap.instance,
                                                   dry_run:   args.dry_run?,
+                                                  git:,
                                                   fail_fast: args.fail_fast?,
                                                   verbose:   args.verbose?)
       end
