@@ -10,6 +10,7 @@ module Homebrew
 
         # Run `brew typecheck` if this tap is typed.
         # TODO: consider in future if we want to allow unsupported taps here.
+        puts "tap.name: #{tap.name}, tap.path: #{tap.path}" if ENV["HOMEBREW_DEBUG"].present?
         if tap.official? && quiet_system(git, "-C", tap.path.to_s, "grep", "-qE", "^# typed: (true|strict|strong)$")
           test "brew", "typecheck", tap.name
         end
