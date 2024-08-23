@@ -274,6 +274,10 @@ module Homebrew
           old_formula.bottle_specification.tag?(Utils::Bottles.tag(:all))
         end
 
+        # Checking `origin/HEAD` for formula failed because the formula doesn't exist at that revision.
+        # TODO: This should probably be improved in brew.
+        return false if all_bottle_at_origin_head.nil?
+
         # If a formula has an `:all` bottle, then all its dependencies have
         # to be bottled too for us to use it. We only need to recurse
         # up the dep tree when we encounter an `:all` bottle because
