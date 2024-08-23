@@ -265,14 +265,23 @@ module Homebrew
       end
 
       def bottled?(formula, no_older_versions: false)
+        require "formula_versions"
+
         # If a formula has an `:all` bottle, then all its dependencies have
         # to be bottled too for us to use it. We only need to recurse
         # up the dep tree when we encounter an `:all` bottle because
         # a formula is not bottled unless its dependencies are.
-        if formula.bottle_specification.tag?(Utils::Bottles.tag(:all))
+        all_bottle_at_origin_head = FormulaVersions.new(formula).formula_at_revision("origin/HEAD") do |old_formula|
+          old_formula.bottle_specification.tag?(Utils::Bottles.tag(:all))
+        end
+
+        # Check the bottle block at `origin/HEAD` because the current bottle block may have been tampered with.
+        if all_bottle_at_origin_head
           formula.deps.all? { |dep| bottled?(dep.to_formula, no_older_versions:) }
         else
-          formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions:)
+          FormulaVersions.new(formula).formula_at_revision("origin/HEAD") do |old_formula|
+            old_formula.bottle_specification.tag?(Utils::Bottles.tag, no_older_versions:)
+          end
         end
       end
 
