@@ -221,6 +221,8 @@ module Homebrew
         unless dependent_was_previously_installed
           build_args = []
 
+          fetch_formulae = dependent_dependencies.reject(&:satisfied?).map(&:name)
+
           if build_from_source
             required_dependent_reqs = dependent.requirements.reject(&:optional?)
             install_curl_if_needed(dependent)
@@ -228,10 +230,14 @@ module Homebrew
             install_subversion_if_needed(required_dependent_deps, required_dependent_reqs)
 
             build_args << "--build-from-source"
+
+            test "brew", "fetch", "--build-from-source", "--retry", dependent.full_name
+            return if steps.last.failed?
+          else
+            fetch_formulae << dependent.full_name
           end
 
-          missing_deps = dependent_dependencies.reject(&:satisfied?).map(&:name)
-          test "brew", "fetch", *build_args, "--retry", dependent.full_name, *missing_deps
+          test "brew", "fetch", "--retry", *fetch_formulae
           return if steps.last.failed?
 
           unlink_conflicts dependent
