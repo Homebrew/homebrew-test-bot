@@ -228,10 +228,10 @@ module Homebrew
           git, "-C", repository,
           "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
           start_revision, end_revision, "--", path
-        ).lines.filter_map do |line|
-          file = Pathname.new line.chomp
+        ).lines(chomp: true).filter_map do |file|
           next unless tap.formula_file?(file)
 
+          file = Pathname.new(file)
           tap.formula_file_to_name(file)
         end
       end
