@@ -238,12 +238,13 @@ module Homebrew
         if !dry_run && !testing_formulae_dependents && install_step.passed?
           bottle_hash = local_bottle_hash(formula_name, bottle_dir:)
           bottle_revision = bottle_hash.dig(formula_name, "formula", "tap_git_revision")
-          bottle_header = "Installed previously built bottle for #{formula_name} from:"
-          bottle_message = if @fetched_refs&.include?(bottle_revision)
+          bottle_header = "Bottle cache hit"
+          bottle_commit_details = if @fetched_refs&.include?(bottle_revision)
             Utils.safe_popen_read(git, "-C", repository, "show", "--format=reference", bottle_revision)
           else
             bottle_revision
           end
+          bottle_message = "Bottle for #{formula_name} built at #{bottle_commit_details}"
 
           if ENV["GITHUB_ACTIONS"].present?
             puts GitHub::Actions::Annotation.new(
