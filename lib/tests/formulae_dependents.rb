@@ -4,13 +4,13 @@
 module Homebrew
   module Tests
     class FormulaeDependents < TestFormulae
-      attr_writer :testing_formulae
+      attr_writer :testing_formulae, :tested_formulae
 
       def run!(args:)
         info_header "Skipped or failed formulae:"
         puts skipped_or_failed_formulae
 
-        @tested_formulae = []
+        @testing_formulae_with_tested_dependents = []
         @tested_dependents_list = Pathname("tested-dependents-#{Utils::Bottles.tag}.txt")
 
         @dependent_testing_formulae = sorted_formulae - skipped_or_failed_formulae
@@ -38,7 +38,7 @@ module Homebrew
       private
 
       def install_formulae_if_needed_from_bottles!(args:)
-        @dependent_testing_formulae.each do |formula_name|
+        (@tested_formulae - skipped_or_failed_formulae).each do |formula_name|
           formula = Formulary.factory(formula_name)
           next if formula.latest_version_installed?
 
@@ -50,7 +50,7 @@ module Homebrew
         cleanup_during!(@dependent_testing_formulae, args:)
 
         test_header(:FormulaeDependents, method: "dependent_formulae!(#{formula_name})")
-        @tested_formulae << formula_name
+        @testing_formulae_with_tested_dependents << formula_name
 
         formula = Formulary.factory(formula_name)
 
@@ -112,7 +112,7 @@ module Homebrew
         dependents&.uniq!
         dependents&.sort!
 
-        dependents -= @testing_formulae
+        dependents -= @tested_formulae
         dependents = dependents.map { |d| Formulary.factory(d) }
 
         dependents = dependents.zip(dependents.map do |f|
@@ -136,7 +136,7 @@ module Homebrew
         # Defer formulae which could be tested later
         # i.e. formulae that also depend on something else yet to be built in this test run.
         dependents.reject! do |_, deps|
-          still_to_test = @dependent_testing_formulae - @tested_formulae
+          still_to_test = @dependent_testing_formulae - @testing_formulae_with_tested_dependents
           deps.map { |d| d.to_formula.full_name }.intersect?(still_to_test)
         end
 

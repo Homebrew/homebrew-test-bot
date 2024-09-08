@@ -104,6 +104,8 @@ module Homebrew
         comma_array "--skipped-or-failed-formulae=",
                     description: "Use these skipped or failed formulae from formulae steps for a " \
                                  "formulae dependents step."
+        comma_array "--tested-formulae=",
+                    description: "Use these tested formulae from formulae steps for a formulae dependents step."
         conflicts "--only-formulae-detect", "--testing-formulae"
         conflicts "--only-formulae-detect", "--added-formulae"
         conflicts "--only-formulae-detect", "--deleted-formulae"
