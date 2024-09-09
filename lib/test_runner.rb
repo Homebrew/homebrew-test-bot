@@ -236,6 +236,7 @@ module Homebrew
         if (dependents_test = tests[:formulae_dependents])
           dependents_test.testing_formulae = testing_formulae
           dependents_test.skipped_or_failed_formulae = skipped_or_failed_formulae
+          dependents_test.tested_formulae = args.tested_formulae.to_a.presence || testing_formulae
 
           dependents_test.run!(args:)
         end
