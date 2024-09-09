@@ -237,8 +237,10 @@ module Homebrew
             fetch_formulae << dependent.full_name
           end
 
-          test "brew", "fetch", "--retry", *fetch_formulae
-          return if steps.last.failed?
+          if fetch_formulae.present?
+            test "brew", "fetch", "--retry", *fetch_formulae
+            return if steps.last.failed?
+          end
 
           unlink_conflicts dependent
 
