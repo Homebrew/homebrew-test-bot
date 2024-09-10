@@ -196,7 +196,10 @@ module Homebrew
         return
       end
 
-      if OS.mac? && MacOS.version == :sequoia && output.include?("LoadError") && output.include?("not a mach-o file")
+      if OS.mac? && MacOS.version == :sequoia &&
+         ENV["GITHUB_REPOSITORY_OWNER"]&.casecmp?("homebrew") &&
+         output.include?("LoadError") &&
+         output.include?("not a mach-o file")
         time_slept = 0
         sleep_time = 300
         sleep_for = 3600
