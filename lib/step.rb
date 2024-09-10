@@ -196,6 +196,23 @@ module Homebrew
         return
       end
 
+      if OS.mac? && MacOS.version == :sequoia &&
+         ENV["GITHUB_REPOSITORY_OWNER"]&.casecmp?("homebrew") &&
+         output.include?("LoadError") &&
+         output.include?("not a mach-o file")
+        time_slept = 0
+        sleep_time = 300
+        sleep_for = 3600
+        while time_slept < sleep_for
+          puts GitHub::Actions::Annotation.new(
+            :notice,
+            "ping @Bo98, please investigate. Continuing in #{sleep_for - time_slept}s.",
+          )
+          time_slept += sleep_time
+          sleep sleep_time
+        end
+      end
+
       os_string = if OS.mac?
         str = +"macOS #{MacOS.version.pretty_name} (#{MacOS.version})"
         str << " on Apple Silicon" if Hardware::CPU.arm?
