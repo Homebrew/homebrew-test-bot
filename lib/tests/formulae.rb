@@ -510,6 +510,11 @@ module Homebrew
 
         livecheck(formula) if !args.skip_livecheck? && !skip_online_checks
 
+        if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present? && OS.mac? && MacOS.version == :sequoia
+          # Fix intermittent broken disk cache on Sonoma after building from source.
+          test "/usr/bin/sudo", "--non-interactive", "/usr/sbin/purge"
+        end
+
         test "brew", "style", "--formula", formula_name, report_analytics: true
         test "brew", "audit", "--formula", *audit_args, report_analytics: true unless formula.deprecated?
         unless install_step_passed
