@@ -91,7 +91,10 @@ module Homebrew
         info_header "Determining dependents..."
 
         # Always skip recursive dependents on Intel. It's really slow.
-        skip_recursive_dependents = args.skip_recursive_dependents? || (OS.mac? && Hardware::CPU.intel?)
+        # Also skip recursive dependents on Linux unless it's a Linux-only formula.
+        skip_recursive_dependents = args.skip_recursive_dependents? ||
+                                    (OS.mac? && Hardware::CPU.intel?) ||
+                                    (OS.linux? && formula.requirements.exclude?(LinuxRequirement.new))
 
         uses_args = %w[--formula --eval-all]
         uses_include_test_args = [*uses_args, "--include-test"]
