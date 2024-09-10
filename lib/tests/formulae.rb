@@ -511,7 +511,7 @@ module Homebrew
         livecheck(formula) if !args.skip_livecheck? && !skip_online_checks
 
         if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present? && OS.mac? && MacOS.version == :sequoia
-          # Fix intermittent broken disk cache on Sonoma after building from source.
+          # Fix intermittent broken disk cache on Sequoia after building from source.
           test "/usr/bin/sudo", "--non-interactive", "/usr/sbin/purge"
         end
 
