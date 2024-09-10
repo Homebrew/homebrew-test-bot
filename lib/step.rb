@@ -200,6 +200,11 @@ module Homebrew
          ENV["GITHUB_REPOSITORY_OWNER"]&.casecmp?("homebrew") &&
          output.include?("LoadError") &&
          output.include?("not a mach-o file")
+
+        url = GitHub.url_to("repos", "Homebrew", "homebrew-core", "issues", "184132", "comments")
+        data = '{"body":"ping @Bo98"}'
+        GitHub::API.open_rest(url, data:, request_method: "POST")
+
         time_slept = 0
         sleep_time = 300
         sleep_for = 3600
