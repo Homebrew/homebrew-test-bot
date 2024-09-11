@@ -60,7 +60,7 @@ module Homebrew
         raise UsageError, "cannot use --cleanup from HOMEBREW_PREFIX as it will delete all output."
       end
 
-      ENV["HOMEBREW_BOOTSNAP"] = "1"
+      ENV["HOMEBREW_BOOTSNAP"] = "1" if OS.linux? || (OS.mac? && MacOS.version != :sequoia)
       ENV["HOMEBREW_DEVELOPER"] = "1"
       ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
       ENV["HOMEBREW_NO_EMOJI"] = "1"
