@@ -244,7 +244,7 @@ module Homebrew
           else
             bottle_revision
           end
-          bottle_message = "Bottle for #{formula_name} built at #{bottle_commit_details}"
+          bottle_message = "Bottle for #{formula_name} built at #{bottle_commit_details}".strip
 
           if ENV["GITHUB_ACTIONS"].present?
             puts GitHub::Actions::Annotation.new(
