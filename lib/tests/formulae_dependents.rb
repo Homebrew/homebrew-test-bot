@@ -69,13 +69,17 @@ module Homebrew
         test "brew", "link", formula_name unless formula.keg_only?
 
         # Install formula dependencies. These may not be installed.
-        test "brew", "install", "--only-dependencies", formula_name,
-             env: { "HOMEBREW_DEVELOPER" => nil }
-        return if steps.last.failed?
+        test "brew", "install", "--only-dependencies",
+             named_args:      formula_name,
+             ignore_failures: !bottled?(formula, no_older_versions: true),
+             env:             { "HOMEBREW_DEVELOPER" => nil }
+        return unless steps.last.passed?
 
         # Restore etc/var files that may have been nuked in the build stage.
-        test "brew", "postinstall", formula_name
-        return if steps.last.failed?
+        test "brew", "postinstall",
+             named_args:      formula_name,
+             ignore_failures: !bottled?(formula, no_older_versions: true)
+        return unless steps.last.passed?
 
         source_dependents.each do |dependent|
           install_dependent(dependent, testable_dependents, build_from_source: true, args:)
