@@ -7,6 +7,10 @@ module Homebrew
       attr_writer :testing_formulae, :tested_formulae
 
       def run!(args:)
+        unneeded_formulae = @tested_formulae - @testing_formulae
+        skipped_or_failed_formulae ||= []
+        skipped_or_failed_formulae += unneeded_formulae
+
         info_header "Skipped or failed formulae:"
         puts skipped_or_failed_formulae
 
@@ -14,8 +18,6 @@ module Homebrew
         @tested_dependents_list = Pathname("tested-dependents-#{Utils::Bottles.tag}.txt")
 
         @dependent_testing_formulae = sorted_formulae - skipped_or_failed_formulae
-        unneeded_formulae = @tested_formulae - @testing_formulae
-        @dependent_testing_formulae -= unneeded_formulae
 
         install_formulae_if_needed_from_bottles!(args:)
 
@@ -40,7 +42,7 @@ module Homebrew
       private
 
       def install_formulae_if_needed_from_bottles!(args:)
-        (@tested_formulae - skipped_or_failed_formulae).each do |formula_name|
+        @dependent_testing_formulae.each do |formula_name|
           formula = Formulary.factory(formula_name)
           next if formula.latest_version_installed?
 
