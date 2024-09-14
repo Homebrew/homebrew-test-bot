@@ -8,8 +8,7 @@ module Homebrew
 
       def run!(args:)
         unneeded_formulae = @tested_formulae - @testing_formulae
-        skipped_or_failed_formulae ||= []
-        skipped_or_failed_formulae += unneeded_formulae
+        @skipped_or_failed_formulae += unneeded_formulae
 
         info_header "Skipped or failed formulae:"
         puts skipped_or_failed_formulae
