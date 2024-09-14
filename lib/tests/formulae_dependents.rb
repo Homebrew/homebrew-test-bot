@@ -14,6 +14,8 @@ module Homebrew
         @tested_dependents_list = Pathname("tested-dependents-#{Utils::Bottles.tag}.txt")
 
         @dependent_testing_formulae = sorted_formulae - skipped_or_failed_formulae
+        unneeded_formulae = @tested_formulae - @testing_formulae
+        @dependent_testing_formulae -= unneeded_formulae
 
         install_formulae_if_needed_from_bottles!(args:)
 
