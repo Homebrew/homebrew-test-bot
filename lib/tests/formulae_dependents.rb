@@ -254,8 +254,10 @@ module Homebrew
 
           unlink_conflicts dependent
 
-          test "brew", "install", *build_args, "--only-dependencies", dependent.full_name,
-               env: { "HOMEBREW_DEVELOPER" => nil }
+          test "brew", "install", *build_args, "--only-dependencies",
+               named_args:      dependent.full_name,
+               ignore_failures: !bottled_on_current_version,
+               env:             { "HOMEBREW_DEVELOPER" => nil }
 
           env = {}
           env["HOMEBREW_GIT_PATH"] = nil if build_from_source && required_dependent_deps.any? do |d|
