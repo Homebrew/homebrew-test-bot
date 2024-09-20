@@ -7,6 +7,7 @@ module Homebrew
       attr_writer :testing_formulae, :tested_formulae
 
       def run!(args:)
+        installable_bottles = @tested_formulae - @skipped_or_failed_formulae
         unneeded_formulae = @tested_formulae - @testing_formulae
         @skipped_or_failed_formulae += unneeded_formulae
 
@@ -18,7 +19,7 @@ module Homebrew
 
         @dependent_testing_formulae = sorted_formulae - skipped_or_failed_formulae
 
-        install_formulae_if_needed_from_bottles!(args:)
+        install_formulae_if_needed_from_bottles!(installable_bottles, args:)
 
         artifact_specifier = if OS.linux?
           "{linux,ubuntu}"
@@ -40,8 +41,8 @@ module Homebrew
 
       private
 
-      def install_formulae_if_needed_from_bottles!(args:)
-        @dependent_testing_formulae.each do |formula_name|
+      def install_formulae_if_needed_from_bottles!(installable_bottles, args:)
+        installable_bottles.each do |formula_name|
           formula = Formulary.factory(formula_name)
           next if formula.latest_version_installed?
 
