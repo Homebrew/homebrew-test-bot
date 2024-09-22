@@ -132,16 +132,26 @@ module Homebrew
       [@repository.glob("**/#{name}*").first, nil]
     end
 
-    def truncate_output(output, max_kb:, max_lines:, context_lines:)
+    def truncate_output(output, max_kb:, context_lines:)
       output_lines = output.lines
       first_error_index = output_lines.find_index { |line| line.match?(/\b[Ee]rror:\s+/) }
 
       if first_error_index.blank?
-        max_length_start = [output.length - (max_kb * 1024), 0].max
-        output[max_length_start..].lines.last(max_lines).join
+        output = []
+
+        # Collect up to max_kb worth of the last lines of output.
+        output_lines.reverse_each do |line|
+          # Check output.present? so that we at least have _some_ output.
+          break if line.length + output.join.length > max_kb && output.present?
+
+          output.unshift line
+        end
+
+        output.join
       else
         start = [first_error_index - context_lines, 0].max
-        output_lines[start..(start + max_lines - 1)].join[..(max_kb * 1024)]
+        # Let GitHub Actions truncate us to 4KB if needed.
+        output_lines[start..].join
       end
     end
 
@@ -218,9 +228,8 @@ module Homebrew
         path, line = annotation_location(name)
         next if path.blank?
 
-        # GitHub Actions has a 64KB maximum for annotiations. That's a bit
-        # too long so instead let's go for a maximum of 24KB or 256 lines.
-        annotation_output = truncate_output(@output, max_kb: 24, max_lines: 256, context_lines: 10)
+        # GitHub Actions has a 4KB maximum for annotations.
+        annotation_output = truncate_output(@output, max_kb: 4, context_lines: 5)
 
         annotation_title = "`#{command_trimmed}` failed on #{os_string}!"
         file = path.to_s.delete_prefix("#{@repository}/")
