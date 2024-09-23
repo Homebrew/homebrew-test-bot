@@ -72,8 +72,7 @@ module Homebrew
       ENV["HOMEBREW_NO_ENV_HINTS"] = "1"
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV.fetch("PATH")}"
-      # https://github.com/Homebrew/brew/issues/14274
-      ENV["PYTHONDONTWRITEBYTECODE"] = "1"
+      ENV["HOMEBREW_VERIFY_ATTESTATIONS"] = "1"
 
       if local?(args)
         home = "#{Dir.pwd}/home"
