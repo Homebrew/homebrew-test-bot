@@ -267,7 +267,7 @@ module Homebrew
           test "brew", "install", *build_args,
                named_args:      dependent.full_name,
                env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
-               ignore_failures: !args.test_default_formula? && build_from_source && !bottled_on_current_version
+               ignore_failures: !args.test_default_formula? && !bottled_on_current_version
           install_step = steps.last
 
           return unless install_step.passed?
