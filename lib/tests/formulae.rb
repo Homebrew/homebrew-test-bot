@@ -59,7 +59,7 @@ module Homebrew
         @skipped_or_failed_formulae_output_path.write(@skipped_or_failed_formulae.join(","))
       ensure
         verify_local_bottles
-        artifact_cache.rmtree if artifact_cache.exist?
+        FileUtils.rm_rf artifact_cache
       end
 
       private
