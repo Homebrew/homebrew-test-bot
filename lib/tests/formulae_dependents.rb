@@ -85,6 +85,17 @@ module Homebrew
              ignore_failures: !bottled?(formula, no_older_versions: true)
         return unless steps.last.passed?
 
+        # Test texlive first to avoid GitHub-hosted runners running out of storage.
+        # TODO: Try generalising this by sorting dependents according to install size,
+        #       where ideally install size should include recursive dependencies.
+        [source_dependents, bottled_dependents].each do |dependent_array|
+          texlive = dependent_array.find { |dependent| dependent.name == "texlive" }
+          next unless texlive.present?
+
+          dependent_array.delete(texlive)
+          dependent_array.unshift(texlive)
+        end
+
         source_dependents.each do |dependent|
           install_dependent(dependent, testable_dependents, build_from_source: true, args:)
           install_dependent(dependent, testable_dependents, args:) if bottled?(dependent)
