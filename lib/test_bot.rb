@@ -72,7 +72,6 @@ module Homebrew
       ENV["HOMEBREW_NO_ENV_HINTS"] = "1"
       ENV["HOMEBREW_PATH"] = ENV["PATH"] =
         "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:#{ENV.fetch("PATH")}"
-      ENV["HOMEBREW_VERIFY_ATTESTATIONS"] = "1"
 
       if local?(args)
         home = "#{Dir.pwd}/home"
@@ -88,6 +87,7 @@ module Homebrew
       tap = resolve_test_tap(args.tap)
 
       ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1" if tap.to_s == CoreTap.instance.name
+      ENV["HOMEBREW_VERIFY_ATTESTATIONS"] = "1" if tap.to_s == CoreTap.instance.name
 
       # Tap repository if required, this is done before everything else
       # because Formula parsing and/or git commit hash lookup depends on it.
