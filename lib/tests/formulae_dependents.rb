@@ -253,14 +253,16 @@ module Homebrew
 
             build_args << "--build-from-source"
 
-            test "brew", "fetch", "--build-from-source", "--retry", dependent.full_name
+            test "brew", "fetch", "--build-from-source", "--retry",
+                 "--concurrency", Homebrew::EnvConfig.make_jobs,
+                 dependent.full_name
             return if steps.last.failed?
           else
             fetch_formulae << dependent.full_name
           end
 
           if fetch_formulae.present?
-            test "brew", "fetch", "--retry", *fetch_formulae
+            test "brew", "fetch", "--retry", "--concurrency", Homebrew::EnvConfig.make_jobs, *fetch_formulae
             return if steps.last.failed?
           end
 

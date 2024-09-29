@@ -31,7 +31,9 @@ module Homebrew
 
         tags.each do |tag|
           cleanup_during!(args:)
-          test "brew", "fetch", "--retry", "--formulae", "--bottle-tag=#{tag}", formula_name
+          test "brew", "fetch", "--retry", "--formulae", "--bottle-tag=#{tag}",
+               "--concurrency", Homebrew::EnvConfig.make_jobs,
+               formula_name
         end
       end
     end

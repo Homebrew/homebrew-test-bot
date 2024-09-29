@@ -151,11 +151,16 @@ module Homebrew
 
         dependencies -= installed
         @unchanged_dependencies = dependencies - @testing_formulae
-        test "brew", "fetch", "--formulae", "--retry", *@unchanged_dependencies unless @unchanged_dependencies.empty?
+        unless @unchanged_dependencies.empty?
+          test "brew", "fetch", "--formulae", "--retry",
+               "--concurrency", Homebrew::EnvConfig.make_jobs,
+               *@unchanged_dependencies
+        end
 
         changed_dependencies = dependencies - @unchanged_dependencies
         unless changed_dependencies.empty?
           test "brew", "fetch", "--formulae", "--retry", "--build-from-source",
+               "--concurrency", Homebrew::EnvConfig.make_jobs,
                *changed_dependencies
 
           ignore_failures = !args.test_default_formula? && changed_dependencies.any? do |dep|
@@ -453,7 +458,7 @@ module Homebrew
         install_ca_certificates_if_needed
 
         if (messages = unsatisfied_requirements_messages(formula))
-          test "brew", "fetch", "--formula", "--retry", *fetch_args
+          test "brew", "fetch", "--formula", "--retry", "--concurrency", Homebrew::EnvConfig.make_jobs, *fetch_args
           test "brew", "audit", "--formula", *audit_args
 
           skipped formula_name, messages
@@ -485,7 +490,7 @@ module Homebrew
 
         info_header "Starting tests for #{formula_name}"
 
-        test "brew", "fetch", "--formula", "--retry", *fetch_args
+        test "brew", "fetch", "--formula", "--retry", "--concurrency", Homebrew::EnvConfig.make_jobs, *fetch_args
 
         env = {}
         env["HOMEBREW_GIT_PATH"] = nil if deps.any? do |d|
