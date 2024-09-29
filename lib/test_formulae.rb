@@ -209,7 +209,15 @@ module Homebrew
         return false if sha.blank?
         return false unless no_diff?(formula, sha)
 
-        formula.recursive_dependencies.all? do |dep|
+        recursive_dependencies = if formulae_dependents
+          formula.recursive_dependencies
+        else
+          formula.recursive_dependencies do |_, dep|
+            Dependency.prune if dep.build? || dep.test?
+          end
+        end
+
+        recursive_dependencies.all? do |dep|
           no_diff?(dep.to_formula, sha)
         end
       end
