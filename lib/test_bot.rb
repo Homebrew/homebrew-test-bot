@@ -86,8 +86,10 @@ module Homebrew
 
       tap = resolve_test_tap(args.tap)
 
-      ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1" if tap.to_s == CoreTap.instance.name
-      ENV["HOMEBREW_VERIFY_ATTESTATIONS"] = "1" if tap.to_s == CoreTap.instance.name
+      if tap.to_s == CoreTap.instance.name
+        ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1"
+        ENV["HOMEBREW_VERIFY_ATTESTATIONS"] = "1" if args.only_formulae?
+      end
 
       # Tap repository if required, this is done before everything else
       # because Formula parsing and/or git commit hash lookup depends on it.
