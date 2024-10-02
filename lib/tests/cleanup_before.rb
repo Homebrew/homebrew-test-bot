@@ -13,7 +13,8 @@ module Homebrew
 
         Pathname.glob("*.bottle*.*").each(&:unlink)
 
-        on_github_hosted_runner = ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
+        on_github_hosted_runner = ENV["HOMEBREW_GITHUB_ACTIONS"].present? &&
+                                  ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].blank?
         if on_github_hosted_runner
           # minimally fix brew doctor failures (a full clean takes ~5m)
           if OS.linux?
