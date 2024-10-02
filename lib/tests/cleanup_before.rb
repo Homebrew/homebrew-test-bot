@@ -13,7 +13,9 @@ module Homebrew
 
         Pathname.glob("*.bottle*.*").each(&:unlink)
 
-        if ENV["HOMEBREW_GITHUB_ACTIONS"] && !ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"]
+        on_github_hosted_runner = ENV["HOMEBREW_GITHUB_ACTIONS"].present? &&
+                                  ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].blank?
+        if on_github_hosted_runner
           # minimally fix brew doctor failures (a full clean takes ~5m)
           if OS.linux?
             # brew doctor complains
@@ -48,6 +50,11 @@ module Homebrew
         cleanup_shared
 
         installed_taps = Tap.select(&:installed?).map(&:name)
+        if on_github_hosted_runner && tap.to_s == CoreTap.instance.name
+          (installed_taps - REQUIRED_TAPS).each do |tap|
+            test "brew", "untap", tap
+          end
+        end
         (REQUIRED_TAPS - installed_taps).each do |tap|
           test "brew", "tap", tap
         end
