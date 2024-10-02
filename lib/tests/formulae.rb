@@ -510,7 +510,8 @@ module Homebrew
         install_step_passed ||= begin
           test("brew", "install", *install_args,
                named_args:      formula_name,
-               env:             env.merge({ "HOMEBREW_DEVELOPER" => nil }),
+               env:             env.merge({ "HOMEBREW_DEVELOPER"           => nil,
+                                            "HOMEBREW_VERIFY_ATTESTATIONS" => verify_attestations }),
                ignore_failures:, report_analytics: true)
           steps.last.passed?
         end
