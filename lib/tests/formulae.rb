@@ -297,8 +297,15 @@ module Homebrew
           @unchanged_dependencies -= @unchanged_build_dependencies
         end
 
-        test "brew", "install", "--only-dependencies", @bottle_filename
-        test "brew", "install", @bottle_filename
+        verify_attestations = if formula.name == "gh"
+          nil
+        else
+          ENV.fetch("HOMEBREW_VERIFY_ATTESTATIONS", nil)
+        end
+        test "brew", "install", "--only-dependencies", @bottle_filename,
+             env: { "HOMEBREW_VERIFY_ATTESTATIONS" => verify_attestations }
+        test "brew", "install", @bottle_filename,
+             env: { "HOMEBREW_VERIFY_ATTESTATIONS" => verify_attestations }
       end
 
       def build_bottle?(formula, args:)
