@@ -474,9 +474,16 @@ module Homebrew
         install_args = ["--verbose", "--formula"]
         install_args << build_flag
 
+        # We can't verify attestations if we're building `gh`.
+        verify_attestations = if formula_name == "gh"
+          nil
+        else
+          ENV.fetch("HOMEBREW_VERIFY_ATTESTATIONS", nil)
+        end
         # Don't care about e.g. bottle failures for dependencies.
         test "brew", "install", "--only-dependencies", *install_args, formula_name,
-             env: { "HOMEBREW_DEVELOPER" => nil }
+             env: { "HOMEBREW_DEVELOPER"           => nil,
+                    "HOMEBREW_VERIFY_ATTESTATIONS" => verify_attestations }
 
         # Do this after installing dependencies to avoid skipping formulae
         # that build with and declare a dependency on GCC. See discussion at
