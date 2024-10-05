@@ -47,10 +47,14 @@ module Homebrew
         else
           FileUtils.rm_rf paths
         end
-      elsif sudo
-        test "sudo", "mv", *paths, Dir.mktmpdir
       else
-        FileUtils.mv paths, Dir.mktmpdir, force: true
+        paths.each do |path|
+          if sudo
+            test "sudo", "mv", path, Dir.mktmpdir
+          else
+            FileUtils.mv path, Dir.mktmpdir, force: true
+          end
+        end
       end
     end
 
