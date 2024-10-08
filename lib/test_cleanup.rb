@@ -71,9 +71,9 @@ module Homebrew
         paths_to_delete = []
 
         info_header "Determining #{HOMEBREW_PREFIX} files to purge..."
-        Keg::MUST_BE_WRITABLE_DIRECTORIES.each(&:mkpath)
+        Keg.must_be_writable_directories.each(&:mkpath)
         Pathname.glob("#{HOMEBREW_PREFIX}/**/*", File::FNM_DOTMATCH).each do |path|
-          next if Keg::MUST_BE_WRITABLE_DIRECTORIES.include?(path)
+          next if Keg.must_be_writable_directories.include?(path)
           next if path == HOMEBREW_PREFIX/"bin/brew"
           next if path == HOMEBREW_PREFIX/"var"
           next if path == HOMEBREW_PREFIX/"var/homebrew"
