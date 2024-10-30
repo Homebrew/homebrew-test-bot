@@ -280,6 +280,8 @@ module Homebrew
         # a formula is not bottled unless its dependencies are.
         if formula.bottle_specification.tag?(Utils::Bottles.tag(:all))
           formula.deps.all? do |dep|
+            next false if @skipped_or_failed_formulae.include?(dep.name)
+
             bottle_no_older_versions = no_older_versions && (!dep.test? || dep.build?)
             bottled?(dep.to_formula, no_older_versions: bottle_no_older_versions)
           end
