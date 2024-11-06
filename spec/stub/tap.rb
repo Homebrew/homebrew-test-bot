@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "ostruct"
+
 class Tap
   def self.fetch(*)
     OpenStruct.new(name: "Homebrew/homebrew-core")
