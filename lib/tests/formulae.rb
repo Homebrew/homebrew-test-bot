@@ -293,7 +293,7 @@ module Homebrew
         @testing_formulae.delete(formula.name)
 
         unless @unchanged_build_dependencies.empty?
-          test "brew", "uninstall", "--formulae", "--force", *@unchanged_build_dependencies
+          test "brew", "uninstall", "--formulae", "--force", "--ignore-dependencies", *@unchanged_build_dependencies
           @unchanged_dependencies -= @unchanged_build_dependencies
         end
 
