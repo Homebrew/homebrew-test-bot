@@ -610,7 +610,7 @@ module Homebrew
         cleanup_bottle_etc_var(formula) if cleanup?(args)
 
         if @unchanged_dependencies.present?
-          test "brew", "uninstall", "--formulae", "--force", *@unchanged_dependencies
+          test "brew", "uninstall", "--formulae", "--force", "--ignore-dependencies", *@unchanged_dependencies
         end
       end
 
