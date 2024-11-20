@@ -326,7 +326,7 @@ module Homebrew
           test_step = steps.last
         end
 
-        test "brew", "uninstall", "--force", dependent.full_name
+        test "brew", "uninstall", "--force", "--ignore-dependencies", dependent.full_name
 
         all_tests_passed = (dependent_was_previously_installed || install_step.passed?) &&
                            linkage_step.passed? &&
