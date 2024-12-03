@@ -323,7 +323,7 @@ module Homebrew
       end
 
       def livecheck(formula)
-        return unless formula.livecheckable?
+        return unless formula.livecheck_defined?
         return if formula.livecheck.skip?
 
         livecheck_step = test "brew", "livecheck", "--formula", "--json", "--full-name", formula.full_name
