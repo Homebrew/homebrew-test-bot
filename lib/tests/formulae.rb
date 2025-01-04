@@ -326,7 +326,8 @@ module Homebrew
         return unless formula.livecheck_defined?
         return if formula.livecheck.skip?
 
-        livecheck_step = test "brew", "livecheck", "--formula", "--json", "--full-name", formula.full_name
+        livecheck_step = test "brew", "livecheck", "--autobump", "--formula",
+                              "--json", "--full-name", formula.full_name
 
         return if livecheck_step.failed?
         return unless livecheck_step.output?
