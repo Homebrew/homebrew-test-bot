@@ -139,10 +139,11 @@ module Homebrew
 
         dependents = dependents.zip(dependents.map do |f|
           if skip_recursive_dependents
-            f.deps
+            f.deps.reject(&:implicit?)
           else
             begin
               Dependency.expand(f, cache_key: "test-bot-dependents") do |_, dependency|
+                Dependency.skip if dependency.implicit?
                 Dependency.keep_but_prune_recursive_deps if dependency.build? || dependency.test?
               end
             rescue TapFormulaUnavailableError => e
