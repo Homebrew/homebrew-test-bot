@@ -52,6 +52,11 @@ module Homebrew
 
         return unless ENV["GITHUB_ACTIONS"]
 
+        # Remove `bash` after it is tested, since leaving a broken `bash`
+        # installation in the environment can cause issues with subsequent
+        # GitHub Actions steps.
+        test "brew", "uninstall", "--formula", "--force", "bash" if @testing_formulae.include?("bash")
+
         File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
           f.puts "skipped_or_failed_formulae=#{@skipped_or_failed_formulae.join(",")}"
         end
