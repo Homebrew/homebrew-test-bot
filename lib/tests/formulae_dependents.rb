@@ -37,6 +37,15 @@ module Homebrew
           dependent_formulae!(formula_name, args:)
           puts
         end
+
+        return unless ENV["GITHUB_ACTIONS"]
+
+        # Remove `bash` after it is tested, since leaving a broken `bash`
+        # installation in the environment can cause issues with subsequent
+        # GitHub Actions steps.
+        return unless @dependent_testing_formulae.include?("bash")
+
+        test "brew", "uninstall", "--formula", "--force", "bash"
       end
 
       private
