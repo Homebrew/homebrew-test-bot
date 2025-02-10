@@ -37,6 +37,7 @@ module Homebrew
 
         # #run! modifies `@testing_formulae`, so we need to track this separately.
         @testing_formulae_count = @testing_formulae.count
+        perform_bash_cleanup = @testing_formulae.include?("bash")
 
         sorted_formulae.each do |f|
           formula!(f, args:)
@@ -55,7 +56,7 @@ module Homebrew
         # Remove `bash` after it is tested, since leaving a broken `bash`
         # installation in the environment can cause issues with subsequent
         # GitHub Actions steps.
-        test "brew", "uninstall", "--formula", "--force", "bash" if @testing_formulae.include?("bash")
+        test "brew", "uninstall", "--formula", "--force", "bash" if perform_bash_cleanup
 
         File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |f|
           f.puts "skipped_or_failed_formulae=#{@skipped_or_failed_formulae.join(",")}"
