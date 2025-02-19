@@ -120,6 +120,7 @@ module Homebrew
           ENV["HOMEBREW_COLOR"] = "1"
           ENV["HOMEBREW_GITHUB_ACTIONS"] = "1"
         end
+        ENV["HOMEBREW_TEST_BOT"] = "1"
 
         Homebrew::TestBot.run!(args)
       end
