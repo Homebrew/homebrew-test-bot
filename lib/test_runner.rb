@@ -7,7 +7,7 @@ require_relative "test_cleanup"
 require_relative "test_formulae"
 require_relative "tests/cleanup_after"
 require_relative "tests/cleanup_before"
-require_relative "tests/formulae_detect"
+require_relative "tests/packages_detect"
 require_relative "tests/formulae_dependents"
 require_relative "tests/bottles_fetch"
 require_relative "tests/formulae"
@@ -142,7 +142,7 @@ module Homebrew
                           args.added_formulae.nil? &&
                           args.deleted_formulae.nil?
       if no_formulae_flags && (no_only_args || args.only_formulae? || args.only_formulae_detect?)
-        tests[:formulae_detect] = Tests::FormulaeDetect.new(argument, tap:,
+        tests[:formulae_detect] = Tests::PackagesDetect.new(argument, tap:,
                                                                       git:,
                                                                       dry_run:   args.dry_run?,
                                                                       fail_fast: args.fail_fast?,
