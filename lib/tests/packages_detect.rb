@@ -230,9 +230,9 @@ module Homebrew
           start_revision, end_revision, "--", path
         ).lines(chomp: true).filter_map do |file|
           if tap.formula_file?(file)
-            tap.formula_file_to_name(file)
+            tap.formula_file_to_name(Pathname.new(file))
           elsif tap.cask_file?(file)
-            file.basename(".rb").to_s
+            File.basename(file, ".rb")
           end
         end.compact
       end
