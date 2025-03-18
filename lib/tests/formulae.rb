@@ -294,7 +294,7 @@ module Homebrew
         bottle_merge_args << "--keep-old" if args.keep_old? && !new_formula
 
         test "brew", "bottle", *bottle_merge_args
-        test "brew", "uninstall", "--formula", "--force", formula.full_name
+        test "brew", "uninstall", "--formula", "--force", "--ignore-dependencies", formula.full_name
 
         @testing_formulae.delete(formula.name)
 
