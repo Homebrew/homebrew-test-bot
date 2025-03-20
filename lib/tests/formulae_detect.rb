@@ -3,7 +3,7 @@
 
 module Homebrew
   module Tests
-    class PackagesDetect < Test
+    class FormulaeDetect < Test
       attr_reader :testing_formulae, :added_formulae, :deleted_formulae
 
       def initialize(argument, tap:, git:, dry_run:, fail_fast:, verbose:)
@@ -16,7 +16,7 @@ module Homebrew
       end
 
       def run!(args:)
-        detect_packages!(args:)
+        detect_formulae!(args:)
 
         return unless ENV["GITHUB_ACTIONS"]
 
@@ -30,8 +30,8 @@ module Homebrew
 
       private
 
-      def detect_packages!(args:)
-        test_header(:PackagesDetect, method: :detect_formulae!)
+      def detect_formulae!(args:)
+        test_header(:FormulaeDetect, method: :detect_formulae!)
 
         url = nil
         origin_ref = "origin/master"
@@ -132,11 +132,11 @@ module Homebrew
         if tap && diff_start_sha1 != diff_end_sha1
           formula_path = tap.formula_dir.to_s
           @added_formulae +=
-            diff_packages(diff_start_sha1, diff_end_sha1, formula_path, "A")
+            diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "A")
           modified_formulae +=
-            diff_packages(diff_start_sha1, diff_end_sha1, formula_path, "M")
+            diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "M")
           @deleted_formulae +=
-            diff_packages(diff_start_sha1, diff_end_sha1, formula_path, "D")
+            diff_formulae(diff_start_sha1, diff_end_sha1, formula_path, "D")
         end
 
         # If a formula is both added and deleted: it's actually modified.
@@ -221,7 +221,7 @@ module Homebrew
         rev_parse("HEAD")
       end
 
-      def diff_packages(start_revision, end_revision, path, filter)
+      def diff_formulae(start_revision, end_revision, path, filter)
         return unless tap
 
         Utils.safe_popen_read(
@@ -229,12 +229,11 @@ module Homebrew
           "diff-tree", "-r", "--name-only", "--diff-filter=#{filter}",
           start_revision, end_revision, "--", path
         ).lines(chomp: true).filter_map do |file|
-          if tap.formula_file?(file)
-            tap.formula_file_to_name(Pathname.new(file))
-          elsif tap.cask_file?(file)
-            File.basename(file, ".rb")
-          end
-        end.compact
+          next unless tap.formula_file?(file)
+
+          file = Pathname.new(file)
+          tap.formula_file_to_name(file)
+        end
       end
     end
   end
