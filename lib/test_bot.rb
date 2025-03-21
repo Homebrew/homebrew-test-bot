@@ -62,6 +62,7 @@ module Homebrew
 
       ENV["HOMEBREW_BOOTSNAP"] = "1" if OS.linux? || (OS.mac? && MacOS.version != :sequoia)
       ENV["HOMEBREW_DEVELOPER"] = "1"
+      ENV["HOMEBREW_ARM64_TESTING"] = "1" if OS.linux? && Hardware::CPU.arm?
       ENV["HOMEBREW_NO_AUTO_UPDATE"] = "1"
       ENV["HOMEBREW_NO_EMOJI"] = "1"
       ENV["HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK"] = "1"
