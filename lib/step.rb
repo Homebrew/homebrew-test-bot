@@ -134,7 +134,9 @@ module Homebrew
 
     def truncate_output(output, max_kb:, context_lines:)
       output_lines = output.lines
-      first_error_index = output_lines.find_index { |line| line.match?(/\b[Ee]rror:\s+/) }
+      first_error_index = output_lines.find_index do |line|
+        line.match?(/\berror:\s+/i) && !line.strip.match?(/^::error( .*)?::/)
+      end
 
       if first_error_index.blank?
         output = []
@@ -219,7 +221,7 @@ module Homebrew
 
         str
       else
-        OS.kernel_name
+        "#{OS.kernel_name} #{Hardware::CPU.arch}"
       end
 
       @named_args.each do |name|
