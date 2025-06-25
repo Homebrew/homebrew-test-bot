@@ -34,7 +34,7 @@ module Homebrew
         test_header(:FormulaeDetect, method: :detect_formulae!)
 
         url = nil
-        origin_ref = "origin/master"
+        origin_ref = "origin/main"
 
         github_repository = ENV.fetch("GITHUB_REPOSITORY", nil)
         github_ref = ENV.fetch("GITHUB_REF", nil)

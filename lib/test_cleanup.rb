@@ -139,7 +139,7 @@ module Homebrew
       default_branch = Utils.popen_read(
         git, "-C", repository, "symbolic-ref", "refs/remotes/origin/HEAD", "--short"
       ).strip.presence
-      default_branch ||= "origin/master"
+      default_branch ||= "origin/main"
       default_branch
     end
 

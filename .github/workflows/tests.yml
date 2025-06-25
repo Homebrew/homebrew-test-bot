@@ -1,7 +1,9 @@
 name: CI
 on:
   push:
-    branches: master
+    branches:
+      - main
+      - master
   pull_request:
 jobs:
   rspec:
@@ -38,7 +40,7 @@ jobs:
           - os: Linux
             runner: ubuntu-latest
             workdir: /github/home
-            container: '{"image": "ghcr.io/homebrew/ubuntu22.04:master", "options": "--user=linuxbrew"}'
+            container: '{"image": "ghcr.io/homebrew/ubuntu22.04:main", "options": "--user=linuxbrew"}'
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container && fromJSON(matrix.container) || '' }}
