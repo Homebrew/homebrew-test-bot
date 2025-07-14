@@ -516,10 +516,10 @@ module Homebrew
         install_step_passed = formula_installed_from_bottle =
           artifact_cache_valid?(formula) &&
           verify_local_bottles && # Checking the artifact cache loads formulae, so do this check second.
-          install_formula_from_bottle(formula_name,
-                                      bottle_dir:                  artifact_cache,
-                                      testing_formulae_dependents: false,
-                                      dry_run:                     args.dry_run?)
+          install_formula_from_bottle!(formula_name,
+                                       bottle_dir:                  artifact_cache,
+                                       testing_formulae_dependents: false,
+                                       dry_run:                     args.dry_run?)
 
         install_step_passed ||= begin
           test("brew", "install", *install_args,
