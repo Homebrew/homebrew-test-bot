@@ -55,7 +55,7 @@ module Homebrew
           formula = Formulary.factory(formula_name)
           next if formula.latest_version_installed?
 
-          install_formula_from_bottle(formula_name, testing_formulae_dependents: true, dry_run: args.dry_run?)
+          install_formula_from_bottle!(formula_name, testing_formulae_dependents: true, dry_run: args.dry_run?)
         end
       end
 

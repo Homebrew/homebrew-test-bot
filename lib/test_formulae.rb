@@ -226,7 +226,7 @@ module Homebrew
         bottle_dir.glob("#{formula_name}--*.#{bottle_tag}.bottle*#{ext}")
       end
 
-      def install_formula_from_bottle(formula_name, testing_formulae_dependents:, dry_run:, bottle_dir: Pathname.pwd)
+      def install_formula_from_bottle!(formula_name, testing_formulae_dependents:, dry_run:, bottle_dir: Pathname.pwd)
         bottle_filename = bottle_glob(formula_name, bottle_dir).first
         if bottle_filename.blank?
           if testing_formulae_dependents && !dry_run
