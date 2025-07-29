@@ -86,7 +86,7 @@ module Homebrew
 
       tap = resolve_test_tap(args.tap)
 
-      if tap.core_tap?
+      if tap&.core_tap?
         ENV["HOMEBREW_NO_INSTALL_FROM_API"] = "1"
         ENV["HOMEBREW_VERIFY_ATTESTATIONS"] = "1" if args.only_formulae?
         ENV["HOMEBREW_DOWNLOAD_CONCURRENCY"] = "8"
