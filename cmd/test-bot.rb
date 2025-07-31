@@ -20,6 +20,8 @@ module Homebrew
                description: "Print what would be done rather than doing it."
         switch "--cleanup",
                description: "Clean all state from the Homebrew directory. Use with care!"
+        switch "--concurrent-downloads",
+               description: "Invoke `brew` with `HOMEBREW_DOWNLOAD_CONCURRENCY=auto`."
         switch "--skip-setup",
                description: "Don't check if the local system is set up correctly."
         switch "--build-from-source",
