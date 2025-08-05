@@ -5,8 +5,11 @@ on:
       - main
       - master
   pull_request:
+permissions: {}
 jobs:
   rspec:
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
