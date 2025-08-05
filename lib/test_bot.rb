@@ -38,7 +38,7 @@ module Homebrew
       git_url = ENV.fetch("GITHUB_REPOSITORY", nil)
       return if git_url.blank?
 
-      url_path = git_url.sub(%r{^https?://.*github\.com/}, "")
+      url_path = git_url.sub(%r{^https?://github\.com/}, "")
                         .chomp("/")
                         .sub(/\.git$/, "")
 
