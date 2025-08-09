@@ -135,7 +135,8 @@ module Homebrew
     def truncate_output(output, max_kb:, context_lines:)
       output_lines = output.lines
       first_error_index = output_lines.find_index do |line|
-        line.match?(/\berror:\s+/i) && !line.strip.match?(/^::error( .*)?::/)
+        !line.strip.match?(/^::error( .*)?::/) &&
+          (line.match?(/\berror:\s+/i) || line.match?(/\bcmake error\b/i))
       end
 
       if first_error_index.blank?
