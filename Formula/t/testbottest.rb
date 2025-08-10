@@ -6,7 +6,7 @@ class Testbottest < Formula
   url "file://#{Tap.fetch("homebrew", "test-bot").formula_dir}/t/tarballs/testbottest-0.1.tbz"
   sha256 "246c4839624d0b97338ce976100d56bd9331d9416e178eb0f74ef050c1dbdaad"
   license "BSD-2-Clause"
-  head "https://github.com/Homebrew/homebrew-test-bot.git"
+  head "https://github.com/Homebrew/homebrew-test-bot.git", branch: "main"
 
   depends_on xcode: ["10.2", :optional]
 
