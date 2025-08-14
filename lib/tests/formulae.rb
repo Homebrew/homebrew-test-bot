@@ -38,11 +38,18 @@ module Homebrew
         # #run! modifies `@testing_formulae`, so we need to track this separately.
         @testing_formulae_count = @testing_formulae.count
         perform_bash_cleanup = @testing_formulae.include?("bash")
+        @tested_formulae_count = 0
 
         sorted_formulae.each do |f|
           formula!(f, args:)
           verify_local_bottles
           puts
+          next if @testing_formulae_count < 3
+
+          progress_text = +"Test progress: "
+          progress_text += "#{@tested_formulae_count} formula(e) tested, "
+          progress_text += "#{@testing_formulae_count - @tested_formulae_count} remaining"
+          info_header progress_text
         end
 
         @deleted_formulae.each do |f|
@@ -614,6 +621,7 @@ module Homebrew
           end
         end
       ensure
+        @tested_formulae_count += 1
         cleanup_bottle_etc_var(formula) if cleanup?(args)
 
         if @unchanged_dependencies.present?
