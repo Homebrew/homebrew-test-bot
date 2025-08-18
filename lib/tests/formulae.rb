@@ -158,6 +158,7 @@ module Homebrew
           link_formula = Formulary.factory(name)
           next if link_formula.keg_only?
           next if link_formula.linked_keg.exist?
+          next if unlink_formulae.include?(name)
 
           test "brew", "link", name
         end
