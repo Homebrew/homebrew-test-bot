@@ -33,7 +33,7 @@ module Homebrew
           []
         end
 
-        test "brew", "untap", "--force", "homebrew/cask" if !tap.core_cask_tap? && CoreCaskTap.instance.installed?
+        test "brew", "untap", "--force", "homebrew/cask" if !tap&.core_cask_tap? && CoreCaskTap.instance.installed?
 
         @dependent_testing_formulae.each do |formula_name|
           dependent_formulae!(formula_name, args:)
