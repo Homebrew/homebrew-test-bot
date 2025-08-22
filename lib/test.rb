@@ -2,9 +2,12 @@
 # frozen_string_literal: true
 
 require "utils/analytics"
+require "utils/output"
 
 module Homebrew
   class Test
+    include Utils::Output::Mixin
+
     def failed_steps
       @steps.select(&:failed?)
     end
