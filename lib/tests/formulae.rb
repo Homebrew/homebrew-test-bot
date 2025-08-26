@@ -542,7 +542,7 @@ module Homebrew
 
         if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present? && OS.mac? && MacOS.version == :sequoia
           # Fix intermittent broken disk cache on Sequoia after building from source.
-          test "/usr/bin/sudo", "--non-interactive", "/usr/sbin/purge"
+          test "/usr/bin/sudo", "--non-interactive", "/usr/sbin/purge", ignore_failures: true
         end
 
         test "brew", "style", "--formula", formula_name, report_analytics: true
