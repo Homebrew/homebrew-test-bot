@@ -12,7 +12,11 @@ module Homebrew
         # Always output `brew config` output even when it doesn't fail.
         test "brew", "config", verbose: true
 
-        test "brew", "doctor", "--debug", verbose: true
+        if ENV["HOMEBREW_TEST_BOT_VERBOSE_DOCTOR"]
+          test "brew", "doctor", "--debug", verbose: true
+        else
+          test "brew", "doctor"
+        end
       end
     end
   end
