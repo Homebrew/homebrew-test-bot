@@ -94,23 +94,6 @@ module Homebrew
              env: { "HOMEBREW_DEVELOPER" => nil }
       end
 
-      def install_gcc_if_needed(formula, deps)
-        installed_gcc = T.let(false, T::Boolean)
-        begin
-          deps.each { |dep| CompilerSelector.select_for(dep.to_formula) }
-          CompilerSelector.select_for(formula)
-        rescue CompilerSelectionError => e
-          unless installed_gcc
-            test "brew", "install", "--formula", "gcc",
-                 env: { "HOMEBREW_DEVELOPER" => nil }
-            installed_gcc = true
-            DevelopmentTools.clear_version_cache
-            retry
-          end
-          skipped formula.name, e.message
-        end
-      end
-
       def setup_formulae_deps_instances(formula, formula_name, args:)
         conflicts = formula.conflicts
         formula_recursive_dependencies = formula.recursive_dependencies.map(&:to_formula)
@@ -507,11 +490,6 @@ module Homebrew
              env: { "HOMEBREW_DEVELOPER"           => nil,
                     "HOMEBREW_VERIFY_ATTESTATIONS" => verify_attestations }
 
-        # Do this after installing dependencies to avoid skipping formulae
-        # that build with and declare a dependency on GCC. See discussion at
-        # https://github.com/Homebrew/homebrew-core/pull/86826
-        install_gcc_if_needed(formula, deps)
-
         info_header "Starting tests for #{formula_name}"
 
         test "brew", "fetch", "--formula", "--retry", *fetch_args
@@ -539,11 +517,6 @@ module Homebrew
         end
 
         livecheck(formula) if !args.skip_livecheck? && !skip_online_checks
-
-        if ENV["GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"].present? && OS.mac? && MacOS.version == :sequoia
-          # Fix intermittent broken disk cache on Sequoia after building from source.
-          test "/usr/bin/sudo", "--non-interactive", "/usr/sbin/purge", ignore_failures: true
-        end
 
         test "brew", "style", "--formula", formula_name, report_analytics: true
         test "brew", "audit", "--formula", *audit_args, report_analytics: true unless formula.deprecated?
